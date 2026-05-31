@@ -1833,8 +1833,9 @@ function confirmer(titre, message, callback) {
   document.getElementById('confirm-overlay').classList.add('open');
 }
 document.getElementById('confirm-ok').addEventListener('click', () => {
-  fermerConfirm();
-  if (confirmCallback) confirmCallback();
+  const cb = confirmCallback;  // sauvegarder avant reset
+  fermerConfirm();             // remet confirmCallback = null
+  if (cb) cb();                // exécuter le callback sauvegardé
 });
 function fermerConfirm() {
   document.getElementById('confirm-overlay').classList.remove('open');
