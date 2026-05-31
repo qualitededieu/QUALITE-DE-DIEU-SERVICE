@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LQD Admin — Espace de gestion</title>
+  <link rel="icon" href="/icons/logoqds.jpg" type="image/jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+  <!-- Google Identity Services pour OAuth -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    /* ================================================================
+       VARIABLES & RESET
+    ================================================================ */
+    :root {
+      --dark-950: #050C0A;
+      --dark-900: #0A1612;
+      --dark-800: #0F211A;
+      --dark-700: #162E24;
+      --dark-600: #1D3D30;
+      --teal:     #0D7A8A;
+      --teal-l:   #14A89C;
+      --teal-dim: rgba(13,122,138,0.15);
+      --orange:   #F5A623;
+      --orange-dim:rgba(245,166,35,0.12);
+      --green:    #22C77A;
+      --green-dim:rgba(34,199,122,0.12);
+      --red:      #F05252;
+      --red-dim:  rgba(240,82,82,0.12);
+      --yellow:   #F5C518;
+      --text-1:   #E8F0EC;
+      --text-2:   #9BB5A8;
+      --text-3:   #5C7A6E;
+      --border:   rgba(255,255,255,0.06);
+      --border-l: rgba(255,255,255,0.10);
+      --radius:   10px;
+      --radius-l: 16px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+      --font-mono:'IBM Plex Mono', monospace;
+      --font-ui:  'Sora', sans-serif;
+      --font-body:'DM Sans', sans-serif;
+      --sidebar-w:240px;
+      --topbar-h: 58px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      background: var(--dark-950);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; }
+    img { max-width: 100%; display: block; }
+    input, select, textarea {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-1);
+      background: transparent;
+    }
+
+    /* ================================================================
+       AUTH SCREEN
+    ================================================================ */
+    #auth-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--dark-950);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .auth-card {
+      width: 100%; max-width: 420px;
+      background: var(--dark-800);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius-l);
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+    }
+    .auth-header {
+      background: var(--dark-700);
+      padding: 28px 32px 24px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .auth-logo {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      margin: 0 auto 14px;
+      border: 2px solid var(--border-l);
+    }
+    .auth-header h1 {
+      font-family: var(--font-ui);
+      font-size: 18px; font-weight: 700;
+      color: var(--text-1); margin-bottom: 4px;
+    }
+    .auth-header p { font-size: 12px; color: var(--text-3); }
+
+    .auth-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+    }
+    .auth-tab {
+      flex: 1; padding: 14px;
+      background: none; border: none;
+      font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+      color: var(--text-3); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+    .auth-tab.active { color: var(--teal-l); border-bottom-color: var(--teal-l); }
+
+    .auth-body { padding: 28px 32px; }
+
+    .auth-step { display: none; }
+    .auth-step.active { display: block; }
+
+    .auth-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-2); margin-bottom: 6px; letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .auth-input {
+      width: 100%; padding: 11px 14px;
+      background: var(--dark-900);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius);
+      color: var(--text-1); font-size: 14px;
+      transition: border-color .2s, box-shadow .2s;
+      margin-bottom: 16px;
+    }
+    .auth-input:focus {
+      outline: none;
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px var(--teal-dim);
+    }
+    .auth-input.error { border-color: var(--red); }
+
+    .otp-inputs {
+      display: flex; gap: 10px; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .otp-digit {
+      width: 48px; height: 56px;
+      background: var(--dark-900);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius);
+      text-align: center; font-size: 22px; font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-1);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .otp-digit:focus {
+      outline: none;
+      border-color: var(--teal-l);
+      box-shadow: 0 0 0 3px var(--teal-dim);
+    }
+
+    .auth-btn {
+      width: 100%; padding: 13px;
+      background: var(--teal);
+      color: #fff; border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-ui); font-size: 15px; font-weight: 700;
+      transition: background .2s, transform .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .auth-btn:hover { background: var(--teal-l); transform: translateY(-1px); }
+    .auth-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    .auth-divider {
+      text-align: center; margin: 20px 0;
+      font-size: 12px; color: var(--text-3);
+      position: relative;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; position: absolute; top: 50%;
+      width: calc(50% - 24px); height: 1px;
+      background: var(--border);
+    }
+    .auth-divider::before { left: 0; }
+    .auth-divider::after  { right: 0; }
+
+    .google-btn {
+      width: 100%; padding: 11px;
+      background: var(--dark-900);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius);
+      color: var(--text-1);
+      font-family: var(--font-ui); font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: background .2s, border-color .2s;
+    }
+    .google-btn:hover { background: var(--dark-700); border-color: var(--border-l); }
+
+    .auth-back {
+      background: none; border: none;
+      color: var(--text-3); font-size: 13px;
+      margin-top: 16px; width: 100%; text-align: center;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: color .2s;
+    }
+    .auth-back:hover { color: var(--text-2); }
+
+    .auth-error {
+      background: var(--red-dim); border: 1px solid rgba(240,82,82,0.25);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 13px; color: var(--red);
+      margin-bottom: 16px; display: none;
+    }
+    .auth-error.show { display: block; }
+    .auth-info {
+      background: var(--teal-dim); border: 1px solid rgba(13,122,138,0.25);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 13px; color: var(--teal-l);
+      margin-bottom: 16px; display: none;
+    }
+    .auth-info.show { display: block; }
+
+    /* ================================================================
+       APP LAYOUT
+    ================================================================ */
+    #app { display: none; min-height: 100vh; }
+    #app.visible { display: flex; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--dark-900);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 100; transition: transform .3s;
+    }
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-logo img {
+      width: 36px; height: 36px; border-radius: 8px;
+    }
+    .sidebar-logo-text {
+      font-family: var(--font-ui); font-size: 13px; font-weight: 700;
+      color: var(--text-1); line-height: 1.2;
+    }
+    .sidebar-logo-text span { font-size: 11px; color: var(--text-3); font-weight: 400; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--text-3);
+      padding: 10px 10px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; color: var(--text-2);
+      cursor: pointer; transition: background .15s, color .15s;
+      border: none; background: none; width: 100%; text-align: left;
+      margin-bottom: 2px;
+    }
+    .nav-item .iconify { font-size: 17px; flex-shrink: 0; }
+    .nav-item:hover { background: var(--dark-700); color: var(--text-1); }
+    .nav-item.active {
+      background: var(--teal-dim);
+      color: var(--teal-l);
+      border: 1px solid rgba(13,122,138,0.2);
+    }
+    .nav-badge {
+      margin-left: auto; background: var(--orange);
+      color: #000; font-size: 10px; font-weight: 700;
+      padding: 1px 7px; border-radius: 50px;
+    }
+
+    .sidebar-footer {
+      padding: 14px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-user {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius);
+      background: var(--dark-700);
+    }
+    .sidebar-user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--teal-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--teal-l); flex-shrink: 0;
+    }
+    .sidebar-user-info { flex: 1; min-width: 0; }
+    .sidebar-user-info strong {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sidebar-user-info span { font-size: 10px; color: var(--text-3); }
+    .logout-btn {
+      background: none; border: none; color: var(--text-3);
+      font-size: 16px; padding: 4px; transition: color .2s;
+    }
+    .logout-btn:hover { color: var(--red); }
+
+    /* Topbar */
+    .topbar {
+      position: fixed; top: 0;
+      left: var(--sidebar-w); right: 0;
+      height: var(--topbar-h);
+      background: rgba(10,22,18,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 24px; gap: 16px; z-index: 90;
+    }
+    .topbar-title {
+      font-family: var(--font-ui); font-size: 15px; font-weight: 700;
+      color: var(--text-1); flex: 1;
+    }
+    .topbar-title span { color: var(--text-3); font-weight: 400; font-size: 13px; }
+    .topbar-search {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--dark-800); border: 1px solid var(--border-l);
+      border-radius: var(--radius); padding: 7px 12px; width: 260px;
+    }
+    .topbar-search input {
+      background: none; border: none; outline: none;
+      font-size: 13px; color: var(--text-1); width: 100%;
+    }
+    .topbar-search input::placeholder { color: var(--text-3); }
+    .topbar-search .iconify { color: var(--text-3); font-size: 16px; flex-shrink: 0; }
+
+    .mobile-menu-btn {
+      display: none; background: none; border: none;
+      color: var(--text-2); font-size: 22px;
+    }
+
+    /* Main content */
+    .main-content {
+      margin-left: var(--sidebar-w);
+      padding-top: var(--topbar-h);
+      min-height: 100vh;
+    }
+    .page { display: none; padding: 28px 24px; }
+    .page.active { display: block; }
+
+    /* ================================================================
+       COMPOSANTS UI
+    ================================================================ */
+
+    /* Stat cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--dark-800);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-l);
+      padding: 20px;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border-l); }
+    .stat-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .stat-card-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .stat-card-badge {
+      font-family: var(--font-mono); font-size: 10px;
+      padding: 2px 8px; border-radius: 50px;
+    }
+    .stat-card-val {
+      font-family: var(--font-ui); font-size: 30px; font-weight: 800;
+      color: var(--text-1); line-height: 1; margin-bottom: 4px;
+    }
+    .stat-card-label { font-size: 12px; color: var(--text-3); }
+
+    /* Tables */
+    .table-card {
+      background: var(--dark-800);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-l);
+      overflow: hidden;
+    }
+    .table-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-card-title {
+      font-family: var(--font-ui); font-size: 14px; font-weight: 700;
+      color: var(--text-1);
+    }
+    .table-card-actions { display: flex; gap: 8px; align-items: center; }
+
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      padding: 11px 16px; text-align: left;
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--text-3);
+      background: var(--dark-900);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 13px 16px;
+      font-size: 13px; color: var(--text-2);
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr { transition: background .15s; }
+    .data-table tbody tr:hover { background: var(--dark-700); }
+    .data-table td strong { color: var(--text-1); font-weight: 600; }
+
+    /* Badges statut */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 50px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .badge-orange { background: var(--orange-dim); color: var(--orange); }
+    .badge-orange::before { background: var(--orange); }
+    .badge-green  { background: var(--green-dim);  color: var(--green);  }
+    .badge-green::before  { background: var(--green);  }
+    .badge-red    { background: var(--red-dim);    color: var(--red);    }
+    .badge-red::before    { background: var(--red);    }
+    .badge-teal   { background: var(--teal-dim);   color: var(--teal-l); }
+    .badge-teal::before   { background: var(--teal-l); }
+    .badge-yellow { background: rgba(245,197,24,0.12); color: var(--yellow); }
+    .badge-yellow::before { background: var(--yellow); }
+
+    /* Boutons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 16px; border-radius: var(--radius);
+      font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+      border: none; cursor: pointer; transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-primary   { background: var(--teal); color: #fff; }
+    .btn-primary:hover { background: var(--teal-l); }
+    .btn-ghost     { background: var(--dark-700); color: var(--text-2); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--dark-600); color: var(--text-1); }
+    .btn-danger    { background: var(--red-dim); color: var(--red); border: 1px solid rgba(240,82,82,0.2); }
+    .btn-danger:hover { background: rgba(240,82,82,0.2); }
+    .btn-success   { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,199,122,0.2); }
+    .btn-success:hover { background: rgba(34,199,122,0.2); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn .iconify { font-size: 15px; }
+
+    /* Filtres */
+    .filters-bar {
+      display: flex; gap: 10px; align-items: center;
+      flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .filter-select {
+      background: var(--dark-800);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius);
+      padding: 8px 12px; color: var(--text-1);
+      font-size: 13px; outline: none;
+      cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--teal); }
+    .search-input-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--dark-800); border: 1px solid var(--border-l);
+      border-radius: var(--radius); padding: 8px 12px; flex: 1; min-width: 200px;
+    }
+    .search-input-bar input {
+      background: none; border: none; outline: none;
+      color: var(--text-1); font-size: 13px; width: 100%;
+    }
+    .search-input-bar input::placeholder { color: var(--text-3); }
+    .search-input-bar .iconify { color: var(--text-3); font-size: 15px; }
+
+    /* Pagination */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-3);
+    }
+    .pagination-btns { display: flex; gap: 6px; }
+    .pg-btn {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--dark-700); border: 1px solid var(--border);
+      color: var(--text-2); font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s;
+    }
+    .pg-btn:hover { background: var(--dark-600); color: var(--text-1); }
+    .pg-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 999;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--dark-800);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius-l);
+      width: 100%; max-width: 600px;
+      max-height: 90vh; overflow-y: auto;
+      transform: translateY(20px);
+      transition: transform .25s;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--dark-800); z-index: 1;
+    }
+    .modal-header h3 {
+      font-family: var(--font-ui); font-size: 16px; font-weight: 700;
+      color: var(--text-1);
+    }
+    .modal-close {
+      background: var(--dark-700); border: 1px solid var(--border);
+      color: var(--text-2); width: 32px; height: 32px; border-radius: 8px;
+      font-size: 18px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .modal-close:hover { background: var(--red-dim); color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-footer {
+      display: flex; gap: 10px; justify-content: flex-end;
+      padding: 16px 24px; border-top: 1px solid var(--border);
+    }
+
+    /* Info rows dans modal */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .info-field label {
+      display: block; font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      color: var(--text-3); margin-bottom: 4px;
+    }
+    .info-field span {
+      font-size: 13px; color: var(--text-1); font-weight: 500;
+    }
+    .info-field a { color: var(--teal-l); }
+    .info-field a:hover { text-decoration: underline; }
+    .modal-section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-3);
+      margin: 20px 0 12px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Select dans modal */
+    .modal-select {
+      background: var(--dark-900);
+      border: 1px solid var(--border-l);
+      border-radius: var(--radius);
+      padding: 9px 12px; color: var(--text-1);
+      font-size: 13px; width: 100%; outline: none;
+      transition: border-color .2s;
+    }
+    .modal-select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim); }
+
+    /* Toast */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      z-index: 9998; display: flex; flex-direction: column;
+      gap: 10px; pointer-events: none;
+    }
+    .toast {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--dark-700); border: 1px solid var(--border-l);
+      border-radius: var(--radius); padding: 12px 18px;
+      font-size: 13px; color: var(--text-1);
+      box-shadow: var(--shadow);
+      transform: translateX(120%); opacity: 0;
+      transition: transform .3s ease, opacity .3s ease;
+      pointer-events: all; min-width: 260px; max-width: 360px;
+    }
+    .toast.show { transform: translateX(0); opacity: 1; }
+    .toast .iconify { font-size: 18px; flex-shrink: 0; }
+    .toast-success .iconify { color: var(--green); }
+    .toast-error   .iconify { color: var(--red); }
+    .toast-info    .iconify { color: var(--teal-l); }
+
+    /* Loading */
+    .loading-overlay {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 20px; gap: 14px; color: var(--text-3);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--teal-l);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Vide */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--text-3);
+    }
+    .empty-state .iconify { font-size: 48px; margin-bottom: 14px; opacity: .4; }
+    .empty-state p { font-size: 14px; }
+
+    /* Mono ID */
+    .mono { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+
+    /* Formation tags */
+    .formation-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .formation-tag {
+      font-size: 10px; font-weight: 600; padding: 2px 8px;
+      border-radius: 50px; background: var(--teal-dim); color: var(--teal-l);
+      white-space: nowrap;
+    }
+
+    /* Montant bloc */
+    .montant-table { width: 100%; border-collapse: collapse; }
+    .montant-table tr td {
+      padding: 7px 0; font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .montant-table tr:last-child td { border-bottom: none; }
+    .montant-table td:last-child { text-align: right; font-weight: 600; color: var(--text-1); }
+    .montant-table .total td { color: var(--orange); font-weight: 700; }
+
+    /* Confirm dialog */
+    .confirm-overlay {
+      position: fixed; inset: 0; z-index: 9997;
+      background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: var(--dark-800); border: 1px solid var(--border-l);
+      border-radius: var(--radius-l); padding: 28px; max-width: 360px; width: 100%;
+      text-align: center; box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    }
+    .confirm-box .iconify { font-size: 40px; color: var(--red); margin-bottom: 14px; }
+    .confirm-box h4 {
+      font-family: var(--font-ui); font-size: 16px; font-weight: 700;
+      color: var(--text-1); margin-bottom: 8px;
+    }
+    .confirm-box p { font-size: 13px; color: var(--text-3); margin-bottom: 24px; }
+    .confirm-box-btns { display: flex; gap: 10px; justify-content: center; }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .topbar { left: 0; }
+      .main-content { margin-left: 0; }
+      .mobile-menu-btn { display: flex; }
+      .topbar-search { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .page { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================
+     AUTH SCREEN
+================================================================ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/icons/logoqds.jpg" class="auth-logo" alt="LQD" />
+      <h1>LQD Admin</h1>
+      <p>Espace de gestion réservé aux administrateurs</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-credentials" onclick="switchAuthTab('credentials')">
+        <span class="iconify" data-icon="tabler:lock"></span> Identifiant
+      </button>
+      <button class="auth-tab" id="tab-google" onclick="switchAuthTab('google')">
+        <span class="iconify" data-icon="tabler:brand-google"></span> Google
+      </button>
+    </div>
+
+    <!-- Étape 1 : Email + mot de passe -->
+    <div class="auth-body">
+      <div class="auth-step active" id="step-credentials">
+        <div class="auth-error" id="err-credentials"></div>
+        <label class="auth-label" for="auth-email">Adresse email</label>
+        <input type="email" id="auth-email" class="auth-input" placeholder="admin@lqdservice.bj" autocomplete="email" />
+        <label class="auth-label" for="auth-password">Mot de passe</label>
+        <input type="password" id="auth-password" class="auth-input" placeholder="••••••••" autocomplete="current-password" />
+        <button class="auth-btn" id="btn-login" onclick="doLogin()">
+          <span class="iconify" data-icon="tabler:arrow-right"></span>
+          Continuer
+        </button>
+      </div>
+
+      <!-- Étape 2 : OTP -->
+      <div class="auth-step" id="step-otp">
+        <div class="auth-info show" id="otp-info">
+          Code envoyé à <strong id="otp-email-label"></strong>. Vérifiez vos emails.
+        </div>
+        <div class="auth-error" id="err-otp"></div>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;text-align:center;">
+          Saisissez le code à 6 chiffres reçu par email
+        </p>
+        <div class="otp-inputs" id="otp-inputs">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        </div>
+        <button class="auth-btn" id="btn-verify-otp" onclick="doVerifyOtp()">
+          <span class="iconify" data-icon="tabler:shield-check"></span>
+          Vérifier le code
+        </button>
+        <button class="auth-back" onclick="goBackToLogin()">
+          <span class="iconify" data-icon="tabler:arrow-left"></span>
+          Modifier l'email
+        </button>
+      </div>
+
+      <!-- Onglet Google -->
+      <div class="auth-step" id="step-google" style="display:none;">
+        <div class="auth-error" id="err-google"></div>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;text-align:center;line-height:1.7;">
+          Connectez-vous avec votre compte Google autorisé.
+          Seuls les emails de la liste blanche sont acceptés.
+        </p>
+        <!-- Bouton Google Identity Services -->
+        <div id="g_id_onload"
+             data-client_id="849690475047-6km7beuqu8773a9qkaj9qfole90bkcdr.apps.googleusercontent.com"
+             data-callback="handleGoogleCredential"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-size="large"
+             data-theme="filled_black"
+             data-text="signin_with"
+             data-shape="rectangular"
+             data-logo_alignment="left"
+             data-width="356">
+        </div>
+        <p style="font-size:11px;color:var(--text-3);margin-top:14px;text-align:center;">
+          Seuls les emails autorisés peuvent accéder à l'administration.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     APP
+================================================================ -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="/icons/logoqds.jpg" alt="LQD" />
+      <div class="sidebar-logo-text">
+        LQD Admin<br />
+        <span>v1.0 — Espace sécurisé</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Vue d'ensemble</div>
+      <button class="nav-item active" onclick="naviguer('dashboard')">
+        <span class="iconify" data-icon="tabler:layout-dashboard"></span> Tableau de bord
+      </button>
+
+      <div class="nav-section-label">Inscriptions</div>
+      <button class="nav-item" onclick="naviguer('dossiers')">
+        <span class="iconify" data-icon="tabler:folders"></span> Tous les dossiers
+        <span class="nav-badge" id="badge-attente">0</span>
+      </button>
+      <button class="nav-item" onclick="naviguer('dossiers', 'confirme')">
+        <span class="iconify" data-icon="tabler:circle-check"></span> Confirmés
+      </button>
+      <button class="nav-item" onclick="naviguer('dossiers', 'annule')">
+        <span class="iconify" data-icon="tabler:circle-x"></span> Annulés
+      </button>
+
+      <div class="nav-section-label">Paiements</div>
+      <button class="nav-item" onclick="naviguer('dossiers', 'paiement_attente')">
+        <span class="iconify" data-icon="tabler:clock-hour-3"></span> En attente
+      </button>
+      <button class="nav-item" onclick="naviguer('dossiers', 'paiement_recu')">
+        <span class="iconify" data-icon="tabler:receipt"></span> Reçus
+      </button>
+      <button class="nav-item" onclick="naviguer('dossiers', 'paiement_verifie')">
+        <span class="iconify" data-icon="tabler:shield-check"></span> Vérifiés
+      </button>
+
+      <div class="nav-section-label">Demandes</div>
+      <button class="nav-item" onclick="naviguer('renseignements')">
+        <span class="iconify" data-icon="tabler:message-question"></span> Renseignements
+        <span class="nav-badge" id="badge-rens">0</span>
+      </button>
+
+      <div class="nav-section-label">Outils</div>
+      <button class="nav-item" onclick="exporterCSV()">
+        <span class="iconify" data-icon="tabler:table-export"></span> Exporter CSV
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">
+          <span class="iconify" data-icon="tabler:user"></span>
+        </div>
+        <div class="sidebar-user-info">
+          <strong id="sidebar-email">—</strong>
+          <span>Administrateur</span>
+        </div>
+        <button class="logout-btn" title="Déconnexion" onclick="deconnecter()">
+          <span class="iconify" data-icon="tabler:logout"></span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <span class="iconify" data-icon="tabler:menu-2"></span>
+    </button>
+    <div class="topbar-title" id="topbar-title">
+      Tableau de bord <span id="topbar-subtitle"></span>
+    </div>
+    <div class="topbar-search">
+      <span class="iconify" data-icon="tabler:search"></span>
+      <input type="text" id="global-search" placeholder="Rechercher un dossier, nom, ID..." oninput="rechercheGlobale(this.value)" />
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- PAGE : DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="stats-grid">
+        <div class="loading-overlay" style="grid-column:1/-1;"><div class="spinner"></div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <!-- Dernières inscriptions -->
+        <div class="table-card">
+          <div class="table-card-header">
+            <span class="table-card-title">Dernières inscriptions</span>
+            <button class="btn btn-ghost btn-sm" onclick="naviguer('dossiers')">
+              <span class="iconify" data-icon="tabler:arrow-right"></span> Voir tout
+            </button>
+          </div>
+          <div id="table-recent"></div>
+        </div>
+
+        <!-- Renseignements récents -->
+        <div class="table-card">
+          <div class="table-card-header">
+            <span class="table-card-title">Renseignements récents</span>
+            <button class="btn btn-ghost btn-sm" onclick="naviguer('renseignements')">
+              <span class="iconify" data-icon="tabler:arrow-right"></span> Voir tout
+            </button>
+          </div>
+          <div id="table-rens-recent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE : DOSSIERS -->
+    <div class="page" id="page-dossiers">
+      <div class="filters-bar">
+        <div class="search-input-bar">
+          <span class="iconify" data-icon="tabler:search"></span>
+          <input type="text" id="search-dossiers" placeholder="Nom, ID, téléphone..." oninput="filtrerDossiers()" />
+        </div>
+        <select class="filter-select" id="filtre-statut" onchange="filtrerDossiers()">
+          <option value="">Tous les statuts</option>
+          <option value="attente">En attente</option>
+          <option value="confirme">Confirmé</option>
+          <option value="annule">Annulé</option>
+        </select>
+        <select class="filter-select" id="filtre-paiement" onchange="filtrerDossiers()">
+          <option value="">Tous paiements</option>
+          <option value="paiement_attente">Paiement en attente</option>
+          <option value="paiement_recu">Paiement reçu</option>
+          <option value="paiement_verifie">Paiement vérifié</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="chargerDossiers()">
+          <span class="iconify" data-icon="tabler:refresh"></span>
+        </button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Dossiers d'inscription</span>
+          <span id="dossiers-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <div id="dossiers-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+        <div class="pagination" id="dossiers-pagination" style="display:none;">
+          <span id="pagination-info"></span>
+          <div class="pagination-btns" id="pagination-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE : RENSEIGNEMENTS -->
+    <div class="page" id="page-renseignements">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Demandes de renseignement</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerRenseignements()">
+            <span class="iconify" data-icon="tabler:refresh"></span> Actualiser
+          </button>
+        </div>
+        <div id="rens-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ================================================================
+     MODAL DOSSIER
+================================================================ -->
+<div class="modal-overlay" id="modal-dossier">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Dossier</h3>
+      <button class="modal-close" onclick="fermerModal('modal-dossier')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL RENSEIGNEMENT -->
+<div class="modal-overlay" id="modal-rens">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="rens-modal-title">Renseignement</h3>
+      <button class="modal-close" onclick="fermerModal('modal-rens')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="rens-modal-body"></div>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <span class="iconify" data-icon="tabler:alert-triangle"></span>
+    <h4 id="confirm-title">Confirmer l'action</h4>
+    <p id="confirm-message">Cette action est irréversible.</p>
+    <div class="confirm-box-btns">
+      <button class="btn btn-ghost" onclick="fermerConfirm()">Annuler</button>
+      <button class="btn btn-danger" id="confirm-ok">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- ================================================================
+     JAVASCRIPT
+================================================================ -->
+<script>
+/* ================================================================
+   CONFIG
+================================================================ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+
+/* ================================================================
+   STATE
+================================================================ */
+let state = {
+  token:        null,
+  email:        null,
+  page:         'dashboard',
+  filtre:       '',
+  recherche:    '',
+  dossiers:     [],
+  rens:         [],
+  currentPage:  1,
+  perPage:      20,
+  totalPages:   1,
+  pendingLogin: null   // email en attente d'OTP
+};
+
+/* ================================================================
+   API CALL
+================================================================ */
+async function apiCall(action, extra = {}) {
+  const payload = { action, token: state.token, ...extra };
+  const resp = await fetch(GAS_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify(payload)
+  });
+  return await resp.json();
+}
+
+/* ================================================================
+   AUTH
+================================================================ */
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+
+  // Reset étapes
+  document.querySelectorAll('.auth-step').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+
+  if (tab === 'credentials') {
+    const el = document.getElementById('step-credentials');
+    el.style.display = 'block';
+    el.classList.add('active');
+  } else {
+    const el = document.getElementById('step-google');
+    el.style.display = 'block';
+    el.classList.add('active');
+  }
+}
+
+async function doLogin() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('err-credentials');
+  const btn      = document.getElementById('btn-login');
+
+  errEl.classList.remove('show');
+  if (!email || !password) {
+    errEl.textContent = 'Email et mot de passe requis.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Connexion...';
+
+  try {
+    const result = await apiCall('admin_login', { email, password });
+    if (result.status === 'otp_sent') {
+      state.pendingLogin = email;
+      document.getElementById('otp-email-label').textContent = email;
+      document.getElementById('step-credentials').classList.remove('active');
+      document.getElementById('step-credentials').style.display = 'none';
+      const otpStep = document.getElementById('step-otp');
+      otpStep.style.display = 'block';
+      otpStep.classList.add('active');
+      // Focus premier champ OTP
+      setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
+    } else {
+      errEl.textContent = result.message || 'Erreur de connexion.';
+      errEl.classList.add('show');
+    }
+  } catch(e) {
+    errEl.textContent = 'Erreur réseau. Réessayez.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="iconify" data-icon="tabler:arrow-right"></span> Continuer';
+  }
+}
+
+// Navigation OTP entre les champs
+document.addEventListener('DOMContentLoaded', () => {
+  const digits = document.querySelectorAll('.otp-digit');
+  digits.forEach((input, idx) => {
+    input.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val.slice(-1);
+      if (val && idx < digits.length - 1) digits[idx + 1].focus();
+      if (idx === digits.length - 1 && val) doVerifyOtp();
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !input.value && idx > 0) digits[idx - 1].focus();
+    });
+    input.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      digits.forEach((d, i) => { if (text[i]) d.value = text[i]; });
+      if (text.length >= 6) doVerifyOtp();
+    });
+  });
+});
+
+async function doVerifyOtp() {
+  const digits  = document.querySelectorAll('.otp-digit');
+  const otp     = Array.from(digits).map(d => d.value).join('');
+  const errEl   = document.getElementById('err-otp');
+  const btn     = document.getElementById('btn-verify-otp');
+
+  errEl.classList.remove('show');
+  if (otp.length !== 6) {
+    errEl.textContent = 'Saisissez les 6 chiffres.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Vérification...';
+
+  try {
+    const result = await apiCall('admin_verify_otp', { email: state.pendingLogin, otp });
+    if (result.status === 'success') {
+      ouvrirSession(result.token, result.email);
+    } else {
+      errEl.textContent = result.message || 'Code incorrect.';
+      errEl.classList.add('show');
+      digits.forEach(d => d.value = '');
+      digits[0].focus();
+    }
+  } catch(e) {
+    errEl.textContent = 'Erreur réseau.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="iconify" data-icon="tabler:shield-check"></span> Vérifier le code';
+  }
+}
+
+function goBackToLogin() {
+  document.getElementById('step-otp').classList.remove('active');
+  document.getElementById('step-otp').style.display = 'none';
+  const cred = document.getElementById('step-credentials');
+  cred.style.display = 'block';
+  cred.classList.add('active');
+  document.getElementById('auth-password').value = '';
+  state.pendingLogin = null;
+}
+
+// OAuth Google callback
+async function handleGoogleCredential(response) {
+  const errEl = document.getElementById('err-google');
+  errEl.classList.remove('show');
+  try {
+    const result = await apiCall('admin_verify_google', { googleToken: response.credential });
+    if (result.status === 'success') {
+      ouvrirSession(result.token, result.email);
+    } else {
+      errEl.textContent = result.message || 'Accès refusé.';
+      errEl.classList.add('show');
+    }
+  } catch(e) {
+    errEl.textContent = 'Erreur réseau.';
+    errEl.classList.add('show');
+  }
+}
+
+function ouvrirSession(token, email) {
+  state.token = token;
+  state.email = email;
+  sessionStorage.setItem('lqd_token', token);
+  sessionStorage.setItem('lqd_email', email);
+
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('sidebar-email').textContent = email;
+
+  chargerDashboard();
+}
+
+function deconnecter() {
+  confirmer('Déconnexion', 'Êtes-vous sûr de vouloir vous déconnecter ?', () => {
+    sessionStorage.clear();
+    location.reload();
+  });
+}
+
+// Restaurer session si token en sessionStorage
+(function() {
+  const token = sessionStorage.getItem('lqd_token');
+  const email = sessionStorage.getItem('lqd_email');
+  if (token && email) {
+    state.token = token;
+    state.email = email;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('sidebar-email').textContent = email;
+    chargerDashboard();
+  }
+})();
+
+/* ================================================================
+   NAVIGATION
+================================================================ */
+function naviguer(page, filtre = '') {
+  // Reset active nav items
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+
+  // Cacher toutes les pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+  state.page    = page;
+  state.filtre  = filtre;
+  state.currentPage = 1;
+
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.classList.add('active');
+
+  // Topbar title
+  const titres = {
+    dashboard:        'Tableau de bord',
+    dossiers:         'Dossiers',
+    renseignements:   'Renseignements'
+  };
+  document.getElementById('topbar-title').textContent = titres[page] || page;
+
+  if (page === 'dashboard')      chargerDashboard();
+  if (page === 'dossiers')       { chargerDossiers(); }
+  if (page === 'renseignements') chargerRenseignements();
+
+  // Appliquer filtre si fourni
+  if (filtre && page === 'dossiers') {
+    const mapFiltre = {
+      confirme:          'confirme',
+      annule:            'annule',
+      paiement_attente:  'paiement_attente',
+      paiement_recu:     'paiement_recu',
+      paiement_verifie:  'paiement_verifie',
+    };
+    const selectStatut    = document.getElementById('filtre-statut');
+    const selectPaiement  = document.getElementById('filtre-paiement');
+    if (['attente','confirme','annule'].includes(filtre)) {
+      if(selectStatut) selectStatut.value = filtre;
+    } else {
+      if(selectPaiement) selectPaiement.value = filtre;
+    }
+  }
+
+  // Fermer sidebar mobile
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+/* ================================================================
+   DASHBOARD
+================================================================ */
+async function chargerDashboard() {
+  try {
+    const result = await apiCall('admin_get_stats');
+    if (result.status !== 'success') throw new Error(result.message);
+
+    const s = result.stats;
+    document.getElementById('badge-attente').textContent = s.enAttente;
+    document.getElementById('badge-rens').textContent    = s.rensNouveaux;
+
+    // Stat cards
+    document.getElementById('stats-grid').innerHTML = `
+      ${statCard('Total inscriptions',    s.total,              'tabler:users',          '--teal',   'bg-teal')}
+      ${statCard('En attente',            s.enAttente,          'tabler:clock-hour-3',   '--orange',  'bg-orange')}
+      ${statCard('Confirmés',             s.confirmes,          'tabler:circle-check',   '--green',   'bg-green')}
+      ${statCard('Renseignements',        s.rensNouveaux + ' nouveaux', 'tabler:message-question','--teal-l','bg-teal')}
+    `;
+
+    // Charger récents
+    const dossiersRes = await apiCall('admin_get_dossiers', { page: 1, perPage: 6 });
+    if (dossiersRes.status === 'success') {
+      renderTableauRecent(dossiersRes.dossiers);
+    }
+
+    const rensRes = await apiCall('admin_get_rens');
+    if (rensRes.status === 'success') {
+      renderRensRecent(rensRes.renseignements.slice(0, 6));
+    }
+
+  } catch(e) {
+    toast('Erreur de chargement : ' + e.message, 'error');
+  }
+}
+
+function statCard(label, val, icon, color, bgClass) {
+  const colors = { '--teal': '#0D7A8A', '--orange': '#F5A623', '--green': '#22C77A', '--teal-l': '#14A89C' };
+  const c = colors[color] || '#0D7A8A';
+  return `<div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-card-icon" style="background:${c}22;">
+        <span class="iconify" data-icon="${icon}" style="font-size:20px;color:${c};"></span>
+      </div>
+    </div>
+    <div class="stat-card-val">${val}</div>
+    <div class="stat-card-label">${label}</div>
+  </div>`;
+}
+
+function renderTableauRecent(dossiers) {
+  if (!dossiers.length) {
+    document.getElementById('table-recent').innerHTML = '<div class="empty-state"><p>Aucune inscription</p></div>';
+    return;
+  }
+  document.getElementById('table-recent').innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th>
+        <th>Nom</th>
+        <th>Statut</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${dossiers.map(d => `<tr>
+          <td><span class="mono">${d.id}</span></td>
+          <td><strong>${d.prenom} ${d.nom}</strong></td>
+          <td>${badgeStatut(d.statutDossier)}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="ouvrirDossier('${d.id}')">
+            <span class="iconify" data-icon="tabler:eye"></span>
+          </button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderRensRecent(rens) {
+  if (!rens.length) {
+    document.getElementById('table-rens-recent').innerHTML = '<div class="empty-state"><p>Aucune demande</p></div>';
+    return;
+  }
+  document.getElementById('table-rens-recent').innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Nom</th>
+        <th>Formation</th>
+        <th>Statut</th>
+      </tr></thead>
+      <tbody>
+        ${rens.map(r => `<tr>
+          <td><strong>${r.prenom} ${r.nom}</strong><br/><span class="mono">${r.telephone}</span></td>
+          <td style="font-size:12px;color:var(--text-3);max-width:140px;">${(r.formations||'—').split(' | ').join(', ')}</td>
+          <td>${badgeRensStatut(r.statut)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ================================================================
+   DOSSIERS
+================================================================ */
+async function chargerDossiers() {
+  document.getElementById('dossiers-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  document.getElementById('dossiers-pagination').style.display = 'none';
+
+  const filtre    = document.getElementById('filtre-statut')?.value || document.getElementById('filtre-paiement')?.value || state.filtre;
+  const recherche = document.getElementById('search-dossiers')?.value || '';
+
+  try {
+    const result = await apiCall('admin_get_dossiers', {
+      page:      state.currentPage,
+      perPage:   state.perPage,
+      filtre:    filtre,
+      recherche: recherche
+    });
+    if (result.status !== 'success') throw new Error(result.message);
+
+    state.dossiers   = result.dossiers;
+    state.totalPages = result.pages;
+
+    document.getElementById('dossiers-count').textContent = `${result.total} dossier(s)`;
+    renderTableauDossiers(result.dossiers);
+    renderPagination(result.page, result.pages, result.total, result.perPage);
+
+  } catch(e) {
+    document.getElementById('dossiers-table-container').innerHTML =
+      `<div class="empty-state"><span class="iconify" data-icon="tabler:wifi-off"></span><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+function filtrerDossiers() {
+  state.currentPage = 1;
+  chargerDossiers();
+}
+
+function rechercheGlobale(val) {
+  if (state.page === 'dossiers') {
+    const el = document.getElementById('search-dossiers');
+    if (el) { el.value = val; filtrerDossiers(); }
+  }
+}
+
+function renderTableauDossiers(dossiers) {
+  if (!dossiers.length) {
+    document.getElementById('dossiers-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:folder-off"></span><p>Aucun dossier trouvé</p></div>';
+    return;
+  }
+
+  document.getElementById('dossiers-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th>
+        <th>Apprenant</th>
+        <th>Formation(s)</th>
+        <th>1er virement</th>
+        <th>Dossier</th>
+        <th>Paiement</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${dossiers.map(d => `<tr>
+          <td><span class="mono">${d.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${d.date}</span></td>
+          <td>
+            <strong>${d.prenom} ${d.nom}</strong><br/>
+            <span class="mono">${d.telephone}</span>
+          </td>
+          <td>
+            <div class="formation-tags">
+              ${(d.formations||[]).map(f => `<span class="formation-tag">${abrevierFormation(f)}</span>`).join('')}
+            </div>
+          </td>
+          <td style="font-family:var(--font-mono);font-size:12px;color:var(--orange);">
+            ${Number(d.premierVirement||0).toLocaleString('fr-BJ')} F
+          </td>
+          <td>${badgeStatut(d.statutDossier)}</td>
+          <td>${badgePaiement(d.statutPaiement)}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-sm" title="Voir le dossier" onclick="ouvrirDossier('${d.id}')">
+                <span class="iconify" data-icon="tabler:eye"></span>
+              </button>
+              <button class="btn btn-sm" style="background:var(--orange-dim);color:var(--orange);" title="Envoyer relance" onclick="envoyerRelance('${d.id}', '${d.prenom} ${d.nom}')">
+                <span class="iconify" data-icon="tabler:send"></span>
+              </button>
+              <button class="btn btn-danger btn-sm" title="Supprimer" onclick="supprimerDossier('${d.id}', '${d.prenom} ${d.nom}')">
+                <span class="iconify" data-icon="tabler:trash"></span>
+              </button>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+function renderPagination(page, pages, total, perPage) {
+  if (pages <= 1) { document.getElementById('dossiers-pagination').style.display = 'none'; return; }
+
+  document.getElementById('dossiers-pagination').style.display = 'flex';
+  const debut = (page - 1) * perPage + 1;
+  const fin   = Math.min(page * perPage, total);
+  document.getElementById('pagination-info').textContent = `${debut}–${fin} sur ${total}`;
+
+  const btns = document.getElementById('pagination-btns');
+  btns.innerHTML = '';
+
+  // Précédent
+  const prev = document.createElement('button');
+  prev.className = 'pg-btn';
+  prev.innerHTML = '<span class="iconify" data-icon="tabler:chevron-left"></span>';
+  prev.disabled  = page === 1;
+  prev.onclick   = () => changerPage(page - 1);
+  btns.appendChild(prev);
+
+  // Pages
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) {
+      const btn = document.createElement('button');
+      btn.className = 'pg-btn' + (i === page ? ' active' : '');
+      btn.textContent = i;
+      btn.onclick = () => changerPage(i);
+      btns.appendChild(btn);
+    } else if (i === page - 2 || i === page + 2) {
+      const sp = document.createElement('span');
+      sp.textContent = '…';
+      sp.style.cssText = 'color:var(--text-3);font-size:13px;padding:0 4px;align-self:center;';
+      btns.appendChild(sp);
+    }
+  }
+
+  // Suivant
+  const next = document.createElement('button');
+  next.className = 'pg-btn';
+  next.innerHTML = '<span class="iconify" data-icon="tabler:chevron-right"></span>';
+  next.disabled  = page === pages;
+  next.onclick   = () => changerPage(page + 1);
+  btns.appendChild(next);
+}
+
+function changerPage(p) {
+  state.currentPage = p;
+  chargerDossiers();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ================================================================
+   MODAL DOSSIER
+================================================================ */
+async function ouvrirDossier(id) {
+  ouvrirModal('modal-dossier');
+  document.getElementById('modal-title').textContent = `Dossier ${id}`;
+  document.getElementById('modal-body').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  document.getElementById('modal-footer').innerHTML = '';
+
+  try {
+    const result = await apiCall('admin_get_dossier', { id });
+    if (result.status !== 'success') throw new Error(result.message);
+    const d = result.dossier;
+    renderModalDossier(d);
+  } catch(e) {
+    document.getElementById('modal-body').innerHTML =
+      `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+function renderModalDossier(d) {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="info-grid">
+      <div class="info-field"><label>Référence</label><span class="mono">${d.id}</span></div>
+      <div class="info-field"><label>Date</label><span>${d.date}</span></div>
+      <div class="info-field"><label>Prénom</label><span>${d.prenom}</span></div>
+      <div class="info-field"><label>Nom</label><span>${d.nom}</span></div>
+      <div class="info-field"><label>Téléphone</label>
+        <span><a href="tel:${d.telephone}">${d.telephone}</a></span>
+      </div>
+      <div class="info-field"><label>Email</label>
+        <span>${d.email ? `<a href="mailto:${d.email}">${d.email}</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Type pièce</label><span>${d.typePiece}</span></div>
+      <div class="info-field"><label>Nb formations</label><span>${d.nbFormations}</span></div>
+    </div>
+
+    <div class="info-field" style="margin-bottom:16px;">
+      <label>Formation(s)</label>
+      <div class="formation-tags" style="margin-top:6px;">
+        ${(d.formations||[]).map(f => `<span class="formation-tag">${f}</span>`).join('')}
+      </div>
+    </div>
+
+    ${d.message ? `<div class="info-field" style="margin-bottom:16px;">
+      <label>Message</label><span>${d.message}</span>
+    </div>` : ''}
+
+    <div class="modal-section-title">Pièces justificatives</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Pièce identité</label>
+        <span>${d.pieceUrl && d.pieceUrl !== 'Erreur upload Drive' ? `<a href="${d.pieceUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Photo identité</label>
+        <span>${d.photoUrl && d.photoUrl !== 'Erreur upload Drive' ? `<a href="${d.photoUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Preuve paiement</label>
+        <span>${d.preuveUrl && d.preuveUrl !== '—' ? `<a href="${d.preuveUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Dossier complet</label>
+        <span>${d.dossierUrl ? `<a href="${d.dossierUrl}" target="_blank">Dossier Drive</a>` : '—'}</span>
+      </div>
+    </div>
+
+    <div class="modal-section-title">Finances</div>
+    <table class="montant-table" style="margin-bottom:20px;">
+      <tr><td>Frais inscription</td><td>${Number(d.fraisInscription||0).toLocaleString('fr-BJ')} F CFA</td></tr>
+      <tr><td>Coût total formations</td><td>${Number(d.coutTotal||0).toLocaleString('fr-BJ')} F CFA</td></tr>
+      <tr><td>Tranche 1 — 50%</td><td>${Number(d.tranche1||0).toLocaleString('fr-BJ')} F CFA</td></tr>
+      <tr><td>Tranche 2 — 25%</td><td>${Number(d.tranche2||0).toLocaleString('fr-BJ')} F CFA</td></tr>
+      <tr><td>Tranche 3 — 25%</td><td>${Number(d.tranche3||0).toLocaleString('fr-BJ')} F CFA</td></tr>
+      <tr class="total"><td>1er virement attendu</td><td>${Number(d.premierVirement||0).toLocaleString('fr-BJ')} F CFA</td></tr>
+    </table>
+
+    <div class="modal-section-title">Gestion du statut</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <label class="auth-label" style="margin-bottom:6px;">Statut dossier</label>
+        <select class="modal-select" id="select-statut-dossier">
+          ${['En attente','Confirmé','Annulé'].map(s =>
+            `<option value="${s}" ${d.statutDossier === s ? 'selected' : ''}>${s}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="auth-label" style="margin-bottom:6px;">Statut paiement</label>
+        <select class="modal-select" id="select-statut-paiement">
+          ${['En attente','Reçu','Vérifié'].map(s =>
+            `<option value="${s}" ${d.statutPaiement === s ? 'selected' : ''}>${s}</option>`
+          ).join('')}
+        </select>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="fermerModal('modal-dossier')">Fermer</button>
+    <button class="btn btn-sm" style="background:var(--orange-dim);color:var(--orange);" onclick="envoyerRelance('${d.id}', '${d.prenom} ${d.nom}')">
+      <span class="iconify" data-icon="tabler:send"></span> Relance email
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="supprimerDossier('${d.id}', '${d.prenom} ${d.nom}')">
+      <span class="iconify" data-icon="tabler:trash"></span> Supprimer
+    </button>
+    <button class="btn btn-primary" onclick="sauvegarderStatuts('${d.id}')">
+      <span class="iconify" data-icon="tabler:device-floppy"></span> Sauvegarder
+    </button>
+  `;
+}
+
+async function sauvegarderStatuts(id) {
+  const statutDossier  = document.getElementById('select-statut-dossier').value;
+  const statutPaiement = document.getElementById('select-statut-paiement').value;
+
+  try {
+    const [r1, r2] = await Promise.all([
+      apiCall('admin_update_statut',   { id, statut: statutDossier }),
+      apiCall('admin_update_paiement', { id, statut: statutPaiement })
+    ]);
+
+    if (r1.status === 'success' && r2.status === 'success') {
+      toast('Statuts mis à jour avec succès.', 'success');
+      fermerModal('modal-dossier');
+      if (state.page === 'dossiers') chargerDossiers();
+      chargerDashboard();
+    } else {
+      toast((r1.message || r2.message || 'Erreur.'), 'error');
+    }
+  } catch(e) {
+    toast('Erreur réseau.', 'error');
+  }
+}
+
+/* ================================================================
+   ACTIONS
+================================================================ */
+async function envoyerRelance(id, nom) {
+  confirmer(
+    'Envoyer une relance',
+    `Envoyer un email de relance à ${nom} (réf. ${id}) ?`,
+    async () => {
+      try {
+        const result = await apiCall('admin_send_relance', { id });
+        toast(result.status === 'success' ? result.message : result.message, result.status === 'success' ? 'success' : 'error');
+      } catch(e) { toast('Erreur réseau.', 'error'); }
+    }
+  );
+}
+
+async function supprimerDossier(id, nom) {
+  confirmer(
+    'Supprimer le dossier',
+    `Supprimer définitivement le dossier de ${nom} (${id}) ? Cette action est irréversible.`,
+    async () => {
+      try {
+        const result = await apiCall('admin_delete_dossier', { id });
+        if (result.status === 'success') {
+          toast(`Dossier ${id} supprimé.`, 'success');
+          fermerModal('modal-dossier');
+          if (state.page === 'dossiers') chargerDossiers();
+          chargerDashboard();
+        } else {
+          toast(result.message || 'Erreur.', 'error');
+        }
+      } catch(e) { toast('Erreur réseau.', 'error'); }
+    }
+  );
+}
+
+async function exporterCSV() {
+  toast('Export en cours…', 'info');
+  try {
+    const result = await apiCall('admin_export_csv');
+    if (result.status !== 'success') throw new Error(result.message);
+
+    const blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `lqd-inscriptions-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`CSV exporté — ${result.total} dossiers.`, 'success');
+  } catch(e) {
+    toast('Erreur export : ' + e.message, 'error');
+  }
+}
+
+/* ================================================================
+   RENSEIGNEMENTS
+================================================================ */
+async function chargerRenseignements() {
+  document.getElementById('rens-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_get_rens');
+    if (result.status !== 'success') throw new Error(result.message);
+    state.rens = result.renseignements;
+    renderTableauRens(result.renseignements);
+  } catch(e) {
+    document.getElementById('rens-table-container').innerHTML =
+      `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+function renderTableauRens(rens) {
+  if (!rens.length) {
+    document.getElementById('rens-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:message-off"></span><p>Aucune demande</p></div>';
+    return;
+  }
+  document.getElementById('rens-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th>
+        <th>Contact</th>
+        <th>Formation(s)</th>
+        <th>Question</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${rens.map(r => `<tr>
+          <td><span class="mono">${r.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${r.date}</span></td>
+          <td>
+            <strong>${r.prenom} ${r.nom}</strong><br/>
+            <span class="mono">${r.telephone}</span>
+            ${r.email ? `<br/><a href="mailto:${r.email}" style="color:var(--teal-l);font-size:11px;">${r.email}</a>` : ''}
+          </td>
+          <td style="font-size:12px;color:var(--text-3);max-width:160px;">${(r.formations||'—').split(' | ').join(', ')}</td>
+          <td style="font-size:12px;color:var(--text-2);max-width:200px;">${(r.question||'—').slice(0, 80)}${(r.question||'').length > 80 ? '…' : ''}</td>
+          <td>${badgeRensStatut(r.statut)}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <a href="tel:${r.telephone.replace(/[\s+]/g,'')}" class="btn btn-success btn-sm">
+                <span class="iconify" data-icon="tabler:phone"></span>
+              </a>
+              ${r.email ? `<a href="mailto:${r.email}" class="btn btn-ghost btn-sm">
+                <span class="iconify" data-icon="tabler:mail"></span>
+              </a>` : ''}
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+/* ================================================================
+   HELPERS UI
+================================================================ */
+function badgeStatut(statut) {
+  const map = { 'En attente': 'badge-orange', 'Confirmé': 'badge-green', 'Annulé': 'badge-red' };
+  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
+}
+
+function badgePaiement(statut) {
+  const map = { 'En attente': 'badge-orange', 'Reçu': 'badge-yellow', 'Vérifié': 'badge-green' };
+  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
+}
+
+function badgeRensStatut(statut) {
+  const map = { 'Nouveau': 'badge-orange', 'En cours': 'badge-teal', 'Traité': 'badge-green' };
+  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
+}
+
+function abrevierFormation(f) {
+  const map = {
+    'Informatique & Bureautique': 'Informatique',
+    'Graphisme & PAO':            'Graphisme',
+    'Sérigraphie':                'Sérigraphie',
+    'Création de sites web':      'Web'
+  };
+  return map[f] || f;
+}
+
+/* ================================================================
+   MODAL
+================================================================ */
+function ouvrirModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function fermerModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+// Fermer modal en cliquant overlay
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) fermerModal(overlay.id);
+  });
+});
+
+/* ================================================================
+   CONFIRM DIALOG
+================================================================ */
+let confirmCallback = null;
+function confirmer(titre, message, callback) {
+  document.getElementById('confirm-title').textContent   = titre;
+  document.getElementById('confirm-message').textContent = message;
+  confirmCallback = callback;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+document.getElementById('confirm-ok').addEventListener('click', () => {
+  fermerConfirm();
+  if (confirmCallback) confirmCallback();
+});
+function fermerConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  confirmCallback = null;
+}
+document.getElementById('confirm-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('confirm-overlay')) fermerConfirm();
+});
+
+/* ================================================================
+   TOAST
+================================================================ */
+function toast(message, type = 'info') {
+  const icons = { success: 'tabler:circle-check', error: 'tabler:circle-x', info: 'tabler:info-circle' };
+  const el    = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span class="iconify" data-icon="${icons[type]}"></span>${message}`;
+  document.getElementById('toast-container').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 350);
+  }, 4500);
+}
+
+/* ================================================================
+   KEYBOARD SHORTCUTS
+================================================================ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => fermerModal(m.id));
+    fermerConfirm();
+    document.getElementById('sidebar').classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
