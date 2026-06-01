@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Régularisation — Les Qualités de Dieu Service</title>
+  <meta name="description" content="Mise en conformité des anciens apprenants — LQD Service" />
+  <link rel="icon" href="icons/logoqds.jpg" type="image/jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+
+  <style>
+    /* ===== VARIABLES (alignées avec index.html) ===== */
+    :root {
+      --teal-900:#04342C;--teal-800:#085041;--teal-700:#0F6E56;
+      --teal-600:#0D7A8A;--teal-500:#1D9E75;--teal-400:#5DCAA5;
+      --teal-100:#9FE1CB;--teal-50:#E1F5EE;
+      --orange-600:#E8901A;--orange-500:#F5A623;--orange-400:#FABD50;
+      --orange-100:#FDE8BB;--orange-50:#FFF6E5;
+      --gray-900:#1A1A2E;--gray-800:#2C2C3E;--gray-700:#444455;
+      --gray-500:#6B7280;--gray-300:#D1D5DB;--gray-100:#F3F4F6;--gray-50:#F9FAFB;
+      --red-500:#E24B4A;--red-50:#FCEBEB;--white:#FFFFFF;
+      --radius-sm:6px;--radius-md:12px;--radius-lg:20px;--radius-xl:32px;
+      --shadow-card:0 2px 16px rgba(0,0,0,0.08);
+      --shadow-btn:0 4px 14px rgba(13,122,138,0.35);
+      --transition:0.25s ease;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.7;color:var(--gray-800);background:var(--gray-50);overflow-x:hidden}
+    h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;line-height:1.25}
+    img{max-width:100%;display:block}
+    a{text-decoration:none;color:inherit}
+    ul{list-style:none}
+    .container{width:100%;max-width:760px;margin:0 auto;padding:0 20px}
+
+    /* ===== TOPBAR ===== */
+    #topbar{background:var(--teal-900);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.18)}
+    .topbar-inner{display:flex;align-items:center;justify-content:space-between;height:60px}
+    .topbar-logo{display:flex;align-items:center;gap:10px;color:var(--white);font-family:'Sora',sans-serif;font-weight:700;font-size:14px}
+    .topbar-logo img{height:38px;border-radius:6px}
+    .topbar-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.75);transition:color var(--transition)}
+    .topbar-back:hover{color:var(--orange-400)}
+
+    /* ===== HERO BANDEAU ===== */
+    #page-hero{background:linear-gradient(135deg,var(--teal-900) 0%,var(--teal-700) 100%);padding:48px 0 40px;position:relative;overflow:hidden}
+    #page-hero::before{content:'';position:absolute;top:-80px;right:-80px;width:320px;height:320px;border-radius:50%;background:rgba(245,166,35,0.10)}
+    .hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(245,166,35,0.18);color:var(--orange-400);border:1px solid rgba(245,166,35,0.3);border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:16px}
+    .hero-title{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;color:var(--white);margin-bottom:10px}
+    .hero-title span{color:var(--orange-400)}
+    .hero-desc{font-size:15px;color:rgba(255,255,255,0.72);max-width:560px;line-height:1.75}
+    .hero-notice{margin-top:20px;display:flex;align-items:flex-start;gap:10px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.25);border-radius:var(--radius-md);padding:14px 16px}
+    .hero-notice .iconify{color:var(--orange-400);font-size:18px;flex-shrink:0;margin-top:2px}
+    .hero-notice p{font-size:13px;color:rgba(255,255,255,0.82);line-height:1.65;margin:0}
+
+    /* ===== STEPPER ===== */
+    #stepper-wrap{padding:32px 0 0}
+    .stepper{display:flex;align-items:flex-start;gap:0;margin-bottom:36px;position:relative;overflow-x:auto;padding-bottom:4px}
+    .stepper::before{content:'';position:absolute;top:18px;left:18px;right:18px;height:2px;background:var(--gray-200);z-index:0}
+    .step-item{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:80px;position:relative;z-index:1}
+    .step-dot{width:36px;height:36px;border-radius:50%;border:2px solid var(--gray-300);background:var(--white);display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:var(--gray-400);transition:all 0.3s ease}
+    .step-label{font-size:11px;font-weight:600;color:var(--gray-400);text-align:center;line-height:1.3;max-width:70px;transition:color 0.3s ease}
+    .step-item.active .step-dot{border-color:var(--teal-600);background:var(--teal-600);color:var(--white);box-shadow:0 0 0 4px rgba(13,122,138,0.15)}
+    .step-item.active .step-label{color:var(--teal-700);font-weight:700}
+    .step-item.done .step-dot{border-color:var(--teal-500);background:var(--teal-500);color:var(--white)}
+    .step-item.done .step-label{color:var(--teal-600)}
+
+    /* ===== CARTE FORMULAIRE ===== */
+    .form-card{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-card);overflow:hidden;margin-bottom:32px}
+    .form-card-header{background:linear-gradient(135deg,var(--teal-700),var(--teal-600));padding:20px 28px;display:flex;align-items:center;gap:14px}
+    .form-card-header .step-num{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--white);flex-shrink:0}
+    .form-card-header h2{font-size:16px;font-weight:700;color:var(--white);margin:0}
+    .form-card-header p{font-size:12px;color:rgba(255,255,255,0.7);margin:2px 0 0}
+    .form-card-body{padding:28px}
+
+    /* ===== CHAMPS ===== */
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-row.full{grid-template-columns:1fr}
+    .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+    .form-group:last-child{margin-bottom:0}
+    label{font-size:13px;font-weight:600;color:var(--gray-700)}
+    label .req{color:var(--red-500);margin-left:2px}
+    label .opt{font-size:11px;font-weight:400;color:var(--gray-400);margin-left:4px}
+    input,select,textarea{width:100%;padding:11px 14px;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--gray-800);background:var(--white);transition:border-color var(--transition),box-shadow var(--transition);outline:none}
+    input::placeholder,textarea::placeholder{color:var(--gray-400)}
+    input:focus,select:focus,textarea:focus{border-color:var(--teal-500);box-shadow:0 0 0 3px rgba(13,122,138,0.12)}
+    input.error,select.error,textarea.error{border-color:var(--red-500);box-shadow:0 0 0 3px rgba(226,75,74,0.10)}
+    .field-error{font-size:12px;color:var(--red-500);display:none}
+    .field-error.visible{display:block}
+    textarea{resize:vertical;min-height:80px}
+    select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;appearance:none}
+
+    /* ===== SÉPARATEUR DE SECTION ===== */
+    .section-sep{display:flex;align-items:center;gap:12px;margin:24px 0 20px}
+    .section-sep span{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--teal-700);white-space:nowrap}
+    .section-sep::before,.section-sep::after{content:'';flex:1;height:1px;background:var(--gray-100)}
+
+    /* ===== UPLOAD FICHIERS ===== */
+    .upload-zone{border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:20px;text-align:center;cursor:pointer;transition:border-color var(--transition),background var(--transition);position:relative}
+    .upload-zone:hover,.upload-zone.drag-over{border-color:var(--teal-500);background:var(--teal-50)}
+    .upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .upload-zone .icon-upload{font-size:28px;color:var(--teal-400);margin-bottom:8px}
+    .upload-zone p{font-size:13px;color:var(--gray-500);margin:0}
+    .upload-zone .hint{font-size:11px;color:var(--gray-400);margin-top:4px}
+    .file-preview{display:none;align-items:center;gap:10px;background:var(--teal-50);border:1px solid var(--teal-100);border-radius:var(--radius-md);padding:10px 14px;margin-top:10px}
+    .file-preview.visible{display:flex}
+    .file-preview .file-icon{font-size:22px;color:var(--teal-600);flex-shrink:0}
+    .file-preview .file-name{font-size:13px;font-weight:500;color:var(--teal-800);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .remove-file{background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:18px;transition:color var(--transition);flex-shrink:0;line-height:1}
+    .remove-file:hover{color:var(--red-500)}
+
+    /* ===== CANVAS SIGNATURE ===== */
+    .signature-wrap{border:2px solid var(--gray-300);border-radius:var(--radius-md);overflow:hidden;position:relative;background:var(--white)}
+    .signature-wrap.signed{border-color:var(--teal-500)}
+    #sigCanvas{display:block;width:100%;height:160px;cursor:crosshair;touch-action:none}
+    .sig-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--gray-50);border-top:1px solid var(--gray-100)}
+    .sig-toolbar span{font-size:12px;color:var(--gray-400)}
+    .sig-clear{background:none;border:1px solid var(--gray-300);border-radius:var(--radius-sm);padding:4px 12px;font-size:12px;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all var(--transition)}
+    .sig-clear:hover{background:var(--red-50);border-color:var(--red-500);color:var(--red-500)}
+
+    /* ===== CLAUSE ===== */
+    .clause-box{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:18px;font-size:13px;color:var(--gray-600);line-height:1.75;margin-bottom:20px}
+    .clause-box strong{color:var(--gray-800)}
+    .clause-box .article{margin-top:10px;padding-left:12px;border-left:3px solid var(--teal-200)}
+    .checkbox-group{display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--orange-50);border:1px solid var(--orange-100);border-radius:var(--radius-md);margin-bottom:12px;cursor:pointer}
+    .checkbox-group input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:var(--teal-600);cursor:pointer}
+    .checkbox-group label{font-size:13px;color:var(--gray-700);cursor:pointer;line-height:1.6}
+    .checkbox-group label strong{color:var(--gray-900)}
+
+    /* ===== BOUTONS NAVIGATION ===== */
+    .form-nav{display:flex;gap:12px;margin-top:28px}
+    .btn-prev{display:inline-flex;align-items:center;gap:8px;background:var(--white);color:var(--gray-700);border:1.5px solid var(--gray-300);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;padding:12px 22px;border-radius:var(--radius-md);cursor:pointer;transition:all var(--transition)}
+    .btn-prev:hover{background:var(--gray-50);border-color:var(--gray-400)}
+    .btn-next{display:inline-flex;align-items:center;gap:8px;background:var(--teal-600);color:var(--white);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;padding:12px 28px;border-radius:var(--radius-md);border:none;cursor:pointer;box-shadow:var(--shadow-btn);transition:all var(--transition);flex:1;justify-content:center}
+    .btn-next:hover{background:var(--teal-700);transform:translateY(-1px)}
+    .btn-next:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .btn-submit-final{background:linear-gradient(135deg,var(--orange-600),var(--orange-500))}
+    .btn-submit-final:hover{background:linear-gradient(135deg,#D4821A,var(--orange-600))}
+
+    /* ===== INDICATEUR DE PROGRESSION ===== */
+    .progress-bar-wrap{height:4px;background:var(--gray-100);border-radius:2px;margin-bottom:28px}
+    .progress-bar{height:4px;background:linear-gradient(90deg,var(--teal-600),var(--teal-400));border-radius:2px;transition:width 0.4s ease}
+
+    /* ===== SUCCESS STATE ===== */
+    #success-block{display:none;text-align:center;padding:48px 28px}
+    #success-block .success-icon{width:72px;height:72px;background:var(--teal-50);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--teal-500);margin:0 auto 24px}
+    #success-block h2{font-size:1.5rem;font-weight:800;color:var(--gray-900);margin-bottom:12px}
+    #success-block p{font-size:15px;color:var(--gray-500);max-width:440px;margin:0 auto 8px;line-height:1.7}
+    #success-block .success-id{display:inline-block;background:var(--teal-50);border:1px solid var(--teal-200);color:var(--teal-700);font-family:'Sora',sans-serif;font-weight:700;font-size:17px;padding:10px 24px;border-radius:var(--radius-md);margin:16px 0 24px;letter-spacing:0.04em}
+    .btn-retour{display:inline-flex;align-items:center;gap:8px;background:var(--teal-600);color:var(--white);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;padding:13px 28px;border-radius:var(--radius-md);text-decoration:none;margin-top:8px}
+
+    /* ===== TOAST ===== */
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--gray-900);color:var(--white);font-size:14px;font-weight:500;padding:12px 22px;border-radius:var(--radius-md);z-index:9999;opacity:0;transition:all 0.35s ease;white-space:nowrap;max-width:90vw;text-align:center}
+    #toast.error-toast{background:var(--red-500)}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* ===== SPINNER ===== */
+    .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:var(--white);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:600px){
+      .form-row{grid-template-columns:1fr}
+      .form-card-body{padding:20px}
+      .hero-title{font-size:1.4rem}
+      .topbar-logo span{display:none}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== TOPBAR ===== -->
+  <header id="topbar">
+    <div class="container">
+      <div class="topbar-inner">
+        <a href="index.html" class="topbar-logo">
+          <img src="icons/logoqds.jpg" alt="LQD" />
+          <span>Les Qualités de Dieu Service</span>
+        </a>
+        <a href="index.html" class="topbar-back">
+          <span class="iconify" data-icon="tabler:arrow-left"></span>
+          Retour au site
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HÉRO BANDEAU ===== -->
+  <section id="page-hero">
+    <div class="container">
+      <div class="hero-tag">
+        <span class="iconify" data-icon="tabler:refresh-alert"></span>
+        Mise en conformité
+      </div>
+      <h1 class="hero-title">Régularisation <span>anciens apprenants</span></h1>
+      <p class="hero-desc">
+        Vous avez effectué votre paiement sur place et suivi une formation dans notre centre.
+        Ce formulaire vous permet d'intégrer officiellement la base de données LQD Service
+        et d'obtenir votre identifiant apprenant unique.
+      </p>
+      <div class="hero-notice">
+        <span class="iconify" data-icon="tabler:shield-lock"></span>
+        <p>Vos données sont protégées et utilisées uniquement dans le cadre administratif de LQD Service.
+           Toute fausse déclaration est passible de sanctions conformément aux lois en vigueur au Bénin.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CONTENU PRINCIPAL ===== -->
+  <main>
+    <div id="stepper-wrap">
+      <div class="container">
+
+        <!-- Stepper -->
+        <div class="stepper" id="stepper" role="list" aria-label="Étapes du formulaire">
+          <div class="step-item active" id="step-dot-1" role="listitem">
+            <div class="step-dot">1</div>
+            <span class="step-label">Identité</span>
+          </div>
+          <div class="step-item" id="step-dot-2" role="listitem">
+            <div class="step-dot">2</div>
+            <span class="step-label">Filiation</span>
+          </div>
+          <div class="step-item" id="step-dot-3" role="listitem">
+            <div class="step-dot">3</div>
+            <span class="step-label">Formation</span>
+          </div>
+          <div class="step-item" id="step-dot-4" role="listitem">
+            <div class="step-dot">4</div>
+            <span class="step-label">Pièces</span>
+          </div>
+          <div class="step-item" id="step-dot-5" role="listitem">
+            <div class="step-dot">5</div>
+            <span class="step-label">Engagement</span>
+          </div>
+        </div>
+
+        <!-- Barre de progression -->
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progressBar" style="width:20%"></div>
+        </div>
+
+        <!-- ==================== ÉTAPE 1 — Informations personnelles ==================== -->
+        <div class="form-card" id="form-step-1">
+          <div class="form-card-header">
+            <div class="step-num">1</div>
+            <div>
+              <h2>Informations personnelles</h2>
+              <p>État civil et coordonnées de l'apprenant</p>
+            </div>
+          </div>
+          <div class="form-card-body">
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prenom">Prénom(s) <span class="req">*</span></label>
+                <input type="text" id="prenom" name="prenom" placeholder="Ex : Kouassi Jean-Marie" autocomplete="given-name" />
+                <span class="field-error" id="err-prenom">Veuillez saisir votre prénom.</span>
+              </div>
+              <div class="form-group">
+                <label for="nom">Nom de famille <span class="req">*</span></label>
+                <input type="text" id="nom" name="nom" placeholder="Ex : AGOSSOU" autocomplete="family-name" />
+                <span class="field-error" id="err-nom">Veuillez saisir votre nom.</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sexe">Sexe <span class="req">*</span></label>
+                <select id="sexe" name="sexe">
+                  <option value="">— Sélectionner —</option>
+                  <option value="Masculin">Masculin</option>
+                  <option value="Féminin">Féminin</option>
+                </select>
+                <span class="field-error" id="err-sexe">Veuillez sélectionner votre sexe.</span>
+              </div>
+              <div class="form-group">
+                <label for="dateNaissance">Date de naissance <span class="req">*</span></label>
+                <input type="date" id="dateNaissance" name="dateNaissance" max="" />
+                <span class="field-error" id="err-dateNaissance">Veuillez indiquer votre date de naissance.</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="lieuNaissance">Lieu de naissance <span class="req">*</span></label>
+                <input type="text" id="lieuNaissance" name="lieuNaissance" placeholder="Ex : Cotonou, Bénin" />
+                <span class="field-error" id="err-lieuNaissance">Indiquez votre lieu de naissance.</span>
+              </div>
+              <div class="form-group">
+                <label for="nationalite">Nationalité <span class="req">*</span></label>
+                <input type="text" id="nationalite" name="nationalite" placeholder="Ex : Béninoise" value="Béninoise" />
+                <span class="field-error" id="err-nationalite">Indiquez votre nationalité.</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="telephone">Téléphone <span class="req">*</span></label>
+                <input type="tel" id="telephone" name="telephone" placeholder="+229 01 XX XX XX XX" autocomplete="tel" />
+                <span class="field-error" id="err-telephone">Numéro de téléphone invalide.</span>
+              </div>
+              <div class="form-group">
+                <label for="email">Adresse email <span class="opt">(facultatif)</span></label>
+                <input type="email" id="email" name="email" placeholder="votre@email.com" autocomplete="email" />
+                <span class="field-error" id="err-email">Adresse email invalide.</span>
+              </div>
+            </div>
+
+            <div class="form-row full">
+              <div class="form-group">
+                <label for="adresse">Adresse de résidence <span class="req">*</span></label>
+                <input type="text" id="adresse" name="adresse" placeholder="Ex : Comé, Quartier Hongodé, Bénin" autocomplete="street-address" />
+                <span class="field-error" id="err-adresse">Veuillez indiquer votre adresse.</span>
+              </div>
+            </div>
+
+            <div class="form-nav">
+              <button type="button" class="btn-next" id="btn-next-1" onclick="allerEtape(2)">
+                Suivant — Filiation parentale
+                <span class="iconify" data-icon="tabler:arrow-right"></span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== ÉTAPE 2 — Affiliation parentale ==================== -->
+        <div class="form-card" id="form-step-2" style="display:none">
+          <div class="form-card-header">
+            <div class="step-num">2</div>
+            <div>
+              <h2>Filiation parentale</h2>
+              <p>Informations sur les parents ou tuteur légal</p>
+            </div>
+          </div>
+          <div class="form-card-body">
+
+            <div class="section-sep"><span>Mère</span></div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prenomMere">Prénom(s) de la mère <span class="req">*</span></label>
+                <input type="text" id="prenomMere" name="prenomMere" placeholder="Ex : Aïchatou" />
+                <span class="field-error" id="err-prenomMere">Champ requis.</span>
+              </div>
+              <div class="form-group">
+                <label for="nomMere">Nom de la mère <span class="req">*</span></label>
+                <input type="text" id="nomMere" name="nomMere" placeholder="Ex : HOUNSOU" />
+                <span class="field-error" id="err-nomMere">Champ requis.</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="telephoneMere">Téléphone de la mère <span class="opt">(facultatif)</span></label>
+                <input type="tel" id="telephoneMere" name="telephoneMere" placeholder="+229 01 XX XX XX XX" />
+              </div>
+              <div class="form-group">
+                <label for="professionMere">Profession de la mère <span class="opt">(facultatif)</span></label>
+                <input type="text" id="professionMere" name="professionMere" placeholder="Ex : Commerçante" />
+              </div>
+            </div>
+
+            <div class="section-sep"><span>Père</span></div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prenomPere">Prénom(s) du père <span class="req">*</span></label>
+                <input type="text" id="prenomPere" name="prenomPere" placeholder="Ex : Christophe" />
+                <span class="field-error" id="err-prenomPere">Champ requis.</span>
+              </div>
+              <div class="form-group">
+                <label for="nomPere">Nom du père <span class="req">*</span></label>
+                <input type="text" id="nomPere" name="nomPere" placeholder="Ex : AGOSSOU" />
+                <span class="field-error" id="err-nomPere">Champ requis.</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="telephonePere">Téléphone du père <span class="opt">(facultatif)</span></label>
+                <input type="tel" id="telephonePere" name="telephonePere" placeholder="+229 01 XX XX XX XX" />
+              </div>
+              <div class="form-group">
+                <label for="professionPere">Profession du père <span class="opt">(facultatif)</span></label>
+                <input type="text" id="professionPere" name="professionPere" placeholder="Ex : Enseignant" />
+              </div>
+            </div>
+
+            <div class="section-sep"><span>Tuteur légal <span style="font-weight:400;color:var(--gray-400)">(si différent des parents)</span></span></div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prenomTuteur">Prénom(s) du tuteur <span class="opt">(facultatif)</span></label>
+                <input type="text" id="prenomTuteur" name="prenomTuteur" placeholder="Ex : Bernadette" />
+              </div>
+              <div class="form-group">
+                <label for="nomTuteur">Nom du tuteur <span class="opt">(facultatif)</span></label>
+                <input type="text" id="nomTuteur" name="nomTuteur" placeholder="Ex : KPADONOU" />
+              </div>
+            </div>
+
+            <div class="form-nav">
+              <button type="button" class="btn-prev" onclick="allerEtape(1)">
+                <span class="iconify" data-icon="tabler:arrow-left"></span>
+                Retour
+              </button>
+              <button type="button" class="btn-next" onclick="allerEtape(3)">
+                Suivant — Formation
+                <span class="iconify" data-icon="tabler:arrow-right"></span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== ÉTAPE 3 — Filière & Formation ==================== -->
+        <div class="form-card" id="form-step-3" style="display:none">
+          <div class="form-card-header">
+            <div class="step-num">3</div>
+            <div>
+              <h2>Filière &amp; Formation suivie</h2>
+              <p>Informations sur votre parcours au centre</p>
+            </div>
+          </div>
+          <div class="form-card-body">
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="filiere">Filière / Formation suivie <span class="req">*</span></label>
+                <select id="filiere" name="filiere">
+                  <option value="">— Sélectionner —</option>
+                  <option value="Informatique &amp; Bureautique">Informatique &amp; Bureautique</option>
+                  <option value="Graphisme &amp; PAO">Graphisme &amp; PAO</option>
+                  <option value="Sérigraphie">Sérigraphie</option>
+                  <option value="Création de sites web">Création de sites web</option>
+                  <option value="Autre">Autre (préciser ci-dessous)</option>
+                </select>
+                <span class="field-error" id="err-filiere">Veuillez sélectionner une filière.</span>
+              </div>
+              <div class="form-group">
+                <label for="dureeFormation">Durée de la formation <span class="req">*</span></label>
+                <select id="dureeFormation" name="dureeFormation">
+                  <option value="">— Sélectionner —</option>
+                  <option value="1 mois">1 mois</option>
+                  <option value="2 mois">2 mois</option>
+                  <option value="3 mois">3 mois</option>
+                  <option value="6 mois">6 mois</option>
+                  <option value="1 an">1 an</option>
+                  <option value="Plus d'1 an">Plus d'1 an</option>
+                </select>
+                <span class="field-error" id="err-dureeFormation">Indiquez la durée.</span>
+              </div>
+            </div>
+
+            <!-- Champ conditionnel si "Autre" -->
+            <div class="form-group" id="autre-filiere-wrap" style="display:none">
+              <label for="autreFiliere">Précisez la filière <span class="req">*</span></label>
+              <input type="text" id="autreFiliere" name="autreFiliere" placeholder="Ex : Maintenance informatique" />
+              <span class="field-error" id="err-autreFiliere">Veuillez préciser la filière.</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dateEntree">Date d'entrée en formation <span class="req">*</span></label>
+                <input type="date" id="dateEntree" name="dateEntree" />
+                <span class="field-error" id="err-dateEntree">Indiquez la date d'entrée.</span>
+              </div>
+              <div class="form-group">
+                <label for="dateFin">Date de fin de formation <span class="req">*</span></label>
+                <input type="date" id="dateFin" name="dateFin" />
+                <span class="field-error" id="err-dateFin">Indiquez la date de fin.</span>
+              </div>
+            </div>
+
+            <div class="form-row full">
+              <div class="form-group">
+                <label for="niveauAtteint">Niveau atteint / Module complété <span class="opt">(facultatif)</span></label>
+                <input type="text" id="niveauAtteint" name="niveauAtteint" placeholder="Ex : Niveau 2 — Photoshop avancé" />
+              </div>
+            </div>
+
+            <div class="form-row full">
+              <div class="form-group">
+                <label for="montantPaye">Montant total payé au centre <span class="req">*</span> <span style="font-size:11px;color:var(--gray-400)">(en F CFA)</span></label>
+                <input type="number" id="montantPaye" name="montantPaye" placeholder="Ex : 45000" min="0" step="500" />
+                <span class="field-error" id="err-montantPaye">Veuillez indiquer le montant payé.</span>
+              </div>
+            </div>
+
+            <div class="form-row full">
+              <div class="form-group">
+                <label for="observationFormation">Observations / Remarques <span class="opt">(facultatif)</span></label>
+                <textarea id="observationFormation" name="observationFormation" placeholder="Informations complémentaires sur votre parcours…" rows="3"></textarea>
+              </div>
+            </div>
+
+            <div class="form-nav">
+              <button type="button" class="btn-prev" onclick="allerEtape(2)">
+                <span class="iconify" data-icon="tabler:arrow-left"></span>
+                Retour
+              </button>
+              <button type="button" class="btn-next" onclick="allerEtape(4)">
+                Suivant — Pièces justificatives
+                <span class="iconify" data-icon="tabler:arrow-right"></span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== ÉTAPE 4 — Pièces justificatives ==================== -->
+        <div class="form-card" id="form-step-4" style="display:none">
+          <div class="form-card-header">
+            <div class="step-num">4</div>
+            <div>
+              <h2>Pièces justificatives</h2>
+              <p>Documents d'identité valides à fournir</p>
+            </div>
+          </div>
+          <div class="form-card-body">
+
+            <!-- Type de pièce -->
+            <div class="form-group">
+              <label for="typePiece">Type de pièce d'identité <span class="req">*</span></label>
+              <select id="typePiece" name="typePiece">
+                <option value="">— Sélectionner le type —</option>
+                <option value="CIP (Certificat d'Identification Personnelle)">CIP — Certificat d'Identification Personnelle</option>
+                <option value="CNIB (Carte Nationale d'Identité Biométrique)">CNIB — Carte Nationale d'Identité Biométrique</option>
+                <option value="Acte de naissance sécurisé">Acte de naissance sécurisé</option>
+              </select>
+              <span class="field-error" id="err-typePiece">Sélectionnez le type de pièce.</span>
+            </div>
+
+            <!-- Numéro de pièce -->
+            <div class="form-group">
+              <label for="numeroPiece">Numéro de la pièce d'identité <span class="req">*</span></label>
+              <input type="text" id="numeroPiece" name="numeroPiece" placeholder="Ex : CIP123456789" />
+              <span class="field-error" id="err-numeroPiece">Saisissez le numéro de la pièce.</span>
+            </div>
+
+            <!-- Upload pièce -->
+            <div class="form-group">
+              <label>Copie scannée / photo de la pièce <span class="req">*</span>
+                <span style="font-size:11px;font-weight:400;color:var(--gray-400)">JPG, PNG ou PDF — max 5 Mo</span>
+              </label>
+              <div class="upload-zone" id="zone-piece" ondragover="onDragOver(event,'zone-piece')" ondragleave="onDragLeave('zone-piece')" ondrop="onDrop(event,'piece1','zone-piece')">
+                <input type="file" id="piece1" name="piece1" accept="image/jpeg,image/png,application/pdf" onchange="onFileChange('piece1','preview-piece1','zone-piece')" />
+                <div class="icon-upload"><span class="iconify" data-icon="tabler:file-certificate"></span></div>
+                <p>Glissez votre pièce ici ou cliquez pour sélectionner</p>
+                <p class="hint">CIP / CNIB / Acte de naissance sécurisé</p>
+              </div>
+              <div class="file-preview" id="preview-piece1">
+                <span class="iconify file-icon" data-icon="tabler:file-check"></span>
+                <span class="file-name" id="name-piece1">—</span>
+                <button type="button" class="remove-file" onclick="supprimerFichier('piece1','preview-piece1','zone-piece')" aria-label="Supprimer">
+                  <span class="iconify" data-icon="tabler:x"></span>
+                </button>
+              </div>
+              <span class="field-error" id="err-piece1">La pièce d'identité est obligatoire.</span>
+            </div>
+
+            <!-- Upload photo -->
+            <div class="form-group">
+              <label>Photo d'identité récente <span class="req">*</span>
+                <span style="font-size:11px;font-weight:400;color:var(--gray-400)">Format 35×45 mm — fond blanc — moins de 6 mois</span>
+              </label>
+              <div class="upload-zone" id="zone-photo" ondragover="onDragOver(event,'zone-photo')" ondragleave="onDragLeave('zone-photo')" ondrop="onDrop(event,'photo','zone-photo')">
+                <input type="file" id="photo" name="photo" accept="image/jpeg,image/png" onchange="onFileChange('photo','preview-photo','zone-photo')" />
+                <div class="icon-upload"><span class="iconify" data-icon="tabler:camera"></span></div>
+                <p>Glissez votre photo ici ou cliquez pour sélectionner</p>
+                <p class="hint">JPG ou PNG uniquement — max 3 Mo</p>
+              </div>
+              <div class="file-preview" id="preview-photo">
+                <span class="iconify file-icon" data-icon="tabler:photo-check"></span>
+                <span class="file-name" id="name-photo">—</span>
+                <button type="button" class="remove-file" onclick="supprimerFichier('photo','preview-photo','zone-photo')" aria-label="Supprimer">
+                  <span class="iconify" data-icon="tabler:x"></span>
+                </button>
+              </div>
+              <span class="field-error" id="err-photo">La photo d'identité est obligatoire.</span>
+            </div>
+
+            <div class="form-nav">
+              <button type="button" class="btn-prev" onclick="allerEtape(3)">
+                <span class="iconify" data-icon="tabler:arrow-left"></span>
+                Retour
+              </button>
+              <button type="button" class="btn-next" onclick="allerEtape(5)">
+                Suivant — Engagement &amp; Signature
+                <span class="iconify" data-icon="tabler:arrow-right"></span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== ÉTAPE 5 — Engagement & Signature ==================== -->
+        <div class="form-card" id="form-step-5" style="display:none">
+          <div class="form-card-header" style="background:linear-gradient(135deg,var(--teal-900),var(--teal-700))">
+            <div class="step-num">5</div>
+            <div>
+              <h2>Engagement &amp; Signature</h2>
+              <p>Lecture et acceptation des clauses légales</p>
+            </div>
+          </div>
+          <div class="form-card-body">
+
+            <!-- Clause légale -->
+            <div class="clause-box">
+              <strong>DÉCLARATION SUR L'HONNEUR — MISE EN CONFORMITÉ</strong>
+              <div class="article">
+                <p>Je soussigné(e), déclare sur l'honneur que toutes les informations fournies dans ce formulaire
+                de régularisation sont exactes, complètes et conformes à la réalité.</p>
+              </div>
+              <div class="article" style="margin-top:10px">
+                <p><strong>Article 1 — Authenticité des données :</strong>
+                Je certifie que les informations personnelles, parentales et relatives à ma formation sont véridiques.
+                Toute fausse déclaration ou falsification de document engage ma responsabilité pénale conformément
+                aux articles 305 et suivants du Code Pénal béninois relatifs au faux et usage de faux.</p>
+              </div>
+              <div class="article" style="margin-top:10px">
+                <p><strong>Article 2 — Protection des données :</strong>
+                Les données collectées sont traitées exclusivement par LES QUALITÉS DE DIEU SERVICE SARL
+                à des fins administratives et pédagogiques. Elles ne seront pas cédées à des tiers sans
+                consentement préalable, conformément à la Loi n° 2017-20 portant code du numérique en République du Bénin.</p>
+              </div>
+              <div class="article" style="margin-top:10px">
+                <p><strong>Article 3 — Identifiant apprenant :</strong>
+                À la validation de ce dossier, un identifiant unique (ID apprenant) sera attribué
+                et m'appartiendra de manière permanente dans le système LQD Service.</p>
+              </div>
+            </div>
+
+            <!-- Checkbox consentements -->
+            <div class="checkbox-group">
+              <input type="checkbox" id="clause1" name="clause1" />
+              <label for="clause1">
+                Je certifie que toutes les informations et documents fournis sont <strong>authentiques et exacts</strong>.
+                Je suis informé(e) que toute fausse déclaration est punissable par la loi.
+              </label>
+            </div>
+            <span class="field-error" id="err-clause1">Vous devez cocher cette case pour continuer.</span>
+
+            <div class="checkbox-group">
+              <input type="checkbox" id="clause2" name="clause2" />
+              <label for="clause2">
+                J'accepte que mes données personnelles soient enregistrées dans la base de données
+                de <strong>LES QUALITÉS DE DIEU SERVICE SARL</strong> à des fins administratives.
+              </label>
+            </div>
+            <span class="field-error" id="err-clause2">Veuillez accepter cette clause.</span>
+
+            <!-- Signature numérique -->
+            <div class="form-group" style="margin-top:8px">
+              <label>Signature numérique <span class="req">*</span>
+                <span style="font-size:11px;font-weight:400;color:var(--gray-400)">Signez directement avec votre doigt ou la souris</span>
+              </label>
+              <div class="signature-wrap" id="sigWrap">
+                <canvas id="sigCanvas" width="700" height="160" role="img" aria-label="Zone de signature"></canvas>
+                <div class="sig-toolbar">
+                  <span id="sig-hint">Signez dans cet espace</span>
+                  <button type="button" class="sig-clear" id="sigClearBtn" onclick="effacerSignature()">
+                    <span class="iconify" data-icon="tabler:trash"></span> Effacer
+                  </button>
+                </div>
+              </div>
+              <span class="field-error" id="err-signature">Veuillez apposer votre signature.</span>
+            </div>
+
+            <div class="form-nav">
+              <button type="button" class="btn-prev" onclick="allerEtape(4)">
+                <span class="iconify" data-icon="tabler:arrow-left"></span>
+                Retour
+              </button>
+              <button type="button" class="btn-next btn-submit-final" id="btnSoumettre" onclick="soumettre()">
+                <span class="iconify" data-icon="tabler:send"></span>
+                Soumettre mon dossier
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== SUCCÈS ==================== -->
+        <div class="form-card" id="success-block" style="display:none">
+          <div id="success-inner" style="text-align:center;padding:48px 28px">
+            <div style="width:72px;height:72px;background:var(--teal-50);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--teal-500);margin:0 auto 24px">
+              <span class="iconify" data-icon="tabler:circle-check"></span>
+            </div>
+            <h2 style="font-size:1.5rem;font-weight:800;color:var(--gray-900);margin-bottom:12px">
+              Dossier soumis avec succès !
+            </h2>
+            <p style="font-size:15px;color:var(--gray-500);max-width:440px;margin:0 auto;line-height:1.7">
+              Votre dossier de régularisation a été enregistré. Notre équipe le traitera
+              sous <strong>48 heures</strong> et vous contactera pour confirmer votre identifiant apprenant.
+            </p>
+            <div class="success-id" id="successIdDisplay">—</div>
+            <p style="font-size:13px;color:var(--gray-400);margin-bottom:20px">
+              Conservez ce numéro de référence. Un email de confirmation vous a été envoyé si vous avez renseigné une adresse.
+            </p>
+            <a href="index.html" class="btn-retour">
+              <span class="iconify" data-icon="tabler:home"></span>
+              Retour à l'accueil
+            </a>
+          </div>
+        </div>
+
+      </div><!-- /container -->
+    </div><!-- /stepper-wrap -->
+  </main>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <script>
+  /* =====================================================================
+     RÉGULARISATION — Script principal
+     Variables globales et état du formulaire
+     ===================================================================== */
+
+  /* URL du Google Apps Script — à remplacer par l'URL déployée */
+  const GAS_URL = 'VOTRE_URL_GAS_DEPLOYEE_ICI';
+
+  /* Étape courante */
+  let etapeCourante = 1;
+  const NB_ETAPES   = 5;
+
+  /* Données fichiers (base64) */
+  const fichiers = {
+    piece1: { base64: '', mimeType: '', nom: '' },
+    photo:  { base64: '', mimeType: '', nom: '' }
+  };
+
+  /* Signature */
+  let signeDessin = false;
+
+  /* =====================================================================
+     NAVIGATION ENTRE ÉTAPES
+     ===================================================================== */
+  function allerEtape(cible) {
+    if (cible > etapeCourante && !validerEtape(etapeCourante)) return;
+
+    document.getElementById('form-step-' + etapeCourante).style.display = 'none';
+    document.getElementById('form-step-' + cible).style.display = 'block';
+
+    /* Mettre à jour le stepper */
+    for (let i = 1; i <= NB_ETAPES; i++) {
+      const dot = document.getElementById('step-dot-' + i);
+      dot.classList.remove('active', 'done');
+      if (i < cible)  dot.classList.add('done');
+      if (i === cible) dot.classList.add('active');
+    }
+
+    /* Barre de progression */
+    document.getElementById('progressBar').style.width = (cible / NB_ETAPES * 100) + '%';
+
+    etapeCourante = cible;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* =====================================================================
+     VALIDATION PAR ÉTAPE
+     ===================================================================== */
+  function validerEtape(etape) {
+    let ok = true;
+
+    const check = (id, errId, condFn) => {
+      const el  = document.getElementById(id);
+      const err = document.getElementById(errId);
+      if (!err) return;
+      const invalide = condFn ? !condFn(el) : !el || !el.value.trim();
+      el && el.classList.toggle('error', invalide);
+      err.classList.toggle('visible', invalide);
+      if (invalide) ok = false;
+    };
+
+    if (etape === 1) {
+      check('prenom',        'err-prenom',        el => el.value.trim().length >= 2);
+      check('nom',           'err-nom',           el => el.value.trim().length >= 2);
+      check('sexe',          'err-sexe',          el => !!el.value);
+      check('dateNaissance', 'err-dateNaissance', el => !!el.value);
+      check('lieuNaissance', 'err-lieuNaissance', el => el.value.trim().length >= 2);
+      check('nationalite',   'err-nationalite',   el => el.value.trim().length >= 2);
+      check('telephone',     'err-telephone',     el => /^\+?[\d\s\-]{8,20}$/.test(el.value.trim()));
+      check('adresse',       'err-adresse',       el => el.value.trim().length >= 4);
+
+      /* Email facultatif — valider si renseigné */
+      const emailEl = document.getElementById('email');
+      const emailErr = document.getElementById('err-email');
+      if (emailEl.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) {
+        emailEl.classList.add('error');
+        emailErr.classList.add('visible');
+        ok = false;
+      } else {
+        emailEl.classList.remove('error');
+        emailErr.classList.remove('visible');
+      }
+    }
+
+    if (etape === 2) {
+      check('prenomMere', 'err-prenomMere', el => el.value.trim().length >= 2);
+      check('nomMere',    'err-nomMere',    el => el.value.trim().length >= 2);
+      check('prenomPere', 'err-prenomPere', el => el.value.trim().length >= 2);
+      check('nomPere',    'err-nomPere',    el => el.value.trim().length >= 2);
+    }
+
+    if (etape === 3) {
+      check('filiere',        'err-filiere',        el => !!el.value);
+      check('dureeFormation', 'err-dureeFormation', el => !!el.value);
+      check('dateEntree',     'err-dateEntree',     el => !!el.value);
+      check('dateFin',        'err-dateFin',        el => !!el.value);
+      check('montantPaye',    'err-montantPaye',    el => el.value !== '' && Number(el.value) >= 0);
+
+      /* Champ "autre filière" conditionnel */
+      if (document.getElementById('filiere').value === 'Autre') {
+        check('autreFiliere', 'err-autreFiliere', el => el.value.trim().length >= 2);
+      }
+
+      /* Date fin > date entrée */
+      const de = document.getElementById('dateEntree').value;
+      const df = document.getElementById('dateFin').value;
+      if (de && df && df < de) {
+        document.getElementById('dateFin').classList.add('error');
+        document.getElementById('err-dateFin').textContent = 'La date de fin doit être postérieure à la date d\'entrée.';
+        document.getElementById('err-dateFin').classList.add('visible');
+        ok = false;
+      }
+    }
+
+    if (etape === 4) {
+      check('typePiece',   'err-typePiece',   el => !!el.value);
+      check('numeroPiece', 'err-numeroPiece', el => el.value.trim().length >= 4);
+
+      /* Fichier pièce */
+      const errPiece = document.getElementById('err-piece1');
+      if (!fichiers.piece1.base64) {
+        errPiece.classList.add('visible');
+        ok = false;
+      } else {
+        errPiece.classList.remove('visible');
+      }
+
+      /* Fichier photo */
+      const errPhoto = document.getElementById('err-photo');
+      if (!fichiers.photo.base64) {
+        errPhoto.classList.add('visible');
+        ok = false;
+      } else {
+        errPhoto.classList.remove('visible');
+      }
+    }
+
+    if (etape === 5) {
+      /* Clause 1 */
+      const c1  = document.getElementById('clause1');
+      const e1  = document.getElementById('err-clause1');
+      if (!c1.checked) { e1.classList.add('visible'); ok = false; }
+      else              { e1.classList.remove('visible'); }
+
+      /* Clause 2 */
+      const c2  = document.getElementById('clause2');
+      const e2  = document.getElementById('err-clause2');
+      if (!c2.checked) { e2.classList.add('visible'); ok = false; }
+      else              { e2.classList.remove('visible'); }
+
+      /* Signature */
+      const errSig = document.getElementById('err-signature');
+      if (!signeDessin) {
+        errSig.classList.add('visible');
+        ok = false;
+      } else {
+        errSig.classList.remove('visible');
+      }
+    }
+
+    if (!ok) afficherToast('Veuillez corriger les champs signalés.', true);
+    return ok;
+  }
+
+  /* =====================================================================
+     UPLOAD FICHIERS — Conversion base64
+     ===================================================================== */
+  function onFileChange(inputId, previewId, zoneId) {
+    const input   = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    const file    = input.files[0];
+    if (!file) return;
+
+    /* Limite de taille : 5 Mo pour pièce, 3 Mo pour photo */
+    const limite = inputId === 'photo' ? 3 : 5;
+    if (file.size > limite * 1024 * 1024) {
+      afficherToast('Fichier trop volumineux (max ' + limite + ' Mo).', true);
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const raw = e.target.result;
+      /* Extraire la partie base64 après la virgule */
+      fichiers[inputId].base64    = raw.split(',')[1] || '';
+      fichiers[inputId].mimeType  = file.type;
+      fichiers[inputId].nom       = file.name;
+
+      /* Afficher la prévisualisation */
+      document.getElementById('name-' + inputId).textContent = file.name;
+      preview.classList.add('visible');
+      document.getElementById(zoneId).style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function supprimerFichier(inputId, previewId, zoneId) {
+    fichiers[inputId] = { base64: '', mimeType: '', nom: '' };
+    document.getElementById(inputId).value = '';
+    document.getElementById(previewId).classList.remove('visible');
+    document.getElementById(zoneId).style.display = '';
+  }
+
+  /* Drag & drop */
+  function onDragOver(e, zoneId) {
+    e.preventDefault();
+    document.getElementById(zoneId).classList.add('drag-over');
+  }
+  function onDragLeave(zoneId) {
+    document.getElementById(zoneId).classList.remove('drag-over');
+  }
+  function onDrop(e, inputId, zoneId) {
+    e.preventDefault();
+    document.getElementById(zoneId).classList.remove('drag-over');
+    const input = document.getElementById(inputId);
+    input.files  = e.dataTransfer.files;
+    input.dispatchEvent(new Event('change'));
+  }
+
+  /* =====================================================================
+     CANVAS SIGNATURE
+     ===================================================================== */
+  (function initSignature() {
+    const canvas  = document.getElementById('sigCanvas');
+    const ctx     = canvas.getContext('2d');
+    const hint    = document.getElementById('sig-hint');
+    let dessin    = false;
+    let dernier   = { x: 0, y: 0 };
+
+    /* Adapter la résolution au ratio pixel */
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width  = rect.width  * (window.devicePixelRatio || 1);
+      canvas.height = rect.height * (window.devicePixelRatio || 1);
+      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      ctx.strokeStyle = '#1A1A2E';
+      ctx.lineWidth   = 2.2;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function debut(e) {
+      e.preventDefault();
+      dessin  = true;
+      dernier = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(dernier.x, dernier.y);
+    }
+
+    function trace(e) {
+      e.preventDefault();
+      if (!dessin) return;
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      dernier = pos;
+      if (!signeDessin) {
+        signeDessin = true;
+        document.getElementById('sigWrap').classList.add('signed');
+        hint.textContent = 'Signature apposée';
+        document.getElementById('err-signature').classList.remove('visible');
+      }
+    }
+
+    function fin(e) {
+      e.preventDefault();
+      dessin = false;
+    }
+
+    canvas.addEventListener('mousedown',  debut);
+    canvas.addEventListener('mousemove',  trace);
+    canvas.addEventListener('mouseup',    fin);
+    canvas.addEventListener('mouseleave', fin);
+    canvas.addEventListener('touchstart', debut, { passive: false });
+    canvas.addEventListener('touchmove',  trace, { passive: false });
+    canvas.addEventListener('touchend',   fin);
+  })();
+
+  function effacerSignature() {
+    const canvas = document.getElementById('sigCanvas');
+    const ctx    = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    signeDessin = false;
+    document.getElementById('sigWrap').classList.remove('signed');
+    document.getElementById('sig-hint').textContent = 'Signez dans cet espace';
+  }
+
+  /* Obtenir la signature en base64 */
+  function obtenirSignatureBase64() {
+    return document.getElementById('sigCanvas').toDataURL('image/png').split(',')[1];
+  }
+
+  /* =====================================================================
+     FILIÈRE CONDITIONNELLE
+     ===================================================================== */
+  document.addEventListener('DOMContentLoaded', function() {
+    /* Bloquer dates futures sur date de naissance */
+    document.getElementById('dateNaissance').max = new Date().toISOString().split('T')[0];
+
+    /* Affichage conditionnel "Autre filière" */
+    document.getElementById('filiere').addEventListener('change', function() {
+      const wrap = document.getElementById('autre-filiere-wrap');
+      wrap.style.display = this.value === 'Autre' ? 'block' : 'none';
+      if (this.value !== 'Autre') {
+        document.getElementById('autreFiliere').value = '';
+        document.getElementById('autreFiliere').classList.remove('error');
+        document.getElementById('err-autreFiliere').classList.remove('visible');
+      }
+    });
+  });
+
+  /* =====================================================================
+     SOUMISSION FINALE
+     ===================================================================== */
+  async function soumettre() {
+    if (!validerEtape(5)) return;
+
+    const btn = document.getElementById('btnSoumettre');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Envoi en cours…';
+
+    /* Récupérer la filière réelle */
+    const filiereEl = document.getElementById('filiere');
+    const filiereVal = filiereEl.value === 'Autre'
+      ? document.getElementById('autreFiliere').value.trim()
+      : filiereEl.value;
+
+    /* Construire le payload */
+    const payload = {
+      action: 'regularisation',
+
+      /* Étape 1 — Identité */
+      prenom:        document.getElementById('prenom').value.trim(),
+      nom:           document.getElementById('nom').value.trim(),
+      sexe:          document.getElementById('sexe').value,
+      dateNaissance: document.getElementById('dateNaissance').value,
+      lieuNaissance: document.getElementById('lieuNaissance').value.trim(),
+      nationalite:   document.getElementById('nationalite').value.trim(),
+      telephone:     document.getElementById('telephone').value.trim(),
+      email:         document.getElementById('email').value.trim(),
+      adresse:       document.getElementById('adresse').value.trim(),
+
+      /* Étape 2 — Filiation */
+      prenomMere:     document.getElementById('prenomMere').value.trim(),
+      nomMere:        document.getElementById('nomMere').value.trim(),
+      telephoneMere:  document.getElementById('telephoneMere').value.trim(),
+      professionMere: document.getElementById('professionMere').value.trim(),
+      prenomPere:     document.getElementById('prenomPere').value.trim(),
+      nomPere:        document.getElementById('nomPere').value.trim(),
+      telephonePere:  document.getElementById('telephonePere').value.trim(),
+      professionPere: document.getElementById('professionPere').value.trim(),
+      prenomTuteur:   document.getElementById('prenomTuteur').value.trim(),
+      nomTuteur:      document.getElementById('nomTuteur').value.trim(),
+
+      /* Étape 3 — Formation */
+      filiere:              filiereVal,
+      dureeFormation:       document.getElementById('dureeFormation').value,
+      dateEntree:           document.getElementById('dateEntree').value,
+      dateFin:              document.getElementById('dateFin').value,
+      niveauAtteint:        document.getElementById('niveauAtteint').value.trim(),
+      montantPaye:          document.getElementById('montantPaye').value,
+      observationFormation: document.getElementById('observationFormation').value.trim(),
+
+      /* Étape 4 — Pièces */
+      typePiece:       document.getElementById('typePiece').value,
+      numeroPiece:     document.getElementById('numeroPiece').value.trim(),
+      piece1Base64:    fichiers.piece1.base64,
+      piece1MimeType:  fichiers.piece1.mimeType,
+      photoBase64:     fichiers.photo.base64,
+      photoMimeType:   fichiers.photo.mimeType,
+
+      /* Étape 5 — Consentement & signature */
+      clause1Acceptee: document.getElementById('clause1').checked,
+      clause2Acceptee: document.getElementById('clause2').checked,
+      signatureBase64: obtenirSignatureBase64(),
+      dateSignature:   new Date().toISOString()
+    };
+
+    try {
+      const res  = await fetch(GAS_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        /* Cacher toutes les étapes et afficher le succès */
+        for (let i = 1; i <= NB_ETAPES; i++) {
+          const el = document.getElementById('form-step-' + i);
+          if (el) el.style.display = 'none';
+        }
+        document.getElementById('progressBar').style.width = '100%';
+        document.getElementById('successIdDisplay').textContent = data.id || '—';
+
+        const successBlock = document.getElementById('success-block');
+        successBlock.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        afficherToast(data.message || 'Une erreur est survenue. Veuillez réessayer.', true);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> Soumettre mon dossier';
+      }
+    } catch (err) {
+      console.error('[Régularisation]', err);
+      afficherToast('Erreur de connexion. Vérifiez votre accès internet.', true);
+      btn.disabled = false;
+      btn.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> Soumettre mon dossier';
+    }
+  }
+
+  /* =====================================================================
+     TOAST NOTIFICATIONS
+     ===================================================================== */
+  let toastTimer;
+  function afficherToast(msg, estErreur) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.toggle('error-toast', !!estErreur);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+  }
+  </script>
+
+</body>
+</html>
