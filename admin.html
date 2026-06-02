@@ -1365,7 +1365,8 @@ async function chargerDashboard() {
     const s = result.stats;
     document.getElementById('badge-attente').textContent = s.enAttente;
     document.getElementById('badge-rens').textContent    = s.rensNouveaux;
-
+    document.getElementById('badge-regs').textContent    = s.regsEnAttente || 0;
+    
     // Stat cards
     document.getElementById('stats-grid').innerHTML = `
       ${statCard('Total inscriptions',    s.total,              'tabler:users',          '--teal',   'bg-teal')}
