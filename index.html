@@ -970,6 +970,51 @@
       </div>
     </div>
   </section>
+  <!-- SECTION : MA CARTE D'APPRENTISSAGE -->
+<section id="carte" style="background:#F0F4F2;padding:80px 0;">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Espace apprenant</span>
+      <h2 class="section-title">Votre carte d'apprentissage</h2>
+      <p class="section-subtitle">
+        Téléchargez votre carte officielle LQD Service en quelques secondes.
+        Saisissez votre numéro de dossier et votre téléphone.
+      </p>
+    </div>
+
+    <div style="max-width:460px;margin:0 auto;" class="reveal">
+      <div style="background:#FFF;border-radius:16px;padding:32px;box-shadow:0 8px 40px rgba(4,52,44,0.10);">
+
+        <div id="carte-msg" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:14px;"></div>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:#7A9E95;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">
+            Numéro de dossier
+          </label>
+          <input id="carte-id" type="text" placeholder="LQD-XXXXXX-XXXX"
+            style="width:100%;padding:12px 16px;border:1.5px solid #D4E4DF;border-radius:10px;font-size:14px;font-family:monospace;outline:none;transition:border .2s;"
+            onfocus="this.style.borderColor='#04342C'" onblur="this.style.borderColor='#D4E4DF'"/>
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:#7A9E95;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">
+            Numéro de téléphone
+          </label>
+          <input id="carte-tel" type="tel" placeholder="+229 01 XX XX XX XX"
+            style="width:100%;padding:12px 16px;border:1.5px solid #D4E4DF;border-radius:10px;font-size:14px;outline:none;transition:border .2s;"
+            onfocus="this.style.borderColor='#04342C'" onblur="this.style.borderColor='#D4E4DF'"/>
+        </div>
+
+        <button id="carte-btn" onclick="obtenirCarte()"
+          style="width:100%;padding:14px;background:#04342C;color:#FFF;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;transition:background .2s;">
+          <span class="iconify" data-icon="tabler:id-badge-2"></span>
+          Accéder à ma carte
+        </button>
+
+      </div>
+    </div>
+  </div>
+</section>
 
   <!-- FOOTER -->
   <footer>
@@ -1447,6 +1492,56 @@
       });
     }, { threshold: 0.12 });
     revealItems.forEach(el => revObserver.observe(el));
+    /* ================================================================
+   CARTE D'APPRENTISSAGE
+================================================================ */
+async function obtenirCarte() {
+  const id  = document.getElementById('carte-id').value.trim();
+  const tel = document.getElementById('carte-tel').value.trim();
+  const msg = document.getElementById('carte-msg');
+  const btn = document.getElementById('carte-btn');
+
+  // Validation
+  if (!id || !tel) {
+    msg.style.display  = 'block';
+    msg.style.background = 'rgba(224,92,42,0.1)';
+    msg.style.color    = '#E05C2A';
+    msg.textContent    = 'Veuillez remplir le numéro de dossier et le téléphone.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="iconify" data-icon="tabler:loader-2" style="animation:spin 0.8s linear infinite"></span> Vérification…';
+  msg.style.display = 'none';
+
+  try {
+    const resp = await fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'carte_get_data', id, telephone: tel })
+    });
+    const result = await resp.json();
+
+    if (result.status === 'success') {
+      // Rediriger vers la page de vérification avec le token
+      const url = `verifier.html?t=${encodeURIComponent(result.token)}`;
+      window.open(url, '_blank');
+    } else {
+      msg.style.display    = 'block';
+      msg.style.background = 'rgba(224,92,42,0.1)';
+      msg.style.color      = '#E05C2A';
+      msg.textContent      = result.message || 'Dossier introuvable. Vérifiez vos informations.';
+    }
+  } catch (err) {
+    msg.style.display    = 'block';
+    msg.style.background = 'rgba(224,92,42,0.1)';
+    msg.style.color      = '#E05C2A';
+    msg.textContent      = 'Erreur de connexion. Réessayez.';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span class="iconify" data-icon="tabler:id-badge-2"></span> Accéder à ma carte';
+}
   </script>
 </body>
 </html>
