@@ -108,6 +108,7 @@ function routerAdmin(data, action) {
       case 'admin_update_reg_statut': return requireAuth(data, adminUpdateRegStatut);
       case 'admin_delete_reg':        return requireAuth(data, adminDeleteRegularisation);
 
+
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
     }
@@ -319,9 +320,22 @@ function adminGetStats(data, email) {
       if (donnees[i][8] === 'Nouveau') stats.rensNouveaux++;
     }
   }
+  
+// --- Régularisations en attente ---
+  const feuilleRegs = ss.getSheetByName('Régularisations');
+  stats.regsEnAttente = 0;
+
+  if (feuilleRegs) {
+    const donneesR = feuilleRegs.getDataRange().getValues();
+    for (let i = 1; i < donneesR.length; i++) {
+      if (!donneesR[i][0]) continue;
+      const st = String(donneesR[i][37] || '').trim(); // index 37 = colonne "Statut dossier"
+      if (st === 'En attente') stats.regsEnAttente++;
+    }
+  }
 
   return reponseJSON({ status: 'success', stats });
-}
+} // <-- fermeture de adminGetStats — NE PAS OUBLIER CETTE ACCOLADE
 
 
 // =====================================================================
@@ -809,4 +823,4 @@ function mettreAJourColonnePrecise(nomFeuille, id, nomColonne, valeur) {
 //   const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
 //   if (action.startsWith('admin_')) return routerAdmin(data, action);
 //
-// =====================================================================
+// ====================================================================
