@@ -834,6 +834,20 @@
       <button class="nav-item" onclick="exporterCSV()">
         <span class="iconify" data-icon="tabler:table-export"></span> Exporter CSV
       </button>
+            <div class="nav-section-label">Régularisations</div>
+      <button class="nav-item" onclick="naviguer('regularisations')">
+        <span class="iconify" data-icon="tabler:refresh-alert"></span> Tous les dossiers
+        <span class="nav-badge" id="badge-regs">0</span>
+      </button>
+      <button class="nav-item" onclick="naviguer('regularisations', 'reg_attente')">
+        <span class="iconify" data-icon="tabler:clock-hour-3"></span> En attente
+      </button>
+      <button class="nav-item" onclick="naviguer('regularisations', 'reg_valide')">
+        <span class="iconify" data-icon="tabler:circle-check"></span> Validés
+      </button>
+      <button class="nav-item" onclick="naviguer('regularisations', 'reg_rejete')">
+        <span class="iconify" data-icon="tabler:circle-x"></span> Rejetés
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -954,6 +968,39 @@
       </div>
     </div>
 
+    <!-- PAGE : RÉGULARISATIONS -->
+    <div class="page" id="page-regularisations">
+      <div class="filters-bar">
+        <div class="search-input-bar">
+          <span class="iconify" data-icon="tabler:search"></span>
+          <input type="text" id="search-regs" placeholder="Nom, ID, téléphone, filière..." oninput="filtrerRegularisations()" />
+        </div>
+        <select class="filter-select" id="filtre-reg-statut" onchange="filtrerRegularisations()">
+          <option value="">Tous les statuts</option>
+          <option value="reg_attente">En attente</option>
+          <option value="reg_valide">Validé</option>
+          <option value="reg_rejete">Rejeté</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="chargerRegularisations()">
+          <span class="iconify" data-icon="tabler:refresh"></span>
+        </button>
+      </div>
+ 
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Dossiers de régularisation</span>
+          <span id="regs-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <div id="regs-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+        <div class="pagination" id="regs-pagination" style="display:none;">
+          <span id="regs-pagination-info"></span>
+          <div class="pagination-btns" id="regs-pagination-btns"></div>
+        </div>
+      </div>
+    </div>
+ 
   </main>
 </div>
 
@@ -985,6 +1032,21 @@
       </button>
     </div>
     <div class="modal-body" id="rens-modal-body"></div>
+  </div>
+</div>
+  <!-- MODAL RÉGULARISATION -->
+<div class="modal-overlay" id="modal-reg">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h3 id="reg-modal-title">Régularisation</h3>
+      <button class="modal-close" onclick="fermerModal('modal-reg')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="reg-modal-body">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-footer" id="reg-modal-footer"></div>
   </div>
 </div>
 
@@ -1273,8 +1335,18 @@ function naviguer(page, filtre = '') {
       if(selectPaiement) selectPaiement.value = filtre;
     }
   }
+/* ================================================================
+   PATCH naviguer() — Ajouter dans la fonction naviguer() existante
+   après : if (page === 'renseignements') chargerRenseignements();
+================================================================ */
+if (page === 'regularisations') chargerRegularisations();
 
-  // Fermer sidebar mobile
+// Et dans le filtre sidebar, dans le if(filtre && page === 'dossiers')
+// ajouter le cas regularisations :
+ if (filtre && page === 'regularisations') {
+  const sel = document.getElementById('filtre-reg-statut');
+   if (sel) sel.value = filtre;
+}
   document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -1300,6 +1372,8 @@ async function chargerDashboard() {
       ${statCard('En attente',            s.enAttente,          'tabler:clock-hour-3',   '--orange',  'bg-orange')}
       ${statCard('Confirmés',             s.confirmes,          'tabler:circle-check',   '--green',   'bg-green')}
       ${statCard('Renseignements',        s.rensNouveaux + ' nouveaux', 'tabler:message-question','--teal-l','bg-teal')}
+      ${statCard('Renseignements',    s.rensNouveaux + ' nouveaux',  'tabler:message-question','--teal-l','bg-teal')}
+      ${statCard('Régularisations',   (s.regsEnAttente||0) + ' en attente', 'tabler:refresh-alert','--orange','bg-orange')}
     `;
 
     // Charger récents
@@ -1869,8 +1943,323 @@ document.addEventListener('keydown', e => {
     document.querySelectorAll('.modal-overlay.open').forEach(m => fermerModal(m.id));
     fermerConfirm();
     document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('badge-regs').textContent = s.regsEnAttente || 0;
   }
 });
+    /* ================================================================
+   RÉGULARISATIONS
+================================================================ */
+ 
+let regsCurrentPage = 1;
+ 
+async function chargerRegularisations() {
+  document.getElementById('regs-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  document.getElementById('regs-pagination').style.display = 'none';
+ 
+  const filtre    = document.getElementById('filtre-reg-statut')?.value || state.filtre;
+  const recherche = document.getElementById('search-regs')?.value || '';
+ 
+  try {
+    const result = await apiCall('admin_get_regs', {
+      page:      regsCurrentPage,
+      perPage:   20,
+      filtre,
+      recherche
+    });
+    if (result.status !== 'success') throw new Error(result.message);
+ 
+    document.getElementById('regs-count').textContent = result.total + ' dossier(s)';
+    renderTableauRegularisations(result.regs);
+    renderPaginationRegs(result.page, result.pages, result.total, result.perPage);
+ 
+  } catch(e) {
+    document.getElementById('regs-table-container').innerHTML =
+      `<div class="empty-state"><span class="iconify" data-icon="tabler:wifi-off"></span><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+ 
+function filtrerRegularisations() {
+  regsCurrentPage = 1;
+  chargerRegularisations();
+}
+ 
+function renderTableauRegularisations(regs) {
+  if (!regs.length) {
+    document.getElementById('regs-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:folder-off"></span><p>Aucun dossier trouvé</p></div>';
+    return;
+  }
+ 
+  document.getElementById('regs-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th>
+        <th>Apprenant</th>
+        <th>Filière</th>
+        <th>Période</th>
+        <th>Montant payé</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${regs.map(r => `<tr>
+          <td>
+            <span class="mono">${r.id}</span><br/>
+            <span style="font-size:11px;color:var(--text-3);">${r.dateSoumission}</span>
+          </td>
+          <td>
+            <strong>${r.prenom} ${r.nom}</strong><br/>
+            <span class="mono">${r.telephone}</span>
+          </td>
+          <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${r.filiere || '—'}</td>
+          <td style="font-size:12px;color:var(--text-3);">
+            ${r.dateEntree || '—'}<br/>→ ${r.dateFin || '—'}
+          </td>
+          <td style="font-family:var(--font-mono);font-size:12px;color:var(--orange);">
+            ${Number(r.montantPaye || 0).toLocaleString('fr-BJ')} F
+          </td>
+          <td>${badgeRegStatut(r.statutDossier)}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-sm" title="Voir le dossier" onclick="ouvrirRegularisation('${r.id}')">
+                <span class="iconify" data-icon="tabler:eye"></span>
+              </button>
+              <button class="btn btn-success btn-sm" title="Valider" onclick="validerReg('${r.id}', '${r.prenom} ${r.nom}')">
+                <span class="iconify" data-icon="tabler:circle-check"></span>
+              </button>
+              <button class="btn btn-danger btn-sm" title="Rejeter" onclick="rejeterReg('${r.id}', '${r.prenom} ${r.nom}')">
+                <span class="iconify" data-icon="tabler:circle-x"></span>
+              </button>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+ 
+function renderPaginationRegs(page, pages, total, perPage) {
+  if (pages <= 1) { document.getElementById('regs-pagination').style.display = 'none'; return; }
+ 
+  document.getElementById('regs-pagination').style.display = 'flex';
+  const debut = (page - 1) * perPage + 1;
+  const fin   = Math.min(page * perPage, total);
+  document.getElementById('regs-pagination-info').textContent = `${debut}–${fin} sur ${total}`;
+ 
+  const btns = document.getElementById('regs-pagination-btns');
+  btns.innerHTML = '';
+ 
+  const prev = document.createElement('button');
+  prev.className = 'pg-btn';
+  prev.innerHTML = '<span class="iconify" data-icon="tabler:chevron-left"></span>';
+  prev.disabled  = page === 1;
+  prev.onclick   = () => { regsCurrentPage = page - 1; chargerRegularisations(); };
+  btns.appendChild(prev);
+ 
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) {
+      const btn = document.createElement('button');
+      btn.className = 'pg-btn' + (i === page ? ' active' : '');
+      btn.textContent = i;
+      btn.onclick = () => { regsCurrentPage = i; chargerRegularisations(); };
+      btns.appendChild(btn);
+    } else if (i === page - 2 || i === page + 2) {
+      const sp = document.createElement('span');
+      sp.textContent = '…';
+      sp.style.cssText = 'color:var(--text-3);font-size:13px;padding:0 4px;align-self:center;';
+      btns.appendChild(sp);
+    }
+  }
+ 
+  const next = document.createElement('button');
+  next.className = 'pg-btn';
+  next.innerHTML = '<span class="iconify" data-icon="tabler:chevron-right"></span>';
+  next.disabled  = page === pages;
+  next.onclick   = () => { regsCurrentPage = page + 1; chargerRegularisations(); };
+  btns.appendChild(next);
+}
+ 
+async function ouvrirRegularisation(id) {
+  ouvrirModal('modal-reg');
+  document.getElementById('reg-modal-title').textContent = `Régularisation ${id}`;
+  document.getElementById('reg-modal-body').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  document.getElementById('reg-modal-footer').innerHTML = '';
+ 
+  try {
+    const result = await apiCall('admin_get_reg', { id });
+    if (result.status !== 'success') throw new Error(result.message);
+    renderModalReg(result.reg);
+  } catch(e) {
+    document.getElementById('reg-modal-body').innerHTML =
+      `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+ 
+function renderModalReg(r) {
+  document.getElementById('reg-modal-body').innerHTML = `
+ 
+    <div class="modal-section-title">Identité</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Référence (ID apprenant)</label><span class="mono" style="color:var(--teal-l);font-size:15px;font-weight:700;">${r.id}</span></div>
+      <div class="info-field"><label>Date soumission</label><span>${r.dateSoumission}</span></div>
+      <div class="info-field"><label>Prénom(s)</label><span>${r.prenom}</span></div>
+      <div class="info-field"><label>Nom</label><span>${r.nom}</span></div>
+      <div class="info-field"><label>Sexe</label><span>${r.sexe}</span></div>
+      <div class="info-field"><label>Date de naissance</label><span>${r.dateNaissance}</span></div>
+      <div class="info-field"><label>Lieu de naissance</label><span>${r.lieuNaissance}</span></div>
+      <div class="info-field"><label>Nationalité</label><span>${r.nationalite}</span></div>
+      <div class="info-field"><label>Téléphone</label><span><a href="tel:${r.telephone}">${r.telephone}</a></span></div>
+      <div class="info-field"><label>Email</label><span>${r.email ? `<a href="mailto:${r.email}">${r.email}</a>` : '—'}</span></div>
+      <div class="info-field" style="grid-column:1/-1;"><label>Adresse</label><span>${r.adresse}</span></div>
+    </div>
+ 
+    <div class="modal-section-title">Filiation parentale</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Mère</label><span>${r.prenomMere} ${r.nomMere}${r.telephoneMere ? ' — ' + r.telephoneMere : ''}</span></div>
+      <div class="info-field"><label>Profession mère</label><span>${r.professionMere || '—'}</span></div>
+      <div class="info-field"><label>Père</label><span>${r.prenomPere} ${r.nomPere}${r.telephonePere ? ' — ' + r.telephonePere : ''}</span></div>
+      <div class="info-field"><label>Profession père</label><span>${r.professionPere || '—'}</span></div>
+      ${r.prenomTuteur ? `<div class="info-field"><label>Tuteur légal</label><span>${r.prenomTuteur} ${r.nomTuteur}</span></div>` : ''}
+    </div>
+ 
+    <div class="modal-section-title">Formation suivie</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Filière</label><span style="color:var(--teal-l);font-weight:600;">${r.filiere}</span></div>
+      <div class="info-field"><label>Durée</label><span>${r.dureeFormation}</span></div>
+      <div class="info-field"><label>Date d'entrée</label><span>${r.dateEntree}</span></div>
+      <div class="info-field"><label>Date de fin</label><span>${r.dateFin}</span></div>
+      <div class="info-field"><label>Niveau atteint</label><span>${r.niveauAtteint || '—'}</span></div>
+      <div class="info-field"><label>Montant payé</label><span style="color:var(--orange);font-weight:700;font-family:var(--font-mono);">${Number(r.montantPaye || 0).toLocaleString('fr-BJ')} F CFA</span></div>
+      ${r.observation ? `<div class="info-field" style="grid-column:1/-1;"><label>Observation</label><span>${r.observation}</span></div>` : ''}
+    </div>
+ 
+    <div class="modal-section-title">Pièces justificatives</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Type pièce</label><span>${r.typePiece}</span></div>
+      <div class="info-field"><label>N° pièce</label><span class="mono">${r.numeroPiece}</span></div>
+      <div class="info-field"><label>Pièce d'identité</label>
+        <span>${r.pieceUrl ? `<a href="${r.pieceUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Photo d'identité</label>
+        <span>${r.photoUrl ? `<a href="${r.photoUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Signature numérique</label>
+        <span>${r.signatureUrl ? `<a href="${r.signatureUrl}" target="_blank">Voir la signature</a>` : '—'}</span>
+      </div>
+      <div class="info-field"><label>Dossier complet</label>
+        <span>${r.dossierUrl ? `<a href="${r.dossierUrl}" target="_blank">Dossier Drive</a>` : '—'}</span>
+      </div>
+    </div>
+ 
+    <div class="modal-section-title">Consentement</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Clause 1</label><span>${r.clause1}</span></div>
+      <div class="info-field"><label>Clause 2</label><span>${r.clause2}</span></div>
+      <div class="info-field"><label>Date signature</label><span>${r.dateSignature || '—'}</span></div>
+    </div>
+ 
+    <div class="modal-section-title">Gestion du statut</div>
+    <div style="margin-bottom:8px;">
+      <label class="auth-label" style="margin-bottom:6px;">Statut dossier</label>
+      <select class="modal-select" id="select-reg-statut">
+        ${['En attente', 'Validé', 'Rejeté'].map(s =>
+          `<option value="${s}" ${r.statutDossier === s ? 'selected' : ''}>${s}</option>`
+        ).join('')}
+      </select>
+    </div>
+    ${r.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${r.traitePar} le ${r.dateTraitement}</p>` : ''}
+  `;
+ 
+  document.getElementById('reg-modal-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="fermerModal('modal-reg')">Fermer</button>
+    <button class="btn btn-danger btn-sm" onclick="supprimerReg('${r.id}', '${r.prenom} ${r.nom}')">
+      <span class="iconify" data-icon="tabler:trash"></span> Supprimer
+    </button>
+    <button class="btn btn-primary" onclick="sauvegarderStatutReg('${r.id}')">
+      <span class="iconify" data-icon="tabler:device-floppy"></span> Sauvegarder
+    </button>
+  `;
+}
+ 
+async function sauvegarderStatutReg(id) {
+  const statut = document.getElementById('select-reg-statut').value;
+  try {
+    const result = await apiCall('admin_update_reg_statut', { id, statut });
+    if (result.status === 'success') {
+      toast(result.message, 'success');
+      if (statut === 'Validé') toast('Email de confirmation envoyé à l\'apprenant.', 'info');
+      fermerModal('modal-reg');
+      chargerRegularisations();
+      chargerDashboard();
+    } else {
+      toast(result.message || 'Erreur.', 'error');
+    }
+  } catch(e) { toast('Erreur réseau.', 'error'); }
+}
+ 
+function validerReg(id, nom) {
+  confirmer(
+    'Valider le dossier',
+    `Valider le dossier de ${nom} (${id}) ? Un email de confirmation avec l'ID apprenant sera envoyé automatiquement.`,
+    async () => {
+      try {
+        const result = await apiCall('admin_update_reg_statut', { id, statut: 'Validé' });
+        if (result.status === 'success') {
+          toast(`Dossier ${id} validé. Email envoyé.`, 'success');
+          chargerRegularisations();
+          chargerDashboard();
+        } else {
+          toast(result.message || 'Erreur.', 'error');
+        }
+      } catch(e) { toast('Erreur réseau.', 'error'); }
+    }
+  );
+}
+ 
+function rejeterReg(id, nom) {
+  confirmer(
+    'Rejeter le dossier',
+    `Rejeter le dossier de ${nom} (${id}) ?`,
+    async () => {
+      try {
+        const result = await apiCall('admin_update_reg_statut', { id, statut: 'Rejeté' });
+        if (result.status === 'success') {
+          toast(`Dossier ${id} rejeté.`, 'success');
+          chargerRegularisations();
+        } else {
+          toast(result.message || 'Erreur.', 'error');
+        }
+      } catch(e) { toast('Erreur réseau.', 'error'); }
+    }
+  );
+}
+ 
+function supprimerReg(id, nom) {
+  confirmer(
+    'Supprimer la régularisation',
+    `Supprimer définitivement le dossier de ${nom} (${id}) ? Action irréversible.`,
+    async () => {
+      try {
+        const result = await apiCall('admin_delete_reg', { id });
+        if (result.status === 'success') {
+          toast(`Dossier ${id} supprimé.`, 'success');
+          fermerModal('modal-reg');
+          chargerRegularisations();
+          chargerDashboard();
+        } else {
+          toast(result.message || 'Erreur.', 'error');
+        }
+      } catch(e) { toast('Erreur réseau.', 'error'); }
+    }
+  );
+}
+ 
+function badgeRegStatut(statut) {
+  const map = { 'En attente': 'badge-orange', 'Validé': 'badge-green', 'Rejeté': 'badge-red' };
+  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
+}
+ 
 </script>
 </body>
 </html>
