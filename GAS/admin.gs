@@ -32,7 +32,8 @@ const ADMIN_CONFIG = {
   // -------------------------------------------------------
   EMAILS_AUTORISES: [
     'lqddssarl@gmail.com',
-    'phanoskosmos@gmail.com'
+    'phanoskosmos@gmail.com',
+    'qualitededieuservice@gmail.com'
     // Ajouter d'autres emails admin ici
   ],
 
@@ -40,7 +41,7 @@ const ADMIN_CONFIG = {
   // Mot de passe admin (hashé SHA-256 en production idéale)
   // TODO : changer ce mot de passe avant déploiement
   // -------------------------------------------------------
-  MOT_DE_PASSE: 'Z@bulon*935',
+  MOT_DE_PASSE: 'adminqds@2026',
 
   // -------------------------------------------------------
   // Clé secrète HMAC pour signer les tokens
@@ -102,6 +103,10 @@ function routerAdmin(data, action) {
       case 'admin_send_relance':   return requireAuth(data, adminSendRelance);
       case 'admin_delete_dossier': return requireAuth(data, adminDeleteDossier);
       case 'admin_export_csv':     return requireAuth(data, adminExportCSV);
+      case 'admin_get_regs':          return requireAuth(data, adminGetRegularisations);
+      case 'admin_get_reg':           return requireAuth(data, adminGetRegularisation);
+      case 'admin_update_reg_statut': return requireAuth(data, adminUpdateRegStatut);
+      case 'admin_delete_reg':        return requireAuth(data, adminDeleteRegularisation);
 
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
