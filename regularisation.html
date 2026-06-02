@@ -114,6 +114,7 @@
     /* ===== CANVAS SIGNATURE ===== */
     .signature-wrap{border:2px solid var(--gray-300);border-radius:var(--radius-md);overflow:hidden;position:relative;background:var(--white)}
     .signature-wrap.signed{border-color:var(--teal-500)}
+    /* Le canvas occupe toute la largeur du conteneur via CSS */
     #sigCanvas{display:block;width:100%;height:160px;cursor:crosshair;touch-action:none}
     .sig-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--gray-50);border-top:1px solid var(--gray-100)}
     .sig-toolbar span{font-size:12px;color:var(--gray-400)}
@@ -660,7 +661,7 @@
                 <span style="font-size:11px;font-weight:400;color:var(--gray-400)">Signez directement avec votre doigt ou la souris</span>
               </label>
               <div class="signature-wrap" id="sigWrap">
-                <canvas id="sigCanvas" width="700" height="160" role="img" aria-label="Zone de signature"></canvas>
+                <canvas id="sigCanvas" role="img" aria-label="Zone de signature"></canvas>
                 <div class="sig-toolbar">
                   <span id="sig-hint">Signez dans cet espace</span>
                   <button type="button" class="sig-clear" id="sigClearBtn" onclick="effacerSignature()">
@@ -719,13 +720,11 @@
   <script>
   /* =====================================================================
      RÉGULARISATION — Script principal
-     Variables globales et état du formulaire
      ===================================================================== */
 
-  /* URL du Google Apps Script — à remplacer par l'URL déployée */
+  /* URL Google Apps Script */
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
 
-  /* Étape courante */
   let etapeCourante = 1;
   const NB_ETAPES   = 5;
 
@@ -735,8 +734,9 @@
     photo:  { base64: '', mimeType: '', nom: '' }
   };
 
-  /* Signature */
-  let signeDessin = false;
+  /* Signature — état et référence externe au resize */
+  let signeDessin         = false;
+  let resizeSignatureCanvas = null; // FIX : exposé hors de l'IIFE
 
   /* =====================================================================
      NAVIGATION ENTRE ÉTAPES
@@ -751,7 +751,7 @@
     for (let i = 1; i <= NB_ETAPES; i++) {
       const dot = document.getElementById('step-dot-' + i);
       dot.classList.remove('active', 'done');
-      if (i < cible)  dot.classList.add('done');
+      if (i < cible)   dot.classList.add('done');
       if (i === cible) dot.classList.add('active');
     }
 
@@ -759,6 +759,16 @@
     document.getElementById('progressBar').style.width = (cible / NB_ETAPES * 100) + '%';
 
     etapeCourante = cible;
+
+    /* FIX CANVAS : redimensionner quand l'étape 5 devient visible.
+       requestAnimationFrame garantit que le DOM est rendu avant le calcul
+       de getBoundingClientRect(). */
+    if (cible === 5 && typeof resizeSignatureCanvas === 'function') {
+      requestAnimationFrame(function() {
+        resizeSignatureCanvas();
+      });
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -788,8 +798,7 @@
       check('telephone',     'err-telephone',     el => /^\+?[\d\s\-]{8,20}$/.test(el.value.trim()));
       check('adresse',       'err-adresse',       el => el.value.trim().length >= 4);
 
-      /* Email facultatif — valider si renseigné */
-      const emailEl = document.getElementById('email');
+      const emailEl  = document.getElementById('email');
       const emailErr = document.getElementById('err-email');
       if (emailEl.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) {
         emailEl.classList.add('error');
@@ -815,12 +824,10 @@
       check('dateFin',        'err-dateFin',        el => !!el.value);
       check('montantPaye',    'err-montantPaye',    el => el.value !== '' && Number(el.value) >= 0);
 
-      /* Champ "autre filière" conditionnel */
       if (document.getElementById('filiere').value === 'Autre') {
         check('autreFiliere', 'err-autreFiliere', el => el.value.trim().length >= 2);
       }
 
-      /* Date fin > date entrée */
       const de = document.getElementById('dateEntree').value;
       const df = document.getElementById('dateFin').value;
       if (de && df && df < de) {
@@ -835,46 +842,29 @@
       check('typePiece',   'err-typePiece',   el => !!el.value);
       check('numeroPiece', 'err-numeroPiece', el => el.value.trim().length >= 4);
 
-      /* Fichier pièce */
       const errPiece = document.getElementById('err-piece1');
-      if (!fichiers.piece1.base64) {
-        errPiece.classList.add('visible');
-        ok = false;
-      } else {
-        errPiece.classList.remove('visible');
-      }
+      if (!fichiers.piece1.base64) { errPiece.classList.add('visible'); ok = false; }
+      else                         { errPiece.classList.remove('visible'); }
 
-      /* Fichier photo */
       const errPhoto = document.getElementById('err-photo');
-      if (!fichiers.photo.base64) {
-        errPhoto.classList.add('visible');
-        ok = false;
-      } else {
-        errPhoto.classList.remove('visible');
-      }
+      if (!fichiers.photo.base64) { errPhoto.classList.add('visible'); ok = false; }
+      else                        { errPhoto.classList.remove('visible'); }
     }
 
     if (etape === 5) {
-      /* Clause 1 */
-      const c1  = document.getElementById('clause1');
-      const e1  = document.getElementById('err-clause1');
+      const c1 = document.getElementById('clause1');
+      const e1 = document.getElementById('err-clause1');
       if (!c1.checked) { e1.classList.add('visible'); ok = false; }
-      else              { e1.classList.remove('visible'); }
+      else             { e1.classList.remove('visible'); }
 
-      /* Clause 2 */
-      const c2  = document.getElementById('clause2');
-      const e2  = document.getElementById('err-clause2');
+      const c2 = document.getElementById('clause2');
+      const e2 = document.getElementById('err-clause2');
       if (!c2.checked) { e2.classList.add('visible'); ok = false; }
-      else              { e2.classList.remove('visible'); }
+      else             { e2.classList.remove('visible'); }
 
-      /* Signature */
       const errSig = document.getElementById('err-signature');
-      if (!signeDessin) {
-        errSig.classList.add('visible');
-        ok = false;
-      } else {
-        errSig.classList.remove('visible');
-      }
+      if (!signeDessin) { errSig.classList.add('visible'); ok = false; }
+      else              { errSig.classList.remove('visible'); }
     }
 
     if (!ok) afficherToast('Veuillez corriger les champs signalés.', true);
@@ -890,7 +880,6 @@
     const file    = input.files[0];
     if (!file) return;
 
-    /* Limite de taille : 5 Mo pour pièce, 3 Mo pour photo */
     const limite = inputId === 'photo' ? 3 : 5;
     if (file.size > limite * 1024 * 1024) {
       afficherToast('Fichier trop volumineux (max ' + limite + ' Mo).', true);
@@ -901,12 +890,9 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const raw = e.target.result;
-      /* Extraire la partie base64 après la virgule */
-      fichiers[inputId].base64    = raw.split(',')[1] || '';
-      fichiers[inputId].mimeType  = file.type;
-      fichiers[inputId].nom       = file.name;
-
-      /* Afficher la prévisualisation */
+      fichiers[inputId].base64   = raw.split(',')[1] || '';
+      fichiers[inputId].mimeType = file.type;
+      fichiers[inputId].nom      = file.name;
       document.getElementById('name-' + inputId).textContent = file.name;
       preview.classList.add('visible');
       document.getElementById(zoneId).style.display = 'none';
@@ -921,7 +907,6 @@
     document.getElementById(zoneId).style.display = '';
   }
 
-  /* Drag & drop */
   function onDragOver(e, zoneId) {
     e.preventDefault();
     document.getElementById(zoneId).classList.add('drag-over');
@@ -933,51 +918,61 @@
     e.preventDefault();
     document.getElementById(zoneId).classList.remove('drag-over');
     const input = document.getElementById(inputId);
-    input.files  = e.dataTransfer.files;
+    input.files = e.dataTransfer.files;
     input.dispatchEvent(new Event('change'));
   }
 
   /* =====================================================================
      CANVAS SIGNATURE
+     FIX : resizeCanvas n'est plus dans un IIFE fermé.
+     Il est exposé via resizeSignatureCanvas pour être appelé
+     depuis allerEtape() quand l'étape 5 devient visible.
      ===================================================================== */
   (function initSignature() {
-    const canvas  = document.getElementById('sigCanvas');
-    const ctx     = canvas.getContext('2d');
-    const hint    = document.getElementById('sig-hint');
-    let dessin    = false;
-    let dernier   = { x: 0, y: 0 };
+    const canvas = document.getElementById('sigCanvas');
+    const ctx    = canvas.getContext('2d');
+    const hint   = document.getElementById('sig-hint');
+    let dessin   = false;
 
-    /* Adapter la résolution au ratio pixel */
+    /* Dimensionner le canvas selon la largeur réelle du conteneur.
+       Guard : si width === 0 (élément caché), on ne fait rien —
+       allerEtape(5) rappellera cette fonction via requestAnimationFrame. */
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
-      canvas.width  = rect.width  * (window.devicePixelRatio || 1);
-      canvas.height = rect.height * (window.devicePixelRatio || 1);
-      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      if (rect.width === 0) return; // élément non visible, skip
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = rect.width  * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // reset + scale propre
       ctx.strokeStyle = '#1A1A2E';
       ctx.lineWidth   = 2.2;
       ctx.lineCap     = 'round';
       ctx.lineJoin    = 'round';
     }
-    resizeCanvas();
+
+    /* Exposer pour l'appel externe depuis allerEtape() */
+    resizeSignatureCanvas = resizeCanvas;
+
+    /* Resize sur redimensionnement fenêtre */
     window.addEventListener('resize', resizeCanvas);
 
+    /* Coordonnées relatives au canvas CSS (pas aux pixels physiques) */
     function getPos(e) {
       const rect = canvas.getBoundingClientRect();
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - rect.left,
-          y: e.touches[0].clientY - rect.top
-        };
-      }
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const src  = e.touches ? e.touches[0] : e;
+      return {
+        x: src.clientX - rect.left,
+        y: src.clientY - rect.top
+      };
     }
 
     function debut(e) {
       e.preventDefault();
-      dessin  = true;
-      dernier = getPos(e);
+      dessin = true;
+      const pos = getPos(e);
       ctx.beginPath();
-      ctx.moveTo(dernier.x, dernier.y);
+      ctx.moveTo(pos.x, pos.y);
     }
 
     function trace(e) {
@@ -986,7 +981,6 @@
       const pos = getPos(e);
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
-      dernier = pos;
       if (!signeDessin) {
         signeDessin = true;
         document.getElementById('sigWrap').classList.add('signed');
@@ -1006,7 +1000,7 @@
     canvas.addEventListener('mouseleave', fin);
     canvas.addEventListener('touchstart', debut, { passive: false });
     canvas.addEventListener('touchmove',  trace, { passive: false });
-    canvas.addEventListener('touchend',   fin);
+    canvas.addEventListener('touchend',   fin,   { passive: false });
   })();
 
   function effacerSignature() {
@@ -1018,13 +1012,12 @@
     document.getElementById('sig-hint').textContent = 'Signez dans cet espace';
   }
 
-  /* Obtenir la signature en base64 */
   function obtenirSignatureBase64() {
     return document.getElementById('sigCanvas').toDataURL('image/png').split(',')[1];
   }
 
   /* =====================================================================
-     FILIÈRE CONDITIONNELLE
+     INIT DOM
      ===================================================================== */
   document.addEventListener('DOMContentLoaded', function() {
     /* Bloquer dates futures sur date de naissance */
@@ -1044,6 +1037,8 @@
 
   /* =====================================================================
      SOUMISSION FINALE
+     FIX : Content-Type 'text/plain' au lieu de 'application/json'
+     pour éviter le preflight CORS qui bloque GAS.
      ===================================================================== */
   async function soumettre() {
     if (!validerEtape(5)) return;
@@ -1052,13 +1047,12 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Envoi en cours…';
 
-    /* Récupérer la filière réelle */
-    const filiereEl = document.getElementById('filiere');
+    /* Filière réelle (si "Autre", prendre le champ libre) */
+    const filiereEl  = document.getElementById('filiere');
     const filiereVal = filiereEl.value === 'Autre'
       ? document.getElementById('autreFiliere').value.trim()
       : filiereEl.value;
 
-    /* Construire le payload */
     const payload = {
       action: 'regularisation',
 
@@ -1095,12 +1089,12 @@
       observationFormation: document.getElementById('observationFormation').value.trim(),
 
       /* Étape 4 — Pièces */
-      typePiece:       document.getElementById('typePiece').value,
-      numeroPiece:     document.getElementById('numeroPiece').value.trim(),
-      piece1Base64:    fichiers.piece1.base64,
-      piece1MimeType:  fichiers.piece1.mimeType,
-      photoBase64:     fichiers.photo.base64,
-      photoMimeType:   fichiers.photo.mimeType,
+      typePiece:      document.getElementById('typePiece').value,
+      numeroPiece:    document.getElementById('numeroPiece').value.trim(),
+      piece1Base64:   fichiers.piece1.base64,
+      piece1MimeType: fichiers.piece1.mimeType,
+      photoBase64:    fichiers.photo.base64,
+      photoMimeType:  fichiers.photo.mimeType,
 
       /* Étape 5 — Consentement & signature */
       clause1Acceptee: document.getElementById('clause1').checked,
@@ -1110,24 +1104,22 @@
     };
 
     try {
+      /* FIX : text/plain évite le preflight CORS — GAS reçoit le POST directement */
       const res  = await fetch(GAS_URL, {
         method:  'POST',
-        headers: { 'Content-Type': 'text/plain' }
+        headers: { 'Content-Type': 'text/plain' },
         body:    JSON.stringify(payload)
       });
       const data = await res.json();
 
       if (data.status === 'success') {
-        /* Cacher toutes les étapes et afficher le succès */
         for (let i = 1; i <= NB_ETAPES; i++) {
           const el = document.getElementById('form-step-' + i);
           if (el) el.style.display = 'none';
         }
         document.getElementById('progressBar').style.width = '100%';
         document.getElementById('successIdDisplay').textContent = data.id || '—';
-
-        const successBlock = document.getElementById('success-block');
-        successBlock.style.display = 'block';
+        document.getElementById('success-block').style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         afficherToast(data.message || 'Une erreur est survenue. Veuillez réessayer.', true);
