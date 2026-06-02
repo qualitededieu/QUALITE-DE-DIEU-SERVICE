@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vérification — Carte d'apprentissage LQD Service</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <style>
+    /* ===============================================================
+       VARIABLES & RESET
+    =============================================================== */
+    :root {
+      --teal:       #04342C;
+      --teal-mid:   #0A5C4A;
+      --teal-light: #1A8A6E;
+      --accent:     #2ECCA8;
+      --orange:     #F5A623;
+      --red:        #E05C2A;
+      --bg:         #F0F4F2;
+      --white:      #FFFFFF;
+      --text:       #0D1F1A;
+      --text-2:     #3D5A52;
+      --text-3:     #7A9E95;
+      --border:     #D4E4DF;
+      --radius:     16px;
+      --shadow:     0 8px 40px rgba(4,52,44,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===============================================================
+       HEADER
+    =============================================================== */
+    header {
+      background: var(--teal);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    header .brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header .brand-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFF;
+      line-height: 1.2;
+    }
+
+    header .brand-sub {
+      font-size: 11px;
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+
+    header .verif-badge {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    /* ===============================================================
+       LAYOUT PRINCIPAL
+    =============================================================== */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px 60px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* ===============================================================
+       ÉTAT : CHARGEMENT
+    =============================================================== */
+    .state-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 80px 0;
+      text-align: center;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .state-loading p {
+      font-size: 14px;
+      color: var(--text-2);
+    }
+
+    /* ===============================================================
+       ÉTAT : ERREUR / EXPIRÉ
+    =============================================================== */
+    .state-error, .state-expired {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 48px 32px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .state-error .icon-wrap {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(224,92,42,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+
+    .state-expired .icon-wrap {
+      background: rgba(245,166,35,0.1);
+    }
+
+    .state-error .icon-wrap iconify-icon,
+    .state-expired .icon-wrap iconify-icon {
+      font-size: 36px;
+      color: var(--red);
+    }
+
+    .state-expired .icon-wrap iconify-icon { color: var(--orange); }
+
+    .state-error h2, .state-expired h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .state-error p, .state-expired p {
+      font-size: 14px;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+
+    /* ===============================================================
+       CARTE RÉSULTAT
+    =============================================================== */
+    .carte-wrap {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Bandeau statut */
+    .statut-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--teal);
+      color: #FFF;
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 14px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .statut-banner iconify-icon { font-size: 18px; color: var(--accent); }
+
+    .statut-banner .valide-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s ease infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* Corps carte */
+    .carte-body {
+      background: var(--white);
+      border-radius: 0 0 var(--radius) var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Zone identité */
+    .identite {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .photo-wrap {
+      flex-shrink: 0;
+      width: 80px;
+      height: 96px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-wrap .no-photo {
+      font-size: 32px;
+      color: var(--text-3);
+    }
+
+    .identite-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .apprenant-nom {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--teal);
+      line-height: 1.2;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .apprenant-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text-3);
+      background: var(--bg);
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .filiere-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(4,52,44,0.07);
+      color: var(--teal-mid);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    /* Grille infos */
+    .infos-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border-top: 1px solid var(--border);
+    }
+
+    .info-cell {
+      background: var(--white);
+      padding: 16px 20px;
+    }
+
+    .info-cell:nth-child(odd) { background: #FAFCFB; }
+
+    .info-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .info-value.accent { color: var(--red); font-weight: 700; }
+    .info-value.empty  { color: var(--text-3); font-style: italic; }
+
+    /* Pied de carte */
+    .carte-footer {
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--teal);
+      flex-wrap: wrap;
+    }
+
+    .carte-footer .footer-text {
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.6;
+    }
+
+    .carte-footer .footer-text strong {
+      color: var(--accent);
+      display: block;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    .emis-date {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      text-align: right;
+    }
+
+    /* Bouton téléchargement PDF */
+    .btn-pdf {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px 24px;
+      background: var(--teal);
+      color: #FFF;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-pdf:hover  { background: var(--teal-mid); }
+    .btn-pdf:active { transform: scale(0.98); }
+    .btn-pdf iconify-icon { font-size: 18px; }
+
+    /* ===============================================================
+       RESPONSIVE
+    =============================================================== */
+    @media (max-width: 480px) {
+      .infos-grid { grid-template-columns: 1fr; }
+      .identite   { flex-direction: column; align-items: center; text-align: center; }
+      .apprenant-nom { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <img src="icons/logoqds.jpg" alt="LQD Service"/>
+    <div class="brand">
+      <span class="brand-name">LQD Service</span>
+      <span class="brand-sub">VÉRIFICATION DE CARTE</span>
+    </div>
+    <div class="verif-badge">
+      <iconify-icon icon="tabler:shield-check"></iconify-icon>
+      Système officiel
+    </div>
+  </header>
+
+  <!-- CONTENU -->
+  <main>
+    <div class="container" id="app">
+      <!-- État initial : chargement -->
+      <div class="state-loading" id="state-loading">
+        <div class="spinner"></div>
+        <p>Vérification de la carte en cours…</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- jsPDF pour export PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script>
+    /* ================================================================
+       CONFIG
+    ================================================================ */
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+
+    /* ================================================================
+       UTILITAIRES
+    ================================================================ */
+    function formatDate(str) {
+      if (!str) return '—';
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      return d.toLocaleDateString('fr-BJ', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+
+    function esc(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    /* ================================================================
+       APPEL GAS
+    ================================================================ */
+    async function verifierToken(token) {
+      const resp = await fetch(GAS_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'carte_verifier', token })
+      });
+      return resp.json();
+    }
+
+    /* ================================================================
+       RENDU — ERREUR
+    ================================================================ */
+    function renderErreur(message) {
+      document.getElementById('app').innerHTML = `
+        <div class="state-error">
+          <div class="icon-wrap">
+            <iconify-icon icon="tabler:shield-x"></iconify-icon>
+          </div>
+          <h2>Carte invalide</h2>
+          <p>${esc(message)}</p>
+        </div>`;
+    }
+
+    /* ================================================================
+       RENDU — EXPIRÉ
+    ================================================================ */
+    function renderExpire(apprenant) {
+      document.getElementById('app').innerHTML = `
+        <div class="state-expired">
+          <div class="icon-wrap">
+            <iconify-icon icon="tabler:clock-x" style="color:var(--orange)"></iconify-icon>
+          </div>
+          <h2>Carte expirée</h2>
+          <p>
+            La carte de <strong>${esc(apprenant.prenom)} ${esc(apprenant.nom)}</strong>
+            (${esc(apprenant.id)}) a expiré le <strong>${formatDate(apprenant.dateFin)}</strong>.
+          </p>
+        </div>`;
+    }
+
+    /* ================================================================
+       RENDU — CARTE VALIDE
+    ================================================================ */
+    function renderCarte(a, tokenBrut) {
+      const photoHtml = a.photoUrl
+        ? `<img src="${esc(a.photoUrl)}" alt="Photo" onerror="this.parentElement.innerHTML='<iconify-icon icon=\\'tabler:user\\' class=\\"no-photo\\"></iconify-icon>'"/>`
+        : `<iconify-icon icon="tabler:user" class="no-photo"></iconify-icon>`;
+
+      const maintenant  = new Date();
+      const dateEmission = maintenant.toLocaleDateString('fr-BJ', { day: '2-digit', month: 'long', year: 'numeric' });
+
+      document.getElementById('app').innerHTML = `
+        <div class="carte-wrap" id="carte-wrap">
+
+          <!-- Bandeau statut -->
+          <div class="statut-banner">
+            <span class="valide-dot"></span>
+            <iconify-icon icon="tabler:shield-check"></iconify-icon>
+            CARTE AUTHENTIFIÉE — VALIDE
+          </div>
+
+          <!-- Corps -->
+          <div class="carte-body" id="carte-body">
+
+            <!-- Identité -->
+            <div class="identite">
+              <div class="photo-wrap">${photoHtml}</div>
+              <div class="identite-info">
+                <div class="apprenant-nom">${esc(a.prenom)} ${esc(a.nom)}</div>
+                <div class="apprenant-id">${esc(a.id)}</div>
+                <div class="filiere-tag">
+                  <iconify-icon icon="tabler:school"></iconify-icon>
+                  ${esc(a.filiere)}
+                </div>
+              </div>
+            </div>
+
+            <!-- Infos grille -->
+            <div class="infos-grid">
+              <div class="info-cell">
+                <div class="info-label">Sexe</div>
+                <div class="info-value ${a.sexe ? '' : 'empty'}">${esc(a.sexe) || 'Non renseigné'}</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Date de naissance</div>
+                <div class="info-value ${a.dateNaissance ? '' : 'empty'}">${a.dateNaissance ? formatDate(a.dateNaissance) : 'Non renseignée'}</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Début de formation</div>
+                <div class="info-value">${formatDate(a.dateEntree)}</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Fin de validité</div>
+                <div class="info-value accent">${formatDate(a.dateFin)}</div>
+              </div>
+              <div class="info-cell" style="grid-column: 1 / -1;">
+                <div class="info-label">Établissement</div>
+                <div class="info-value">Les Qualités de Dieu Service SARL — Cotonou, Bénin</div>
+              </div>
+            </div>
+
+            <!-- Pied -->
+            <div class="carte-footer">
+              <div class="footer-text">
+                <strong>LQD Service — Officiel</strong>
+                Vérification authentique du système LQD
+              </div>
+              <div class="emis-date">Vérifié le<br/>${dateEmission}</div>
+            </div>
+
+          </div><!-- /.carte-body -->
+
+          <!-- Bouton PDF -->
+          <button class="btn-pdf" id="btn-pdf" onclick="telechargerPDF()">
+            <iconify-icon icon="tabler:file-type-pdf"></iconify-icon>
+            Télécharger la carte en PDF
+          </button>
+
+        </div>`;
+    }
+
+    /* ================================================================
+       EXPORT PDF
+    ================================================================ */
+    async function telechargerPDF() {
+      const btn = document.getElementById('btn-pdf');
+      btn.disabled = true;
+      btn.innerHTML = '<iconify-icon icon="tabler:loader-2" style="animation:spin 0.8s linear infinite"></iconify-icon> Génération…';
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const el        = document.getElementById('carte-body');
+
+        const canvas = await html2canvas(el, {
+          scale:            2,
+          useCORS:          true,
+          allowTaint:       false,
+          backgroundColor:  '#FFFFFF'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+
+        const pageW   = pdf.internal.pageSize.getWidth();
+        const pageH   = pdf.internal.pageSize.getHeight();
+        const ratio   = canvas.height / canvas.width;
+        const imgW    = pageW - 20;
+        const imgH    = imgW * ratio;
+        const offsetY = (pageH - imgH) / 2;
+
+        pdf.addImage(imgData, 'PNG', 10, offsetY > 0 ? offsetY : 10, imgW, imgH);
+        pdf.save(`carte-lqd-${Date.now()}.pdf`);
+      } catch (err) {
+        alert('Erreur lors de la génération du PDF. Réessayez.');
+        console.error(err);
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<iconify-icon icon="tabler:file-type-pdf"></iconify-icon> Télécharger la carte en PDF';
+    }
+
+    /* ================================================================
+       INIT — Lecture du token dans l'URL
+    ================================================================ */
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const token  = params.get('t');
+
+      if (!token) {
+        renderErreur('Aucun token de vérification trouvé dans l\'URL. Scannez le QR code de la carte.');
+        return;
+      }
+
+      try {
+        const result = await verifierToken(token);
+
+        if (result.status === 'success') {
+          renderCarte(result.apprenant, token);
+        } else if (result.status === 'expired') {
+          renderExpire(result.apprenant);
+        } else {
+          renderErreur(result.message || 'Cette carte est invalide ou a été falsifiée.');
+        }
+      } catch (err) {
+        renderErreur('Impossible de contacter le serveur de vérification. Vérifiez votre connexion.');
+        console.error(err);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
