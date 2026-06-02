@@ -2181,7 +2181,10 @@ function renderModalReg(r) {
     </button>
   `;
 }
- 
+/* ================================================================
+              CARTE D'APPRENTISSAGE
+================================================================ */
+  
 async function sauvegarderStatutReg(id) {
   const statut = document.getElementById('select-reg-statut').value;
   try {
@@ -2259,7 +2262,20 @@ function badgeRegStatut(statut) {
   const map = { 'En attente': 'badge-orange', 'Validé': 'badge-green', 'Rejeté': 'badge-red' };
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
 }
- 
+ async function envoyerCarte(id) {
+  if (!confirm(`Envoyer la carte d'apprentissage pour le dossier ${id} ?`)) return;
+  try {
+    const result = await apiCall('admin_envoyer_carte', { id });
+    if (result.status === 'success') {
+      showToast(`Carte envoyée à ${result.apprenant.email}`, 'success');
+    } else {
+      showToast(result.message || 'Erreur envoi carte', 'error');
+    }
+  } catch (err) {
+    showToast('Erreur connexion', 'error');
+  }
+}
+
 </script>
 </body>
 </html>
