@@ -1837,7 +1837,7 @@ function renderTableauRens(rens) {
           <td>${badgeRensStatut(r.statut)}</td>
           <td>
             <div style="display:flex;gap:6px;">
-              <a href="tel:${r.telephone.replace(/[\s+]/g,'')}" class="btn btn-success btn-sm">
+              <a href="tel:${String(r.telephone).replace(/[\s+]/g,'')}" class="btn btn-success btn-sm">
                 <span class="iconify" data-icon="tabler:phone"></span>
               </a>
               ${r.email ? `<a href="mailto:${r.email}" class="btn btn-ghost btn-sm">
