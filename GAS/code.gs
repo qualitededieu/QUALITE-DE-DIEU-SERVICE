@@ -138,6 +138,7 @@ function doPost(e) {
 // Routing admin — doit être en premier
   if (action.startsWith('admin_')) return routerAdmin(data, action);
   if (action === 'renseignement') return traiterRenseignement(data);
+  if (action === 'regularisation') return traiterRegularisation(data);
     return traiterInscription(data);
 
   } catch (err) {
@@ -194,7 +195,7 @@ function testerRenseignement() {
         prenom:     'Marie',
         nom:        'Test',
         telephone:  '+22901000000001',
-        email:      'marie@test.bj',
+        email:      'marie@yopmail.com',
         formations: ['Graphisme & PAO', 'Sérigraphie'],
         question:   'Quels sont les horaires disponibles le soir ?'
       })
