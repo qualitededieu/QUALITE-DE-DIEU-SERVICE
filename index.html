@@ -1492,6 +1492,7 @@
       });
     }, { threshold: 0.12 });
     revealItems.forEach(el => revObserver.observe(el));
+
     /* ================================================================
    CARTE D'APPRENTISSAGE
 ================================================================ */
@@ -1501,12 +1502,11 @@ async function obtenirCarte() {
   const msg = document.getElementById('carte-msg');
   const btn = document.getElementById('carte-btn');
 
-  // Validation
   if (!id || !tel) {
-    msg.style.display  = 'block';
+    msg.style.display    = 'block';
     msg.style.background = 'rgba(224,92,42,0.1)';
-    msg.style.color    = '#E05C2A';
-    msg.textContent    = 'Veuillez remplir le numéro de dossier et le téléphone.';
+    msg.style.color      = '#E05C2A';
+    msg.textContent      = 'Veuillez remplir le numéro de dossier et le téléphone.';
     return;
   }
 
@@ -1515,28 +1515,28 @@ async function obtenirCarte() {
   msg.style.display = 'none';
 
   try {
+    // FIX CORS : Content-Type text/plain — obligatoire pour GAS
     const resp = await fetch(GAS_WEBAPP_URL, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify({ action: 'carte_get_data', id, telephone: tel })
     });
     const result = await resp.json();
 
     if (result.status === 'success') {
-      // Rediriger vers la page de vérification avec le token
-      const url = `verifier.html?t=${encodeURIComponent(result.token)}`;
-      window.open(url, '_blank');
+      window.open('verifier.html?t=' + encodeURIComponent(result.token), '_blank');
     } else {
       msg.style.display    = 'block';
       msg.style.background = 'rgba(224,92,42,0.1)';
       msg.style.color      = '#E05C2A';
       msg.textContent      = result.message || 'Dossier introuvable. Vérifiez vos informations.';
     }
-  } catch (err) {
+  } catch(err) {
     msg.style.display    = 'block';
     msg.style.background = 'rgba(224,92,42,0.1)';
     msg.style.color      = '#E05C2A';
     msg.textContent      = 'Erreur de connexion. Réessayez.';
+    console.error('[obtenirCarte]', err);
   }
 
   btn.disabled = false;
