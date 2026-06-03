@@ -9,13 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
-  <!-- Google Identity Services pour OAuth -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
-    /* ================================================================
-       VARIABLES & RESET
-    ================================================================ */
     :root {
       --dark-950: #050C0A;
       --dark-900: #0A1612;
@@ -67,9 +63,7 @@
       background: transparent;
     }
 
-    /* ================================================================
-       AUTH SCREEN
-    ================================================================ */
+    /* AUTH SCREEN */
     #auth-screen {
       position: fixed; inset: 0; z-index: 9999;
       background: var(--dark-950);
@@ -90,22 +84,10 @@
       text-align: center;
       border-bottom: 1px solid var(--border);
     }
-    .auth-logo {
-      width: 52px; height: 52px;
-      border-radius: 12px;
-      margin: 0 auto 14px;
-      border: 2px solid var(--border-l);
-    }
-    .auth-header h1 {
-      font-family: var(--font-ui);
-      font-size: 18px; font-weight: 700;
-      color: var(--text-1); margin-bottom: 4px;
-    }
+    .auth-logo { width: 52px; height: 52px; border-radius: 12px; margin: 0 auto 14px; border: 2px solid var(--border-l); }
+    .auth-header h1 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
     .auth-header p { font-size: 12px; color: var(--text-3); }
-
-    .auth-tabs {
-      display: flex; border-bottom: 1px solid var(--border);
-    }
+    .auth-tabs { display: flex; border-bottom: 1px solid var(--border); }
     .auth-tab {
       flex: 1; padding: 14px;
       background: none; border: none;
@@ -115,17 +97,10 @@
       transition: color .2s, border-color .2s;
     }
     .auth-tab.active { color: var(--teal-l); border-bottom-color: var(--teal-l); }
-
     .auth-body { padding: 28px 32px; }
-
     .auth-step { display: none; }
     .auth-step.active { display: block; }
-
-    .auth-label {
-      display: block; font-size: 12px; font-weight: 600;
-      color: var(--text-2); margin-bottom: 6px; letter-spacing: .04em;
-      text-transform: uppercase;
-    }
+    .auth-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; letter-spacing: .04em; text-transform: uppercase; }
     .auth-input {
       width: 100%; padding: 11px 14px;
       background: var(--dark-900);
@@ -135,17 +110,9 @@
       transition: border-color .2s, box-shadow .2s;
       margin-bottom: 16px;
     }
-    .auth-input:focus {
-      outline: none;
-      border-color: var(--teal);
-      box-shadow: 0 0 0 3px var(--teal-dim);
-    }
+    .auth-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim); }
     .auth-input.error { border-color: var(--red); }
-
-    .otp-inputs {
-      display: flex; gap: 10px; justify-content: center;
-      margin-bottom: 24px;
-    }
+    .otp-inputs { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
     .otp-digit {
       width: 48px; height: 56px;
       background: var(--dark-900);
@@ -156,16 +123,10 @@
       color: var(--text-1);
       transition: border-color .2s, box-shadow .2s;
     }
-    .otp-digit:focus {
-      outline: none;
-      border-color: var(--teal-l);
-      box-shadow: 0 0 0 3px var(--teal-dim);
-    }
-
+    .otp-digit:focus { outline: none; border-color: var(--teal-l); box-shadow: 0 0 0 3px var(--teal-dim); }
     .auth-btn {
       width: 100%; padding: 13px;
-      background: var(--teal);
-      color: #fff; border: none;
+      background: var(--teal); color: #fff; border: none;
       border-radius: var(--radius);
       font-family: var(--font-ui); font-size: 15px; font-weight: 700;
       transition: background .2s, transform .15s;
@@ -173,63 +134,21 @@
     }
     .auth-btn:hover { background: var(--teal-l); transform: translateY(-1px); }
     .auth-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-
-    .auth-divider {
-      text-align: center; margin: 20px 0;
-      font-size: 12px; color: var(--text-3);
-      position: relative;
-    }
-    .auth-divider::before, .auth-divider::after {
-      content: ''; position: absolute; top: 50%;
-      width: calc(50% - 24px); height: 1px;
-      background: var(--border);
-    }
+    .auth-divider { text-align: center; margin: 20px 0; font-size: 12px; color: var(--text-3); position: relative; }
+    .auth-divider::before, .auth-divider::after { content: ''; position: absolute; top: 50%; width: calc(50% - 24px); height: 1px; background: var(--border); }
     .auth-divider::before { left: 0; }
     .auth-divider::after  { right: 0; }
-
-    .google-btn {
-      width: 100%; padding: 11px;
-      background: var(--dark-900);
-      border: 1px solid var(--border-l);
-      border-radius: var(--radius);
-      color: var(--text-1);
-      font-family: var(--font-ui); font-size: 14px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      transition: background .2s, border-color .2s;
-    }
-    .google-btn:hover { background: var(--dark-700); border-color: var(--border-l); }
-
-    .auth-back {
-      background: none; border: none;
-      color: var(--text-3); font-size: 13px;
-      margin-top: 16px; width: 100%; text-align: center;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      transition: color .2s;
-    }
+    .auth-back { background: none; border: none; color: var(--text-3); font-size: 13px; margin-top: 16px; width: 100%; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; transition: color .2s; }
     .auth-back:hover { color: var(--text-2); }
-
-    .auth-error {
-      background: var(--red-dim); border: 1px solid rgba(240,82,82,0.25);
-      border-radius: var(--radius); padding: 10px 14px;
-      font-size: 13px; color: var(--red);
-      margin-bottom: 16px; display: none;
-    }
+    .auth-error { background: var(--red-dim); border: 1px solid rgba(240,82,82,0.25); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; display: none; }
     .auth-error.show { display: block; }
-    .auth-info {
-      background: var(--teal-dim); border: 1px solid rgba(13,122,138,0.25);
-      border-radius: var(--radius); padding: 10px 14px;
-      font-size: 13px; color: var(--teal-l);
-      margin-bottom: 16px; display: none;
-    }
+    .auth-info { background: var(--teal-dim); border: 1px solid rgba(13,122,138,0.25); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--teal-l); margin-bottom: 16px; display: none; }
     .auth-info.show { display: block; }
 
-    /* ================================================================
-       APP LAYOUT
-    ================================================================ */
+    /* APP LAYOUT */
     #app { display: none; min-height: 100vh; }
     #app.visible { display: flex; }
 
-    /* Sidebar */
     .sidebar {
       width: var(--sidebar-w);
       background: var(--dark-900);
@@ -238,26 +157,12 @@
       position: fixed; top: 0; left: 0; bottom: 0;
       z-index: 100; transition: transform .3s;
     }
-    .sidebar-logo {
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 10px;
-    }
-    .sidebar-logo img {
-      width: 36px; height: 36px; border-radius: 8px;
-    }
-    .sidebar-logo-text {
-      font-family: var(--font-ui); font-size: 13px; font-weight: 700;
-      color: var(--text-1); line-height: 1.2;
-    }
+    .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .sidebar-logo img { width: 36px; height: 36px; border-radius: 8px; }
+    .sidebar-logo-text { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-1); line-height: 1.2; }
     .sidebar-logo-text span { font-size: 11px; color: var(--text-3); font-weight: 400; }
-
     .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
-    .nav-section-label {
-      font-size: 10px; font-weight: 700; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--text-3);
-      padding: 10px 10px 6px;
-    }
+    .nav-section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); padding: 10px 10px 6px; }
     .nav-item {
       display: flex; align-items: center; gap: 10px;
       padding: 9px 12px; border-radius: var(--radius);
@@ -268,45 +173,17 @@
     }
     .nav-item .iconify { font-size: 17px; flex-shrink: 0; }
     .nav-item:hover { background: var(--dark-700); color: var(--text-1); }
-    .nav-item.active {
-      background: var(--teal-dim);
-      color: var(--teal-l);
-      border: 1px solid rgba(13,122,138,0.2);
-    }
-    .nav-badge {
-      margin-left: auto; background: var(--orange);
-      color: #000; font-size: 10px; font-weight: 700;
-      padding: 1px 7px; border-radius: 50px;
-    }
-
-    .sidebar-footer {
-      padding: 14px 10px;
-      border-top: 1px solid var(--border);
-    }
-    .sidebar-user {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; border-radius: var(--radius);
-      background: var(--dark-700);
-    }
-    .sidebar-user-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: var(--teal-dim);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; color: var(--teal-l); flex-shrink: 0;
-    }
+    .nav-item.active { background: var(--teal-dim); color: var(--teal-l); border: 1px solid rgba(13,122,138,0.2); }
+    .nav-badge { margin-left: auto; background: var(--orange); color: #000; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 50px; }
+    .sidebar-footer { padding: 14px 10px; border-top: 1px solid var(--border); }
+    .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); background: var(--dark-700); }
+    .sidebar-user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--teal-dim); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--teal-l); flex-shrink: 0; }
     .sidebar-user-info { flex: 1; min-width: 0; }
-    .sidebar-user-info strong {
-      display: block; font-size: 12px; font-weight: 600;
-      color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+    .sidebar-user-info strong { display: block; font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sidebar-user-info span { font-size: 10px; color: var(--text-3); }
-    .logout-btn {
-      background: none; border: none; color: var(--text-3);
-      font-size: 16px; padding: 4px; transition: color .2s;
-    }
+    .logout-btn { background: none; border: none; color: var(--text-3); font-size: 16px; padding: 4px; transition: color .2s; }
     .logout-btn:hover { color: var(--red); }
 
-    /* Topbar */
     .topbar {
       position: fixed; top: 0;
       left: var(--sidebar-w); right: 0;
@@ -317,118 +194,41 @@
       display: flex; align-items: center;
       padding: 0 24px; gap: 16px; z-index: 90;
     }
-    .topbar-title {
-      font-family: var(--font-ui); font-size: 15px; font-weight: 700;
-      color: var(--text-1); flex: 1;
-    }
+    .topbar-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-1); flex: 1; }
     .topbar-title span { color: var(--text-3); font-weight: 400; font-size: 13px; }
-    .topbar-search {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--dark-800); border: 1px solid var(--border-l);
-      border-radius: var(--radius); padding: 7px 12px; width: 260px;
-    }
-    .topbar-search input {
-      background: none; border: none; outline: none;
-      font-size: 13px; color: var(--text-1); width: 100%;
-    }
+    .topbar-search { display: flex; align-items: center; gap: 8px; background: var(--dark-800); border: 1px solid var(--border-l); border-radius: var(--radius); padding: 7px 12px; width: 260px; }
+    .topbar-search input { background: none; border: none; outline: none; font-size: 13px; color: var(--text-1); width: 100%; }
     .topbar-search input::placeholder { color: var(--text-3); }
     .topbar-search .iconify { color: var(--text-3); font-size: 16px; flex-shrink: 0; }
+    .mobile-menu-btn { display: none; background: none; border: none; color: var(--text-2); font-size: 22px; }
 
-    .mobile-menu-btn {
-      display: none; background: none; border: none;
-      color: var(--text-2); font-size: 22px;
-    }
-
-    /* Main content */
-    .main-content {
-      margin-left: var(--sidebar-w);
-      padding-top: var(--topbar-h);
-      min-height: 100vh;
-    }
+    .main-content { margin-left: var(--sidebar-w); padding-top: var(--topbar-h); min-height: 100vh; }
     .page { display: none; padding: 28px 24px; }
     .page.active { display: block; }
 
-    /* ================================================================
-       COMPOSANTS UI
-    ================================================================ */
-
-    /* Stat cards */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px; margin-bottom: 28px;
-    }
-    .stat-card {
-      background: var(--dark-800);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-l);
-      padding: 20px;
-      transition: border-color .2s;
-    }
+    /* COMPOSANTS */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--dark-800); border: 1px solid var(--border); border-radius: var(--radius-l); padding: 20px; transition: border-color .2s; }
     .stat-card:hover { border-color: var(--border-l); }
-    .stat-card-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .stat-card-icon {
-      width: 38px; height: 38px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-    }
-    .stat-card-badge {
-      font-family: var(--font-mono); font-size: 10px;
-      padding: 2px 8px; border-radius: 50px;
-    }
-    .stat-card-val {
-      font-family: var(--font-ui); font-size: 30px; font-weight: 800;
-      color: var(--text-1); line-height: 1; margin-bottom: 4px;
-    }
+    .stat-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .stat-card-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .stat-card-val { font-family: var(--font-ui); font-size: 30px; font-weight: 800; color: var(--text-1); line-height: 1; margin-bottom: 4px; }
     .stat-card-label { font-size: 12px; color: var(--text-3); }
 
-    /* Tables */
-    .table-card {
-      background: var(--dark-800);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-l);
-      overflow: hidden;
-    }
-    .table-card-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-    .table-card-title {
-      font-family: var(--font-ui); font-size: 14px; font-weight: 700;
-      color: var(--text-1);
-    }
+    .table-card { background: var(--dark-800); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden; }
+    .table-card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .table-card-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-1); }
     .table-card-actions { display: flex; gap: 8px; align-items: center; }
 
     .data-table { width: 100%; border-collapse: collapse; }
-    .data-table th {
-      padding: 11px 16px; text-align: left;
-      font-size: 11px; font-weight: 700; letter-spacing: .06em;
-      text-transform: uppercase; color: var(--text-3);
-      background: var(--dark-900);
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    .data-table td {
-      padding: 13px 16px;
-      font-size: 13px; color: var(--text-2);
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
+    .data-table th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--dark-900); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .data-table td { padding: 13px 16px; font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--border); vertical-align: middle; }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tbody tr { transition: background .15s; }
     .data-table tbody tr:hover { background: var(--dark-700); }
     .data-table td strong { color: var(--text-1); font-weight: 600; }
 
-    /* Badges statut */
-    .badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 10px; border-radius: 50px;
-      font-size: 11px; font-weight: 700;
-    }
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 50px; font-size: 11px; font-weight: 700; }
     .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
     .badge-orange { background: var(--orange-dim); color: var(--orange); }
     .badge-orange::before { background: var(--orange); }
@@ -441,238 +241,91 @@
     .badge-yellow { background: rgba(245,197,24,0.12); color: var(--yellow); }
     .badge-yellow::before { background: var(--yellow); }
 
-    /* Boutons */
-    .btn {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 8px 16px; border-radius: var(--radius);
-      font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-      border: none; cursor: pointer; transition: all .15s;
-      white-space: nowrap;
-    }
-    .btn-primary   { background: var(--teal); color: #fff; }
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius); font-family: var(--font-ui); font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-primary { background: var(--teal); color: #fff; }
     .btn-primary:hover { background: var(--teal-l); }
-    .btn-ghost     { background: var(--dark-700); color: var(--text-2); border: 1px solid var(--border); }
+    .btn-ghost { background: var(--dark-700); color: var(--text-2); border: 1px solid var(--border); }
     .btn-ghost:hover { background: var(--dark-600); color: var(--text-1); }
-    .btn-danger    { background: var(--red-dim); color: var(--red); border: 1px solid rgba(240,82,82,0.2); }
+    .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(240,82,82,0.2); }
     .btn-danger:hover { background: rgba(240,82,82,0.2); }
-    .btn-success   { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,199,122,0.2); }
+    .btn-success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,199,122,0.2); }
     .btn-success:hover { background: rgba(34,199,122,0.2); }
     .btn-sm { padding: 5px 10px; font-size: 12px; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
     .btn .iconify { font-size: 15px; }
 
-    /* Filtres */
-    .filters-bar {
-      display: flex; gap: 10px; align-items: center;
-      flex-wrap: wrap; margin-bottom: 20px;
-    }
-    .filter-select {
-      background: var(--dark-800);
-      border: 1px solid var(--border-l);
-      border-radius: var(--radius);
-      padding: 8px 12px; color: var(--text-1);
-      font-size: 13px; outline: none;
-      cursor: pointer;
-    }
+    .filters-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .filter-select { background: var(--dark-800); border: 1px solid var(--border-l); border-radius: var(--radius); padding: 8px 12px; color: var(--text-1); font-size: 13px; outline: none; cursor: pointer; }
     .filter-select:focus { border-color: var(--teal); }
-    .search-input-bar {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--dark-800); border: 1px solid var(--border-l);
-      border-radius: var(--radius); padding: 8px 12px; flex: 1; min-width: 200px;
-    }
-    .search-input-bar input {
-      background: none; border: none; outline: none;
-      color: var(--text-1); font-size: 13px; width: 100%;
-    }
+    .search-input-bar { display: flex; align-items: center; gap: 8px; background: var(--dark-800); border: 1px solid var(--border-l); border-radius: var(--radius); padding: 8px 12px; flex: 1; min-width: 200px; }
+    .search-input-bar input { background: none; border: none; outline: none; color: var(--text-1); font-size: 13px; width: 100%; }
     .search-input-bar input::placeholder { color: var(--text-3); }
     .search-input-bar .iconify { color: var(--text-3); font-size: 15px; }
 
-    /* Pagination */
-    .pagination {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; border-top: 1px solid var(--border);
-      font-size: 12px; color: var(--text-3);
-    }
+    .pagination { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-3); }
     .pagination-btns { display: flex; gap: 6px; }
-    .pg-btn {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--dark-700); border: 1px solid var(--border);
-      color: var(--text-2); font-size: 13px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: background .15s;
-    }
+    .pg-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--dark-700); border: 1px solid var(--border); color: var(--text-2); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s; }
     .pg-btn:hover { background: var(--dark-600); color: var(--text-1); }
     .pg-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
     .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* Modal */
-    .modal-overlay {
-      position: fixed; inset: 0; z-index: 999;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      padding: 20px; opacity: 0; pointer-events: none;
-      transition: opacity .25s;
-    }
+    .modal-overlay { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .25s; }
     .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal {
-      background: var(--dark-800);
-      border: 1px solid var(--border-l);
-      border-radius: var(--radius-l);
-      width: 100%; max-width: 600px;
-      max-height: 90vh; overflow-y: auto;
-      transform: translateY(20px);
-      transition: transform .25s;
-      box-shadow: 0 40px 100px rgba(0,0,0,0.6);
-    }
+    .modal { background: var(--dark-800); border: 1px solid var(--border-l); border-radius: var(--radius-l); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform .25s; box-shadow: 0 40px 100px rgba(0,0,0,0.6); }
     .modal-overlay.open .modal { transform: translateY(0); }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px; border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--dark-800); z-index: 1;
-    }
-    .modal-header h3 {
-      font-family: var(--font-ui); font-size: 16px; font-weight: 700;
-      color: var(--text-1);
-    }
-    .modal-close {
-      background: var(--dark-700); border: 1px solid var(--border);
-      color: var(--text-2); width: 32px; height: 32px; border-radius: 8px;
-      font-size: 18px; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: background .15s, color .15s;
-    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--dark-800); z-index: 1; }
+    .modal-header h3 { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-1); }
+    .modal-close { background: var(--dark-700); border: 1px solid var(--border); color: var(--text-2); width: 32px; height: 32px; border-radius: 8px; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s, color .15s; }
     .modal-close:hover { background: var(--red-dim); color: var(--red); }
     .modal-body { padding: 24px; }
-    .modal-footer {
-      display: flex; gap: 10px; justify-content: flex-end;
-      padding: 16px 24px; border-top: 1px solid var(--border);
-    }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--border); }
 
-    /* Info rows dans modal */
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-    .info-field label {
-      display: block; font-size: 11px; font-weight: 700;
-      letter-spacing: .06em; text-transform: uppercase;
-      color: var(--text-3); margin-bottom: 4px;
-    }
-    .info-field span {
-      font-size: 13px; color: var(--text-1); font-weight: 500;
-    }
+    .info-field label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
+    .info-field span { font-size: 13px; color: var(--text-1); font-weight: 500; }
     .info-field a { color: var(--teal-l); }
     .info-field a:hover { text-decoration: underline; }
-    .modal-section-title {
-      font-size: 11px; font-weight: 700; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--text-3);
-      margin: 20px 0 12px; padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    /* Select dans modal */
-    .modal-select {
-      background: var(--dark-900);
-      border: 1px solid var(--border-l);
-      border-radius: var(--radius);
-      padding: 9px 12px; color: var(--text-1);
-      font-size: 13px; width: 100%; outline: none;
-      transition: border-color .2s;
-    }
+    .modal-section-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .modal-select { background: var(--dark-900); border: 1px solid var(--border-l); border-radius: var(--radius); padding: 9px 12px; color: var(--text-1); font-size: 13px; width: 100%; outline: none; transition: border-color .2s; }
     .modal-select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim); }
 
-    /* Toast */
-    #toast-container {
-      position: fixed; bottom: 24px; right: 24px;
-      z-index: 9998; display: flex; flex-direction: column;
-      gap: 10px; pointer-events: none;
-    }
-    .toast {
-      display: flex; align-items: center; gap: 12px;
-      background: var(--dark-700); border: 1px solid var(--border-l);
-      border-radius: var(--radius); padding: 12px 18px;
-      font-size: 13px; color: var(--text-1);
-      box-shadow: var(--shadow);
-      transform: translateX(120%); opacity: 0;
-      transition: transform .3s ease, opacity .3s ease;
-      pointer-events: all; min-width: 260px; max-width: 360px;
-    }
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9998; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { display: flex; align-items: center; gap: 12px; background: var(--dark-700); border: 1px solid var(--border-l); border-radius: var(--radius); padding: 12px 18px; font-size: 13px; color: var(--text-1); box-shadow: var(--shadow); transform: translateX(120%); opacity: 0; transition: transform .3s ease, opacity .3s ease; pointer-events: all; min-width: 260px; max-width: 360px; }
     .toast.show { transform: translateX(0); opacity: 1; }
     .toast .iconify { font-size: 18px; flex-shrink: 0; }
     .toast-success .iconify { color: var(--green); }
     .toast-error   .iconify { color: var(--red); }
     .toast-info    .iconify { color: var(--teal-l); }
 
-    /* Loading */
-    .loading-overlay {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 60px 20px; gap: 14px; color: var(--text-3);
-    }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 2px solid var(--border);
-      border-top-color: var(--teal-l);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
+    .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 14px; color: var(--text-3); }
+    .spinner { width: 36px; height: 36px; border: 2px solid var(--border); border-top-color: var(--teal-l); border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Vide */
-    .empty-state {
-      text-align: center; padding: 60px 20px; color: var(--text-3);
-    }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-3); }
     .empty-state .iconify { font-size: 48px; margin-bottom: 14px; opacity: .4; }
     .empty-state p { font-size: 14px; }
 
-    /* Mono ID */
     .mono { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-
-    /* Formation tags */
     .formation-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-    .formation-tag {
-      font-size: 10px; font-weight: 600; padding: 2px 8px;
-      border-radius: 50px; background: var(--teal-dim); color: var(--teal-l);
-      white-space: nowrap;
-    }
+    .formation-tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 50px; background: var(--teal-dim); color: var(--teal-l); white-space: nowrap; }
 
-    /* Montant bloc */
     .montant-table { width: 100%; border-collapse: collapse; }
-    .montant-table tr td {
-      padding: 7px 0; font-size: 13px;
-      border-bottom: 1px solid var(--border);
-    }
+    .montant-table tr td { padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
     .montant-table tr:last-child td { border-bottom: none; }
     .montant-table td:last-child { text-align: right; font-weight: 600; color: var(--text-1); }
     .montant-table .total td { color: var(--orange); font-weight: 700; }
 
-    /* Confirm dialog */
-    .confirm-overlay {
-      position: fixed; inset: 0; z-index: 9997;
-      background: rgba(0,0,0,0.8);
-      display: flex; align-items: center; justify-content: center;
-      padding: 20px; opacity: 0; pointer-events: none;
-      transition: opacity .2s;
-    }
+    .confirm-overlay { position: fixed; inset: 0; z-index: 9997; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; }
     .confirm-overlay.open { opacity: 1; pointer-events: all; }
-    .confirm-box {
-      background: var(--dark-800); border: 1px solid var(--border-l);
-      border-radius: var(--radius-l); padding: 28px; max-width: 360px; width: 100%;
-      text-align: center; box-shadow: 0 40px 80px rgba(0,0,0,0.6);
-    }
+    .confirm-box { background: var(--dark-800); border: 1px solid var(--border-l); border-radius: var(--radius-l); padding: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 40px 80px rgba(0,0,0,0.6); }
     .confirm-box .iconify { font-size: 40px; color: var(--red); margin-bottom: 14px; }
-    .confirm-box h4 {
-      font-family: var(--font-ui); font-size: 16px; font-weight: 700;
-      color: var(--text-1); margin-bottom: 8px;
-    }
+    .confirm-box h4 { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-1); margin-bottom: 8px; }
     .confirm-box p { font-size: 13px; color: var(--text-3); margin-bottom: 24px; }
     .confirm-box-btns { display: flex; gap: 10px; justify-content: center; }
 
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    }
+    @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 768px) {
-      .sidebar {
-        transform: translateX(-100%);
-      }
+      .sidebar { transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); }
       .topbar { left: 0; }
       .main-content { margin-left: 0; }
@@ -681,17 +334,12 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .info-grid { grid-template-columns: 1fr; }
     }
-    @media (max-width: 480px) {
-      .stats-grid { grid-template-columns: 1fr; }
-      .page { padding: 16px; }
-    }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } .page { padding: 16px; } }
   </style>
 </head>
 <body>
 
-<!-- ================================================================
-     AUTH SCREEN
-================================================================ -->
+<!-- AUTH SCREEN -->
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-header">
@@ -699,7 +347,6 @@
       <h1>LQD Admin</h1>
       <p>Espace de gestion réservé aux administrateurs</p>
     </div>
-
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-credentials" onclick="switchAuthTab('credentials')">
         <span class="iconify" data-icon="tabler:lock"></span> Identifiant
@@ -708,9 +355,8 @@
         <span class="iconify" data-icon="tabler:brand-google"></span> Google
       </button>
     </div>
-
-    <!-- Étape 1 : Email + mot de passe -->
     <div class="auth-body">
+      <!-- Étape 1 -->
       <div class="auth-step active" id="step-credentials">
         <div class="auth-error" id="err-credentials"></div>
         <label class="auth-label" for="auth-email">Adresse email</label>
@@ -718,11 +364,9 @@
         <label class="auth-label" for="auth-password">Mot de passe</label>
         <input type="password" id="auth-password" class="auth-input" placeholder="••••••••" autocomplete="current-password" />
         <button class="auth-btn" id="btn-login" onclick="doLogin()">
-          <span class="iconify" data-icon="tabler:arrow-right"></span>
-          Continuer
+          <span class="iconify" data-icon="tabler:arrow-right"></span> Continuer
         </button>
       </div>
-
       <!-- Étape 2 : OTP -->
       <div class="auth-step" id="step-otp">
         <div class="auth-info show" id="otp-info">
@@ -741,36 +385,27 @@
           <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
         </div>
         <button class="auth-btn" id="btn-verify-otp" onclick="doVerifyOtp()">
-          <span class="iconify" data-icon="tabler:shield-check"></span>
-          Vérifier le code
+          <span class="iconify" data-icon="tabler:shield-check"></span> Vérifier le code
         </button>
         <button class="auth-back" onclick="goBackToLogin()">
-          <span class="iconify" data-icon="tabler:arrow-left"></span>
-          Modifier l'email
+          <span class="iconify" data-icon="tabler:arrow-left"></span> Modifier l'email
         </button>
       </div>
-
       <!-- Onglet Google -->
       <div class="auth-step" id="step-google" style="display:none;">
         <div class="auth-error" id="err-google"></div>
         <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;text-align:center;line-height:1.7;">
           Connectez-vous avec votre compte Google autorisé.
-          Seuls les emails de la liste blanche sont acceptés.
         </p>
-        <!-- Bouton Google Identity Services -->
         <div id="g_id_onload"
              data-client_id="849690475047-6km7beuqu8773a9qkaj9qfole90bkcdr.apps.googleusercontent.com"
              data-callback="handleGoogleCredential"
              data-auto_prompt="false">
         </div>
         <div class="g_id_signin"
-             data-type="standard"
-             data-size="large"
-             data-theme="filled_black"
-             data-text="signin_with"
-             data-shape="rectangular"
-             data-logo_alignment="left"
-             data-width="356">
+             data-type="standard" data-size="large" data-theme="filled_black"
+             data-text="signin_with" data-shape="rectangular"
+             data-logo_alignment="left" data-width="356">
         </div>
         <p style="font-size:11px;color:var(--text-3);margin-top:14px;text-align:center;">
           Seuls les emails autorisés peuvent accéder à l'administration.
@@ -780,21 +415,15 @@
   </div>
 </div>
 
-<!-- ================================================================
-     APP
-================================================================ -->
+<!-- APP -->
 <div id="app">
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <img src="/icons/logoqds.jpg" alt="LQD" />
-      <div class="sidebar-logo-text">
-        LQD Admin<br />
-        <span>v1.2 — Espace sécurisé</span>
-      </div>
+      <div class="sidebar-logo-text">LQD Admin<br /><span>v1.2 — Espace sécurisé</span></div>
     </div>
-
     <nav class="sidebar-nav">
       <div class="nav-section-label">Vue d'ensemble</div>
       <button class="nav-item active" onclick="naviguer('dashboard')">
@@ -834,7 +463,8 @@
       <button class="nav-item" onclick="exporterCSV()">
         <span class="iconify" data-icon="tabler:table-export"></span> Exporter CSV
       </button>
-            <div class="nav-section-label">Régularisations</div>
+
+      <div class="nav-section-label">Régularisations</div>
       <button class="nav-item" onclick="naviguer('regularisations')">
         <span class="iconify" data-icon="tabler:refresh-alert"></span> Tous les dossiers
         <span class="nav-badge" id="badge-regs">0</span>
@@ -849,7 +479,6 @@
         <span class="iconify" data-icon="tabler:circle-x"></span> Rejetés
       </button>
     </nav>
-
     <div class="sidebar-footer">
       <div class="sidebar-user">
         <div class="sidebar-user-avatar">
@@ -888,9 +517,7 @@
       <div class="stats-grid" id="stats-grid">
         <div class="loading-overlay" style="grid-column:1/-1;"><div class="spinner"></div></div>
       </div>
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <!-- Dernières inscriptions -->
         <div class="table-card">
           <div class="table-card-header">
             <span class="table-card-title">Dernières inscriptions</span>
@@ -900,8 +527,6 @@
           </div>
           <div id="table-recent"></div>
         </div>
-
-        <!-- Renseignements récents -->
         <div class="table-card">
           <div class="table-card-header">
             <span class="table-card-title">Renseignements récents</span>
@@ -937,7 +562,6 @@
           <span class="iconify" data-icon="tabler:refresh"></span>
         </button>
       </div>
-
       <div class="table-card">
         <div class="table-card-header">
           <span class="table-card-title">Dossiers d'inscription</span>
@@ -985,7 +609,6 @@
           <span class="iconify" data-icon="tabler:refresh"></span>
         </button>
       </div>
- 
       <div class="table-card">
         <div class="table-card-header">
           <span class="table-card-title">Dossiers de régularisation</span>
@@ -1000,13 +623,11 @@
         </div>
       </div>
     </div>
- 
+
   </main>
 </div>
 
-<!-- ================================================================
-     MODAL DOSSIER
-================================================================ -->
+<!-- MODAL DOSSIER -->
 <div class="modal-overlay" id="modal-dossier">
   <div class="modal">
     <div class="modal-header">
@@ -1015,9 +636,7 @@
         <span class="iconify" data-icon="tabler:x"></span>
       </button>
     </div>
-    <div class="modal-body" id="modal-body">
-      <div class="loading-overlay"><div class="spinner"></div></div>
-    </div>
+    <div class="modal-body" id="modal-body"><div class="loading-overlay"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="modal-footer"></div>
   </div>
 </div>
@@ -1034,7 +653,8 @@
     <div class="modal-body" id="rens-modal-body"></div>
   </div>
 </div>
-  <!-- MODAL RÉGULARISATION -->
+
+<!-- MODAL RÉGULARISATION -->
 <div class="modal-overlay" id="modal-reg">
   <div class="modal" style="max-width:700px;">
     <div class="modal-header">
@@ -1043,9 +663,7 @@
         <span class="iconify" data-icon="tabler:x"></span>
       </button>
     </div>
-    <div class="modal-body" id="reg-modal-body">
-      <div class="loading-overlay"><div class="spinner"></div></div>
-    </div>
+    <div class="modal-body" id="reg-modal-body"><div class="loading-overlay"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="reg-modal-footer"></div>
   </div>
 </div>
@@ -1066,9 +684,6 @@
 <!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
 
-<!-- ================================================================
-     JAVASCRIPT
-================================================================ -->
 <script>
 /* ================================================================
    CONFIG
@@ -1079,17 +694,9 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5
    STATE
 ================================================================ */
 let state = {
-  token:        null,
-  email:        null,
-  page:         'dashboard',
-  filtre:       '',
-  recherche:    '',
-  dossiers:     [],
-  rens:         [],
-  currentPage:  1,
-  perPage:      20,
-  totalPages:   1,
-  pendingLogin: null   // email en attente d'OTP
+  token: null, email: null, page: 'dashboard',
+  filtre: '', recherche: '', dossiers: [], rens: [],
+  currentPage: 1, perPage: 20, totalPages: 1, pendingLogin: null
 };
 
 /* ================================================================
@@ -1098,9 +705,9 @@ let state = {
 async function apiCall(action, extra = {}) {
   const payload = { action, token: state.token, ...extra };
   const resp = await fetch(GAS_URL, {
-    method:  'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body:    JSON.stringify(payload)
+    body: JSON.stringify(payload)
   });
   return await resp.json();
 }
@@ -1111,21 +718,13 @@ async function apiCall(action, extra = {}) {
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
-
-  // Reset étapes
-  document.querySelectorAll('.auth-step').forEach(s => {
-    s.classList.remove('active');
-    s.style.display = 'none';
-  });
-
+  document.querySelectorAll('.auth-step').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
   if (tab === 'credentials') {
     const el = document.getElementById('step-credentials');
-    el.style.display = 'block';
-    el.classList.add('active');
+    el.style.display = 'block'; el.classList.add('active');
   } else {
     const el = document.getElementById('step-google');
-    el.style.display = 'block';
-    el.classList.add('active');
+    el.style.display = 'block'; el.classList.add('active');
   }
 }
 
@@ -1134,17 +733,10 @@ async function doLogin() {
   const password = document.getElementById('auth-password').value;
   const errEl    = document.getElementById('err-credentials');
   const btn      = document.getElementById('btn-login');
-
   errEl.classList.remove('show');
-  if (!email || !password) {
-    errEl.textContent = 'Email et mot de passe requis.';
-    errEl.classList.add('show');
-    return;
-  }
-
+  if (!email || !password) { errEl.textContent = 'Email et mot de passe requis.'; errEl.classList.add('show'); return; }
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Connexion...';
-
   try {
     const result = await apiCall('admin_login', { email, password });
     if (result.status === 'otp_sent') {
@@ -1153,24 +745,15 @@ async function doLogin() {
       document.getElementById('step-credentials').classList.remove('active');
       document.getElementById('step-credentials').style.display = 'none';
       const otpStep = document.getElementById('step-otp');
-      otpStep.style.display = 'block';
-      otpStep.classList.add('active');
-      // Focus premier champ OTP
+      otpStep.style.display = 'block'; otpStep.classList.add('active');
       setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
     } else {
-      errEl.textContent = result.message || 'Erreur de connexion.';
-      errEl.classList.add('show');
+      errEl.textContent = result.message || 'Erreur de connexion.'; errEl.classList.add('show');
     }
-  } catch(e) {
-    errEl.textContent = 'Erreur réseau. Réessayez.';
-    errEl.classList.add('show');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<span class="iconify" data-icon="tabler:arrow-right"></span> Continuer';
-  }
+  } catch(e) { errEl.textContent = 'Erreur réseau. Réessayez.'; errEl.classList.add('show'); }
+  finally { btn.disabled = false; btn.innerHTML = '<span class="iconify" data-icon="tabler:arrow-right"></span> Continuer'; }
 }
 
-// Navigation OTP entre les champs
 document.addEventListener('DOMContentLoaded', () => {
   const digits = document.querySelectorAll('.otp-digit');
   digits.forEach((input, idx) => {
@@ -1180,9 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (val && idx < digits.length - 1) digits[idx + 1].focus();
       if (idx === digits.length - 1 && val) doVerifyOtp();
     });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !input.value && idx > 0) digits[idx - 1].focus();
-    });
+    input.addEventListener('keydown', e => { if (e.key === 'Backspace' && !input.value && idx > 0) digits[idx - 1].focus(); });
     input.addEventListener('paste', e => {
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
@@ -1193,95 +774,66 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function doVerifyOtp() {
-  const digits  = document.querySelectorAll('.otp-digit');
-  const otp     = Array.from(digits).map(d => d.value).join('');
-  const errEl   = document.getElementById('err-otp');
-  const btn     = document.getElementById('btn-verify-otp');
-
+  const digits = document.querySelectorAll('.otp-digit');
+  const otp    = Array.from(digits).map(d => d.value).join('');
+  const errEl  = document.getElementById('err-otp');
+  const btn    = document.getElementById('btn-verify-otp');
   errEl.classList.remove('show');
-  if (otp.length !== 6) {
-    errEl.textContent = 'Saisissez les 6 chiffres.';
-    errEl.classList.add('show');
-    return;
-  }
-
+  if (otp.length !== 6) { errEl.textContent = 'Saisissez les 6 chiffres.'; errEl.classList.add('show'); return; }
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Vérification...';
-
   try {
     const result = await apiCall('admin_verify_otp', { email: state.pendingLogin, otp });
     if (result.status === 'success') {
       ouvrirSession(result.token, result.email);
     } else {
-      errEl.textContent = result.message || 'Code incorrect.';
-      errEl.classList.add('show');
-      digits.forEach(d => d.value = '');
-      digits[0].focus();
+      errEl.textContent = result.message || 'Code incorrect.'; errEl.classList.add('show');
+      digits.forEach(d => d.value = ''); digits[0].focus();
     }
-  } catch(e) {
-    errEl.textContent = 'Erreur réseau.';
-    errEl.classList.add('show');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<span class="iconify" data-icon="tabler:shield-check"></span> Vérifier le code';
-  }
+  } catch(e) { errEl.textContent = 'Erreur réseau.'; errEl.classList.add('show'); }
+  finally { btn.disabled = false; btn.innerHTML = '<span class="iconify" data-icon="tabler:shield-check"></span> Vérifier le code'; }
 }
 
 function goBackToLogin() {
   document.getElementById('step-otp').classList.remove('active');
   document.getElementById('step-otp').style.display = 'none';
   const cred = document.getElementById('step-credentials');
-  cred.style.display = 'block';
-  cred.classList.add('active');
+  cred.style.display = 'block'; cred.classList.add('active');
   document.getElementById('auth-password').value = '';
   state.pendingLogin = null;
 }
 
-// OAuth Google callback
 async function handleGoogleCredential(response) {
   const errEl = document.getElementById('err-google');
   errEl.classList.remove('show');
   try {
     const result = await apiCall('admin_verify_google', { googleToken: response.credential });
-    if (result.status === 'success') {
-      ouvrirSession(result.token, result.email);
-    } else {
-      errEl.textContent = result.message || 'Accès refusé.';
-      errEl.classList.add('show');
-    }
-  } catch(e) {
-    errEl.textContent = 'Erreur réseau.';
-    errEl.classList.add('show');
-  }
+    if (result.status === 'success') { ouvrirSession(result.token, result.email); }
+    else { errEl.textContent = result.message || 'Accès refusé.'; errEl.classList.add('show'); }
+  } catch(e) { errEl.textContent = 'Erreur réseau.'; errEl.classList.add('show'); }
 }
 
 function ouvrirSession(token, email) {
-  state.token = token;
-  state.email = email;
+  state.token = token; state.email = email;
   sessionStorage.setItem('lqd_token', token);
   sessionStorage.setItem('lqd_email', email);
-
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
   document.getElementById('sidebar-email').textContent = email;
-
   chargerDashboard();
 }
 
 function deconnecter() {
   confirmer('Déconnexion', 'Êtes-vous sûr de vouloir vous déconnecter ?', () => {
-    sessionStorage.clear();
-    location.reload();
+    sessionStorage.clear(); location.reload();
   });
 }
 
-// Restaurer session si token en sessionStorage
 (function() {
   const token = sessionStorage.getItem('lqd_token');
   const email = sessionStorage.getItem('lqd_email');
   if (token && email) {
-    state.token = token;
-    state.email = email;
+    state.token = token; state.email = email;
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     document.getElementById('sidebar-email').textContent = email;
@@ -1293,60 +845,27 @@ function deconnecter() {
    NAVIGATION
 ================================================================ */
 function naviguer(page, filtre = '') {
-  // Reset active nav items
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-
-  // Cacher toutes les pages
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-
-  state.page    = page;
-  state.filtre  = filtre;
-  state.currentPage = 1;
-
+  state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-
-  // Topbar title
-  const titres = {
-    dashboard:        'Tableau de bord',
-    dossiers:         'Dossiers',
-    renseignements:   'Renseignements'
-  };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', regularisations: 'Régularisations' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
-
-  if (page === 'dashboard')      chargerDashboard();
-  if (page === 'dossiers')       { chargerDossiers(); }
-  if (page === 'renseignements') chargerRenseignements();
-
-  // Appliquer filtre si fourni
+  if (page === 'dashboard')       chargerDashboard();
+  if (page === 'dossiers')        chargerDossiers();
+  if (page === 'renseignements')  chargerRenseignements();
+  if (page === 'regularisations') chargerRegularisations();
   if (filtre && page === 'dossiers') {
-    const mapFiltre = {
-      confirme:          'confirme',
-      annule:            'annule',
-      paiement_attente:  'paiement_attente',
-      paiement_recu:     'paiement_recu',
-      paiement_verifie:  'paiement_verifie',
-    };
-    const selectStatut    = document.getElementById('filtre-statut');
-    const selectPaiement  = document.getElementById('filtre-paiement');
-    if (['attente','confirme','annule'].includes(filtre)) {
-      if(selectStatut) selectStatut.value = filtre;
-    } else {
-      if(selectPaiement) selectPaiement.value = filtre;
-    }
+    const selectStatut   = document.getElementById('filtre-statut');
+    const selectPaiement = document.getElementById('filtre-paiement');
+    if (['attente','confirme','annule'].includes(filtre)) { if (selectStatut) selectStatut.value = filtre; }
+    else { if (selectPaiement) selectPaiement.value = filtre; }
   }
-/* ================================================================
-   PATCH naviguer() — Ajouter dans la fonction naviguer() existante
-   après : if (page === 'renseignements') chargerRenseignements();
-================================================================ */
-if (page === 'regularisations') chargerRegularisations();
-
-// Et dans le filtre sidebar, dans le if(filtre && page === 'dossiers')
-// ajouter le cas regularisations :
- if (filtre && page === 'regularisations') {
-  const sel = document.getElementById('filtre-reg-statut');
-   if (sel) sel.value = filtre;
-}
+  if (filtre && page === 'regularisations') {
+    const sel = document.getElementById('filtre-reg-statut');
+    if (sel) sel.value = filtre;
+  }
   document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -1361,36 +880,30 @@ async function chargerDashboard() {
   try {
     const result = await apiCall('admin_get_stats');
     if (result.status !== 'success') throw new Error(result.message);
-
     const s = result.stats;
+
+    // Badges sidebar
     document.getElementById('badge-attente').textContent = s.enAttente;
     document.getElementById('badge-rens').textContent    = s.rensNouveaux;
     document.getElementById('badge-regs').textContent    = s.regsEnAttente || 0;
-    
-    // Stat cards
+
+    // Stat cards — 4 colonnes propres (sans doublon)
     document.getElementById('stats-grid').innerHTML = `
-      ${statCard('Total inscriptions',    s.total,              'tabler:users',          '--teal',   'bg-teal')}
-      ${statCard('En attente',            s.enAttente,          'tabler:clock-hour-3',   '--orange',  'bg-orange')}
-      ${statCard('Confirmés',             s.confirmes,          'tabler:circle-check',   '--green',   'bg-green')}
-      ${statCard('Renseignements',        s.rensNouveaux + ' nouveaux', 'tabler:message-question','--teal-l','bg-teal')}
-      ${statCard('Renseignements',    s.rensNouveaux + ' nouveaux',  'tabler:message-question','--teal-l','bg-teal')}
-      ${statCard('Régularisations',   (s.regsEnAttente||0) + ' en attente', 'tabler:refresh-alert','--orange','bg-orange')}
+      ${statCard('Total inscriptions', s.total,                              'tabler:users',           '--teal',   'bg-teal')}
+      ${statCard('En attente',         s.enAttente,                         'tabler:clock-hour-3',    '--orange', 'bg-orange')}
+      ${statCard('Confirmés',          s.confirmes,                         'tabler:circle-check',    '--green',  'bg-green')}
+      ${statCard('Renseignements',     (s.rensNouveaux||0) + ' nouveaux',   'tabler:message-question','--teal-l', 'bg-teal')}
+      ${statCard('Régularisations',    (s.regsEnAttente||0) + ' en attente','tabler:refresh-alert',   '--orange', 'bg-orange')}
+      ${statCard('Chiffre d\'affaires',(s.chiffreAffaire||0).toLocaleString('fr-BJ') + ' F','tabler:cash','--green','bg-green')}
     `;
 
-    // Charger récents
     const dossiersRes = await apiCall('admin_get_dossiers', { page: 1, perPage: 6 });
-    if (dossiersRes.status === 'success') {
-      renderTableauRecent(dossiersRes.dossiers);
-    }
+    if (dossiersRes.status === 'success') renderTableauRecent(dossiersRes.dossiers);
 
     const rensRes = await apiCall('admin_get_rens');
-    if (rensRes.status === 'success') {
-      renderRensRecent(rensRes.renseignements.slice(0, 6));
-    }
+    if (rensRes.status === 'success') renderRensRecent(rensRes.renseignements.slice(0, 6));
 
-  } catch(e) {
-    toast('Erreur de chargement : ' + e.message, 'error');
-  }
+  } catch(e) { toast('Erreur de chargement : ' + e.message, 'error'); }
 }
 
 function statCard(label, val, icon, color, bgClass) {
@@ -1408,50 +921,31 @@ function statCard(label, val, icon, color, bgClass) {
 }
 
 function renderTableauRecent(dossiers) {
-  if (!dossiers.length) {
-    document.getElementById('table-recent').innerHTML = '<div class="empty-state"><p>Aucune inscription</p></div>';
-    return;
-  }
+  if (!dossiers.length) { document.getElementById('table-recent').innerHTML = '<div class="empty-state"><p>Aucune inscription</p></div>'; return; }
   document.getElementById('table-recent').innerHTML = `
     <table class="data-table">
-      <thead><tr>
-        <th>Référence</th>
-        <th>Nom</th>
-        <th>Statut</th>
-        <th></th>
-      </tr></thead>
-      <tbody>
-        ${dossiers.map(d => `<tr>
-          <td><span class="mono">${d.id}</span></td>
-          <td><strong>${d.prenom} ${d.nom}</strong></td>
-          <td>${badgeStatut(d.statutDossier)}</td>
-          <td><button class="btn btn-ghost btn-sm" onclick="ouvrirDossier('${d.id}')">
-            <span class="iconify" data-icon="tabler:eye"></span>
-          </button></td>
-        </tr>`).join('')}
-      </tbody>
+      <thead><tr><th>Référence</th><th>Nom</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${dossiers.map(d => `<tr>
+        <td><span class="mono">${d.id}</span></td>
+        <td><strong>${d.prenom} ${d.nom}</strong></td>
+        <td>${badgeStatut(d.statutDossier)}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="ouvrirDossier('${d.id}')">
+          <span class="iconify" data-icon="tabler:eye"></span>
+        </button></td>
+      </tr>`).join('')}</tbody>
     </table>`;
 }
 
 function renderRensRecent(rens) {
-  if (!rens.length) {
-    document.getElementById('table-rens-recent').innerHTML = '<div class="empty-state"><p>Aucune demande</p></div>';
-    return;
-  }
+  if (!rens.length) { document.getElementById('table-rens-recent').innerHTML = '<div class="empty-state"><p>Aucune demande</p></div>'; return; }
   document.getElementById('table-rens-recent').innerHTML = `
     <table class="data-table">
-      <thead><tr>
-        <th>Nom</th>
-        <th>Formation</th>
-        <th>Statut</th>
-      </tr></thead>
-      <tbody>
-        ${rens.map(r => `<tr>
-          <td><strong>${r.prenom} ${r.nom}</strong><br/><span class="mono">${r.telephone}</span></td>
-          <td style="font-size:12px;color:var(--text-3);max-width:140px;">${(r.formations||'—').split(' | ').join(', ')}</td>
-          <td>${badgeRensStatut(r.statut)}</td>
-        </tr>`).join('')}
-      </tbody>
+      <thead><tr><th>Nom</th><th>Formation</th><th>Statut</th></tr></thead>
+      <tbody>${rens.map(r => `<tr>
+        <td><strong>${r.prenom} ${r.nom}</strong><br/><span class="mono">${r.telephone}</span></td>
+        <td style="font-size:12px;color:var(--text-3);max-width:140px;">${(r.formations||'—').split(' | ').join(', ')}</td>
+        <td>${badgeRensStatut(r.statut)}</td>
+      </tr>`).join('')}</tbody>
     </table>`;
 }
 
@@ -1461,42 +955,25 @@ function renderRensRecent(rens) {
 async function chargerDossiers() {
   document.getElementById('dossiers-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   document.getElementById('dossiers-pagination').style.display = 'none';
-
   const filtre    = document.getElementById('filtre-statut')?.value || document.getElementById('filtre-paiement')?.value || state.filtre;
   const recherche = document.getElementById('search-dossiers')?.value || '';
-
   try {
-    const result = await apiCall('admin_get_dossiers', {
-      page:      state.currentPage,
-      perPage:   state.perPage,
-      filtre:    filtre,
-      recherche: recherche
-    });
+    const result = await apiCall('admin_get_dossiers', { page: state.currentPage, perPage: state.perPage, filtre, recherche });
     if (result.status !== 'success') throw new Error(result.message);
-
-    state.dossiers   = result.dossiers;
-    state.totalPages = result.pages;
-
+    state.dossiers = result.dossiers; state.totalPages = result.pages;
     document.getElementById('dossiers-count').textContent = `${result.total} dossier(s)`;
     renderTableauDossiers(result.dossiers);
     renderPagination(result.page, result.pages, result.total, result.perPage);
-
   } catch(e) {
     document.getElementById('dossiers-table-container').innerHTML =
       `<div class="empty-state"><span class="iconify" data-icon="tabler:wifi-off"></span><p>Erreur : ${e.message}</p></div>`;
   }
 }
 
-function filtrerDossiers() {
-  state.currentPage = 1;
-  chargerDossiers();
-}
+function filtrerDossiers() { state.currentPage = 1; chargerDossiers(); }
 
 function rechercheGlobale(val) {
-  if (state.page === 'dossiers') {
-    const el = document.getElementById('search-dossiers');
-    if (el) { el.value = val; filtrerDossiers(); }
-  }
+  if (state.page === 'dossiers') { const el = document.getElementById('search-dossiers'); if (el) { el.value = val; filtrerDossiers(); } }
 }
 
 function renderTableauDossiers(dossiers) {
@@ -1505,104 +982,71 @@ function renderTableauDossiers(dossiers) {
       '<div class="empty-state"><span class="iconify" data-icon="tabler:folder-off"></span><p>Aucun dossier trouvé</p></div>';
     return;
   }
-
   document.getElementById('dossiers-table-container').innerHTML = `
     <div style="overflow-x:auto;">
     <table class="data-table">
       <thead><tr>
-        <th>Référence</th>
-        <th>Apprenant</th>
-        <th>Formation(s)</th>
-        <th>1er virement</th>
-        <th>Dossier</th>
-        <th>Paiement</th>
-        <th>Actions</th>
+        <th>Référence</th><th>Apprenant</th><th>Formation(s)</th>
+        <th>1er virement</th><th>Dossier</th><th>Paiement</th><th>Actions</th>
       </tr></thead>
-      <tbody>
-        ${dossiers.map(d => `<tr>
-          <td><span class="mono">${d.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${d.date}</span></td>
-          <td>
-            <strong>${d.prenom} ${d.nom}</strong><br/>
-            <span class="mono">${d.telephone}</span>
-          </td>
-          <td>
-            <div class="formation-tags">
-              ${(d.formations||[]).map(f => `<span class="formation-tag">${abrevierFormation(f)}</span>`).join('')}
-            </div>
-          </td>
-          <td style="font-family:var(--font-mono);font-size:12px;color:var(--orange);">
-            ${Number(d.premierVirement||0).toLocaleString('fr-BJ')} F
-          </td>
-          <td>${badgeStatut(d.statutDossier)}</td>
-          <td>${badgePaiement(d.statutPaiement)}</td>
-          <td>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-ghost btn-sm" title="Voir le dossier" onclick="ouvrirDossier('${d.id}')">
-                <span class="iconify" data-icon="tabler:eye"></span>
-              </button>
-              <button class="btn btn-sm" style="background:var(--orange-dim);color:var(--orange);" title="Envoyer relance" onclick="envoyerRelance('${d.id}', '${d.prenom} ${d.nom}')">
-                <span class="iconify" data-icon="tabler:send"></span>
-              </button>
-              <button class="btn btn-danger btn-sm" title="Supprimer" onclick="supprimerDossier('${d.id}', '${d.prenom} ${d.nom}')">
-                <span class="iconify" data-icon="tabler:trash"></span>
-              </button>
-            </div>
-          </td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>`;
+      <tbody>${dossiers.map(d => `<tr>
+        <td><span class="mono">${d.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${d.date}</span></td>
+        <td><strong>${d.prenom} ${d.nom}</strong><br/><span class="mono">${d.telephone}</span></td>
+        <td><div class="formation-tags">${(d.formations||[]).map(f => `<span class="formation-tag">${abrevierFormation(f)}</span>`).join('')}</div></td>
+        <td style="font-family:var(--font-mono);font-size:12px;color:var(--orange);">${Number(d.premierVirement||0).toLocaleString('fr-BJ')} F</td>
+        <td>${badgeStatut(d.statutDossier)}</td>
+        <td>${badgePaiement(d.statutPaiement)}</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" title="Voir le dossier" onclick="ouvrirDossier('${d.id}')">
+              <span class="iconify" data-icon="tabler:eye"></span>
+            </button>
+            <button class="btn btn-sm" style="background:var(--teal-dim);color:var(--teal-l);" title="Envoyer carte" onclick="envoyerCarte('${d.id}')">
+              <span class="iconify" data-icon="tabler:id-badge-2"></span>
+            </button>
+            <button class="btn btn-sm" style="background:var(--orange-dim);color:var(--orange);" title="Envoyer relance" onclick="envoyerRelance('${d.id}', '${d.prenom} ${d.nom}')">
+              <span class="iconify" data-icon="tabler:send"></span>
+            </button>
+            <button class="btn btn-danger btn-sm" title="Supprimer" onclick="supprimerDossier('${d.id}', '${d.prenom} ${d.nom}')">
+              <span class="iconify" data-icon="tabler:trash"></span>
+            </button>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
 }
 
 function renderPagination(page, pages, total, perPage) {
   if (pages <= 1) { document.getElementById('dossiers-pagination').style.display = 'none'; return; }
-
   document.getElementById('dossiers-pagination').style.display = 'flex';
   const debut = (page - 1) * perPage + 1;
   const fin   = Math.min(page * perPage, total);
   document.getElementById('pagination-info').textContent = `${debut}–${fin} sur ${total}`;
-
   const btns = document.getElementById('pagination-btns');
   btns.innerHTML = '';
-
-  // Précédent
   const prev = document.createElement('button');
-  prev.className = 'pg-btn';
-  prev.innerHTML = '<span class="iconify" data-icon="tabler:chevron-left"></span>';
-  prev.disabled  = page === 1;
-  prev.onclick   = () => changerPage(page - 1);
+  prev.className = 'pg-btn'; prev.innerHTML = '<span class="iconify" data-icon="tabler:chevron-left"></span>';
+  prev.disabled = page === 1; prev.onclick = () => changerPage(page - 1);
   btns.appendChild(prev);
-
-  // Pages
   for (let i = 1; i <= pages; i++) {
     if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) {
       const btn = document.createElement('button');
       btn.className = 'pg-btn' + (i === page ? ' active' : '');
-      btn.textContent = i;
-      btn.onclick = () => changerPage(i);
+      btn.textContent = i; btn.onclick = () => changerPage(i);
       btns.appendChild(btn);
     } else if (i === page - 2 || i === page + 2) {
       const sp = document.createElement('span');
-      sp.textContent = '…';
-      sp.style.cssText = 'color:var(--text-3);font-size:13px;padding:0 4px;align-self:center;';
+      sp.textContent = '…'; sp.style.cssText = 'color:var(--text-3);font-size:13px;padding:0 4px;align-self:center;';
       btns.appendChild(sp);
     }
   }
-
-  // Suivant
   const next = document.createElement('button');
-  next.className = 'pg-btn';
-  next.innerHTML = '<span class="iconify" data-icon="tabler:chevron-right"></span>';
-  next.disabled  = page === pages;
-  next.onclick   = () => changerPage(page + 1);
+  next.className = 'pg-btn'; next.innerHTML = '<span class="iconify" data-icon="tabler:chevron-right"></span>';
+  next.disabled = page === pages; next.onclick = () => changerPage(page + 1);
   btns.appendChild(next);
 }
 
-function changerPage(p) {
-  state.currentPage = p;
-  chargerDossiers();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+function changerPage(p) { state.currentPage = p; chargerDossiers(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 /* ================================================================
    MODAL DOSSIER
@@ -1612,15 +1056,12 @@ async function ouvrirDossier(id) {
   document.getElementById('modal-title').textContent = `Dossier ${id}`;
   document.getElementById('modal-body').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   document.getElementById('modal-footer').innerHTML = '';
-
   try {
     const result = await apiCall('admin_get_dossier', { id });
     if (result.status !== 'success') throw new Error(result.message);
-    const d = result.dossier;
-    renderModalDossier(d);
+    renderModalDossier(result.dossier);
   } catch(e) {
-    document.getElementById('modal-body').innerHTML =
-      `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
+    document.getElementById('modal-body').innerHTML = `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
   }
 }
 
@@ -1631,27 +1072,18 @@ function renderModalDossier(d) {
       <div class="info-field"><label>Date</label><span>${d.date}</span></div>
       <div class="info-field"><label>Prénom</label><span>${d.prenom}</span></div>
       <div class="info-field"><label>Nom</label><span>${d.nom}</span></div>
-      <div class="info-field"><label>Téléphone</label>
-        <span><a href="tel:${d.telephone}">${d.telephone}</a></span>
-      </div>
-      <div class="info-field"><label>Email</label>
-        <span>${d.email ? `<a href="mailto:${d.email}">${d.email}</a>` : '—'}</span>
-      </div>
+      <div class="info-field"><label>Téléphone</label><span><a href="tel:${d.telephone}">${d.telephone}</a></span></div>
+      <div class="info-field"><label>Email</label><span>${d.email ? `<a href="mailto:${d.email}">${d.email}</a>` : '—'}</span></div>
       <div class="info-field"><label>Type pièce</label><span>${d.typePiece}</span></div>
       <div class="info-field"><label>Nb formations</label><span>${d.nbFormations}</span></div>
     </div>
-
     <div class="info-field" style="margin-bottom:16px;">
       <label>Formation(s)</label>
       <div class="formation-tags" style="margin-top:6px;">
         ${(d.formations||[]).map(f => `<span class="formation-tag">${f}</span>`).join('')}
       </div>
     </div>
-
-    ${d.message ? `<div class="info-field" style="margin-bottom:16px;">
-      <label>Message</label><span>${d.message}</span>
-    </div>` : ''}
-
+    ${d.message ? `<div class="info-field" style="margin-bottom:16px;"><label>Message</label><span>${d.message}</span></div>` : ''}
     <div class="modal-section-title">Pièces justificatives</div>
     <div class="info-grid">
       <div class="info-field"><label>Pièce identité</label>
@@ -1667,7 +1099,6 @@ function renderModalDossier(d) {
         <span>${d.dossierUrl ? `<a href="${d.dossierUrl}" target="_blank">Dossier Drive</a>` : '—'}</span>
       </div>
     </div>
-
     <div class="modal-section-title">Finances</div>
     <table class="montant-table" style="margin-bottom:20px;">
       <tr><td>Frais inscription</td><td>${Number(d.fraisInscription||0).toLocaleString('fr-BJ')} F CFA</td></tr>
@@ -1677,30 +1108,27 @@ function renderModalDossier(d) {
       <tr><td>Tranche 3 — 25%</td><td>${Number(d.tranche3||0).toLocaleString('fr-BJ')} F CFA</td></tr>
       <tr class="total"><td>1er virement attendu</td><td>${Number(d.premierVirement||0).toLocaleString('fr-BJ')} F CFA</td></tr>
     </table>
-
     <div class="modal-section-title">Gestion du statut</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div>
         <label class="auth-label" style="margin-bottom:6px;">Statut dossier</label>
         <select class="modal-select" id="select-statut-dossier">
-          ${['En attente','Confirmé','Annulé'].map(s =>
-            `<option value="${s}" ${d.statutDossier === s ? 'selected' : ''}>${s}</option>`
-          ).join('')}
+          ${['En attente','Confirmé','Annulé'].map(s => `<option value="${s}" ${d.statutDossier === s ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
       </div>
       <div>
         <label class="auth-label" style="margin-bottom:6px;">Statut paiement</label>
         <select class="modal-select" id="select-statut-paiement">
-          ${['En attente','Reçu','Vérifié'].map(s =>
-            `<option value="${s}" ${d.statutPaiement === s ? 'selected' : ''}>${s}</option>`
-          ).join('')}
+          ${['En attente','Reçu','Vérifié'].map(s => `<option value="${s}" ${d.statutPaiement === s ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
       </div>
-    </div>
-  `;
+    </div>`;
 
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="fermerModal('modal-dossier')">Fermer</button>
+    <button class="btn btn-sm" style="background:var(--teal-dim);color:var(--teal-l);" onclick="envoyerCarte('${d.id}')">
+      <span class="iconify" data-icon="tabler:id-badge-2"></span> Envoyer carte
+    </button>
     <button class="btn btn-sm" style="background:var(--orange-dim);color:var(--orange);" onclick="envoyerRelance('${d.id}', '${d.prenom} ${d.nom}')">
       <span class="iconify" data-icon="tabler:send"></span> Relance email
     </button>
@@ -1709,67 +1137,50 @@ function renderModalDossier(d) {
     </button>
     <button class="btn btn-primary" onclick="sauvegarderStatuts('${d.id}')">
       <span class="iconify" data-icon="tabler:device-floppy"></span> Sauvegarder
-    </button>
-  `;
+    </button>`;
 }
 
 async function sauvegarderStatuts(id) {
   const statutDossier  = document.getElementById('select-statut-dossier').value;
   const statutPaiement = document.getElementById('select-statut-paiement').value;
-
   try {
     const [r1, r2] = await Promise.all([
       apiCall('admin_update_statut',   { id, statut: statutDossier }),
       apiCall('admin_update_paiement', { id, statut: statutPaiement })
     ]);
-
     if (r1.status === 'success' && r2.status === 'success') {
       toast('Statuts mis à jour avec succès.', 'success');
       fermerModal('modal-dossier');
       if (state.page === 'dossiers') chargerDossiers();
       chargerDashboard();
-    } else {
-      toast((r1.message || r2.message || 'Erreur.'), 'error');
-    }
-  } catch(e) {
-    toast('Erreur réseau.', 'error');
-  }
+    } else { toast((r1.message || r2.message || 'Erreur.'), 'error'); }
+  } catch(e) { toast('Erreur réseau.', 'error'); }
 }
 
 /* ================================================================
-   ACTIONS
+   ACTIONS DOSSIERS
 ================================================================ */
 async function envoyerRelance(id, nom) {
-  confirmer(
-    'Envoyer une relance',
-    `Envoyer un email de relance à ${nom} (réf. ${id}) ?`,
-    async () => {
-      try {
-        const result = await apiCall('admin_send_relance', { id });
-        toast(result.status === 'success' ? result.message : result.message, result.status === 'success' ? 'success' : 'error');
-      } catch(e) { toast('Erreur réseau.', 'error'); }
-    }
-  );
+  confirmer('Envoyer une relance', `Envoyer un email de relance à ${nom} (réf. ${id}) ?`, async () => {
+    try {
+      const result = await apiCall('admin_send_relance', { id });
+      toast(result.message, result.status === 'success' ? 'success' : 'error');
+    } catch(e) { toast('Erreur réseau.', 'error'); }
+  });
 }
 
 async function supprimerDossier(id, nom) {
-  confirmer(
-    'Supprimer le dossier',
-    `Supprimer définitivement le dossier de ${nom} (${id}) ? Cette action est irréversible.`,
-    async () => {
-      try {
-        const result = await apiCall('admin_delete_dossier', { id });
-        if (result.status === 'success') {
-          toast(`Dossier ${id} supprimé.`, 'success');
-          fermerModal('modal-dossier');
-          if (state.page === 'dossiers') chargerDossiers();
-          chargerDashboard();
-        } else {
-          toast(result.message || 'Erreur.', 'error');
-        }
-      } catch(e) { toast('Erreur réseau.', 'error'); }
-    }
-  );
+  confirmer('Supprimer le dossier', `Supprimer définitivement le dossier de ${nom} (${id}) ? Action irréversible.`, async () => {
+    try {
+      const result = await apiCall('admin_delete_dossier', { id });
+      if (result.status === 'success') {
+        toast(`Dossier ${id} supprimé.`, 'success');
+        fermerModal('modal-dossier');
+        if (state.page === 'dossiers') chargerDossiers();
+        chargerDashboard();
+      } else { toast(result.message || 'Erreur.', 'error'); }
+    } catch(e) { toast('Erreur réseau.', 'error'); }
+  });
 }
 
 async function exporterCSV() {
@@ -1777,18 +1188,33 @@ async function exporterCSV() {
   try {
     const result = await apiCall('admin_export_csv');
     if (result.status !== 'success') throw new Error(result.message);
-
     const blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `lqd-inscriptions-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.href = url; a.download = `lqd-inscriptions-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
     toast(`CSV exporté — ${result.total} dossiers.`, 'success');
-  } catch(e) {
-    toast('Erreur export : ' + e.message, 'error');
-  }
+  } catch(e) { toast('Erreur export : ' + e.message, 'error'); }
+}
+
+/* ================================================================
+   CARTE D'APPRENTISSAGE
+================================================================ */
+async function envoyerCarte(id) {
+  confirmer(
+    'Envoyer la carte',
+    `Envoyer la carte d'apprentissage pour le dossier ${id} par email ?`,
+    async () => {
+      try {
+        const result = await apiCall('admin_envoyer_carte', { id });
+        if (result.status === 'success') {
+          toast(`Carte envoyée à ${result.apprenant.email}`, 'success');
+        } else {
+          toast(result.message || 'Erreur envoi carte', 'error');
+        }
+      } catch(e) { toast('Erreur connexion', 'error'); }
+    }
+  );
 }
 
 /* ================================================================
@@ -1817,38 +1243,254 @@ function renderTableauRens(rens) {
     <div style="overflow-x:auto;">
     <table class="data-table">
       <thead><tr>
-        <th>Référence</th>
-        <th>Contact</th>
-        <th>Formation(s)</th>
-        <th>Question</th>
-        <th>Statut</th>
-        <th>Actions</th>
+        <th>Référence</th><th>Contact</th><th>Formation(s)</th>
+        <th>Question</th><th>Statut</th><th>Actions</th>
       </tr></thead>
-      <tbody>
-        ${rens.map(r => `<tr>
-          <td><span class="mono">${r.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${r.date}</span></td>
-          <td>
-            <strong>${r.prenom} ${r.nom}</strong><br/>
-            <span class="mono">${r.telephone}</span>
-            ${r.email ? `<br/><a href="mailto:${r.email}" style="color:var(--teal-l);font-size:11px;">${r.email}</a>` : ''}
-          </td>
-          <td style="font-size:12px;color:var(--text-3);max-width:160px;">${(r.formations||'—').split(' | ').join(', ')}</td>
-          <td style="font-size:12px;color:var(--text-2);max-width:200px;">${(r.question||'—').slice(0, 80)}${(r.question||'').length > 80 ? '…' : ''}</td>
-          <td>${badgeRensStatut(r.statut)}</td>
-          <td>
-            <div style="display:flex;gap:6px;">
-              <a href="tel:${String(r.telephone).replace(/[\s+]/g,'')}" class="btn btn-success btn-sm">
-                <span class="iconify" data-icon="tabler:phone"></span>
-              </a>
-              ${r.email ? `<a href="mailto:${r.email}" class="btn btn-ghost btn-sm">
-                <span class="iconify" data-icon="tabler:mail"></span>
-              </a>` : ''}
-            </div>
-          </td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>`;
+      <tbody>${rens.map(r => `<tr>
+        <td><span class="mono">${r.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${r.date}</span></td>
+        <td>
+          <strong>${r.prenom} ${r.nom}</strong><br/>
+          <span class="mono">${r.telephone}</span>
+          ${r.email ? `<br/><a href="mailto:${r.email}" style="color:var(--teal-l);font-size:11px;">${r.email}</a>` : ''}
+        </td>
+        <td style="font-size:12px;color:var(--text-3);max-width:160px;">${(r.formations||'—').split(' | ').join(', ')}</td>
+        <td style="font-size:12px;color:var(--text-2);max-width:200px;">${(r.question||'—').slice(0, 80)}${(r.question||'').length > 80 ? '…' : ''}</td>
+        <td>${badgeRensStatut(r.statut)}</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <a href="tel:${String(r.telephone).replace(/[\s+]/g,'')}" class="btn btn-success btn-sm">
+              <span class="iconify" data-icon="tabler:phone"></span>
+            </a>
+            ${r.email ? `<a href="mailto:${r.email}" class="btn btn-ghost btn-sm">
+              <span class="iconify" data-icon="tabler:mail"></span>
+            </a>` : ''}
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+/* ================================================================
+   RÉGULARISATIONS
+================================================================ */
+let regsCurrentPage = 1;
+
+async function chargerRegularisations() {
+  document.getElementById('regs-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  document.getElementById('regs-pagination').style.display = 'none';
+  const filtre    = document.getElementById('filtre-reg-statut')?.value || state.filtre;
+  const recherche = document.getElementById('search-regs')?.value || '';
+  try {
+    const result = await apiCall('admin_get_regs', { page: regsCurrentPage, perPage: 20, filtre, recherche });
+    if (result.status !== 'success') throw new Error(result.message);
+    document.getElementById('regs-count').textContent = result.total + ' dossier(s)';
+    renderTableauRegularisations(result.regs);
+    renderPaginationRegs(result.page, result.pages, result.total, result.perPage);
+  } catch(e) {
+    document.getElementById('regs-table-container').innerHTML =
+      `<div class="empty-state"><span class="iconify" data-icon="tabler:wifi-off"></span><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+function filtrerRegularisations() { regsCurrentPage = 1; chargerRegularisations(); }
+
+function renderTableauRegularisations(regs) {
+  if (!regs.length) {
+    document.getElementById('regs-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:folder-off"></span><p>Aucun dossier trouvé</p></div>';
+    return;
+  }
+  document.getElementById('regs-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th><th>Apprenant</th><th>Filière</th>
+        <th>Période</th><th>Montant payé</th><th>Statut</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${regs.map(r => `<tr>
+        <td><span class="mono">${r.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${r.dateSoumission}</span></td>
+        <td><strong>${r.prenom} ${r.nom}</strong><br/><span class="mono">${r.telephone}</span></td>
+        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${r.filiere || '—'}</td>
+        <td style="font-size:12px;color:var(--text-3);">${r.dateEntree || '—'}<br/>→ ${r.dateFin || '—'}</td>
+        <td style="font-family:var(--font-mono);font-size:12px;color:var(--orange);">${Number(r.montantPaye || 0).toLocaleString('fr-BJ')} F</td>
+        <td>${badgeRegStatut(r.statutDossier)}</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" title="Voir" onclick="ouvrirRegularisation('${r.id}')">
+              <span class="iconify" data-icon="tabler:eye"></span>
+            </button>
+            <button class="btn btn-sm" style="background:var(--teal-dim);color:var(--teal-l);" title="Envoyer carte" onclick="envoyerCarte('${r.id}')">
+              <span class="iconify" data-icon="tabler:id-badge-2"></span>
+            </button>
+            <button class="btn btn-success btn-sm" title="Valider" onclick="validerReg('${r.id}', '${r.prenom} ${r.nom}')">
+              <span class="iconify" data-icon="tabler:circle-check"></span>
+            </button>
+            <button class="btn btn-danger btn-sm" title="Rejeter" onclick="rejeterReg('${r.id}', '${r.prenom} ${r.nom}')">
+              <span class="iconify" data-icon="tabler:circle-x"></span>
+            </button>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function renderPaginationRegs(page, pages, total, perPage) {
+  if (pages <= 1) { document.getElementById('regs-pagination').style.display = 'none'; return; }
+  document.getElementById('regs-pagination').style.display = 'flex';
+  const debut = (page - 1) * perPage + 1;
+  const fin   = Math.min(page * perPage, total);
+  document.getElementById('regs-pagination-info').textContent = `${debut}–${fin} sur ${total}`;
+  const btns = document.getElementById('regs-pagination-btns');
+  btns.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.className = 'pg-btn'; prev.innerHTML = '<span class="iconify" data-icon="tabler:chevron-left"></span>';
+  prev.disabled = page === 1; prev.onclick = () => { regsCurrentPage = page - 1; chargerRegularisations(); };
+  btns.appendChild(prev);
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) {
+      const btn = document.createElement('button');
+      btn.className = 'pg-btn' + (i === page ? ' active' : '');
+      btn.textContent = i; btn.onclick = () => { regsCurrentPage = i; chargerRegularisations(); };
+      btns.appendChild(btn);
+    } else if (i === page - 2 || i === page + 2) {
+      const sp = document.createElement('span');
+      sp.textContent = '…'; sp.style.cssText = 'color:var(--text-3);font-size:13px;padding:0 4px;align-self:center;';
+      btns.appendChild(sp);
+    }
+  }
+  const next = document.createElement('button');
+  next.className = 'pg-btn'; next.innerHTML = '<span class="iconify" data-icon="tabler:chevron-right"></span>';
+  next.disabled = page === pages; next.onclick = () => { regsCurrentPage = page + 1; chargerRegularisations(); };
+  btns.appendChild(next);
+}
+
+async function ouvrirRegularisation(id) {
+  ouvrirModal('modal-reg');
+  document.getElementById('reg-modal-title').textContent = `Régularisation ${id}`;
+  document.getElementById('reg-modal-body').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  document.getElementById('reg-modal-footer').innerHTML = '';
+  try {
+    const result = await apiCall('admin_get_reg', { id });
+    if (result.status !== 'success') throw new Error(result.message);
+    renderModalReg(result.reg);
+  } catch(e) {
+    document.getElementById('reg-modal-body').innerHTML = `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+function renderModalReg(r) {
+  document.getElementById('reg-modal-body').innerHTML = `
+    <div class="modal-section-title">Identité</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Référence</label><span class="mono" style="color:var(--teal-l);font-size:15px;font-weight:700;">${r.id}</span></div>
+      <div class="info-field"><label>Date soumission</label><span>${r.dateSoumission}</span></div>
+      <div class="info-field"><label>Prénom(s)</label><span>${r.prenom}</span></div>
+      <div class="info-field"><label>Nom</label><span>${r.nom}</span></div>
+      <div class="info-field"><label>Sexe</label><span>${r.sexe}</span></div>
+      <div class="info-field"><label>Date de naissance</label><span>${r.dateNaissance}</span></div>
+      <div class="info-field"><label>Lieu de naissance</label><span>${r.lieuNaissance}</span></div>
+      <div class="info-field"><label>Nationalité</label><span>${r.nationalite}</span></div>
+      <div class="info-field"><label>Téléphone</label><span><a href="tel:${r.telephone}">${r.telephone}</a></span></div>
+      <div class="info-field"><label>Email</label><span>${r.email ? `<a href="mailto:${r.email}">${r.email}</a>` : '—'}</span></div>
+      <div class="info-field" style="grid-column:1/-1;"><label>Adresse</label><span>${r.adresse}</span></div>
+    </div>
+    <div class="modal-section-title">Filiation parentale</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Mère</label><span>${r.prenomMere} ${r.nomMere}${r.telephoneMere ? ' — ' + r.telephoneMere : ''}</span></div>
+      <div class="info-field"><label>Profession mère</label><span>${r.professionMere || '—'}</span></div>
+      <div class="info-field"><label>Père</label><span>${r.prenomPere} ${r.nomPere}${r.telephonePere ? ' — ' + r.telephonePere : ''}</span></div>
+      <div class="info-field"><label>Profession père</label><span>${r.professionPere || '—'}</span></div>
+      ${r.prenomTuteur ? `<div class="info-field"><label>Tuteur légal</label><span>${r.prenomTuteur} ${r.nomTuteur}</span></div>` : ''}
+    </div>
+    <div class="modal-section-title">Formation suivie</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Filière</label><span style="color:var(--teal-l);font-weight:600;">${r.filiere}</span></div>
+      <div class="info-field"><label>Durée</label><span>${r.dureeFormation}</span></div>
+      <div class="info-field"><label>Date d'entrée</label><span>${r.dateEntree}</span></div>
+      <div class="info-field"><label>Date de fin</label><span>${r.dateFin}</span></div>
+      <div class="info-field"><label>Niveau atteint</label><span>${r.niveauAtteint || '—'}</span></div>
+      <div class="info-field"><label>Montant payé</label><span style="color:var(--orange);font-weight:700;font-family:var(--font-mono);">${Number(r.montantPaye || 0).toLocaleString('fr-BJ')} F CFA</span></div>
+      ${r.observation ? `<div class="info-field" style="grid-column:1/-1;"><label>Observation</label><span>${r.observation}</span></div>` : ''}
+    </div>
+    <div class="modal-section-title">Pièces justificatives</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Type pièce</label><span>${r.typePiece}</span></div>
+      <div class="info-field"><label>N° pièce</label><span class="mono">${r.numeroPiece}</span></div>
+      <div class="info-field"><label>Pièce d'identité</label><span>${r.pieceUrl ? `<a href="${r.pieceUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span></div>
+      <div class="info-field"><label>Photo d'identité</label><span>${r.photoUrl ? `<a href="${r.photoUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span></div>
+      <div class="info-field"><label>Signature numérique</label><span>${r.signatureUrl ? `<a href="${r.signatureUrl}" target="_blank">Voir la signature</a>` : '—'}</span></div>
+      <div class="info-field"><label>Dossier complet</label><span>${r.dossierUrl ? `<a href="${r.dossierUrl}" target="_blank">Dossier Drive</a>` : '—'}</span></div>
+    </div>
+    <div class="modal-section-title">Consentement</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Clause 1</label><span>${r.clause1}</span></div>
+      <div class="info-field"><label>Clause 2</label><span>${r.clause2}</span></div>
+      <div class="info-field"><label>Date signature</label><span>${r.dateSignature || '—'}</span></div>
+    </div>
+    <div class="modal-section-title">Gestion du statut</div>
+    <div style="margin-bottom:8px;">
+      <label class="auth-label" style="margin-bottom:6px;">Statut dossier</label>
+      <select class="modal-select" id="select-reg-statut">
+        ${['En attente','Validé','Rejeté'].map(s => `<option value="${s}" ${r.statutDossier === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    ${r.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${r.traitePar} le ${r.dateTraitement}</p>` : ''}`;
+
+  document.getElementById('reg-modal-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="fermerModal('modal-reg')">Fermer</button>
+    <button class="btn btn-sm" style="background:var(--teal-dim);color:var(--teal-l);" onclick="envoyerCarte('${r.id}')">
+      <span class="iconify" data-icon="tabler:id-badge-2"></span> Envoyer carte
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="supprimerReg('${r.id}', '${r.prenom} ${r.nom}')">
+      <span class="iconify" data-icon="tabler:trash"></span> Supprimer
+    </button>
+    <button class="btn btn-primary" onclick="sauvegarderStatutReg('${r.id}')">
+      <span class="iconify" data-icon="tabler:device-floppy"></span> Sauvegarder
+    </button>`;
+}
+
+async function sauvegarderStatutReg(id) {
+  const statut = document.getElementById('select-reg-statut').value;
+  try {
+    const result = await apiCall('admin_update_reg_statut', { id, statut });
+    if (result.status === 'success') {
+      toast(result.message, 'success');
+      if (statut === 'Validé') toast('Email de confirmation envoyé à l\'apprenant.', 'info');
+      fermerModal('modal-reg');
+      chargerRegularisations();
+      chargerDashboard();
+    } else { toast(result.message || 'Erreur.', 'error'); }
+  } catch(e) { toast('Erreur réseau.', 'error'); }
+}
+
+function validerReg(id, nom) {
+  confirmer('Valider le dossier', `Valider le dossier de ${nom} (${id}) ? Un email de confirmation sera envoyé automatiquement.`, async () => {
+    try {
+      const result = await apiCall('admin_update_reg_statut', { id, statut: 'Validé' });
+      if (result.status === 'success') { toast(`Dossier ${id} validé. Email envoyé.`, 'success'); chargerRegularisations(); chargerDashboard(); }
+      else { toast(result.message || 'Erreur.', 'error'); }
+    } catch(e) { toast('Erreur réseau.', 'error'); }
+  });
+}
+
+function rejeterReg(id, nom) {
+  confirmer('Rejeter le dossier', `Rejeter le dossier de ${nom} (${id}) ?`, async () => {
+    try {
+      const result = await apiCall('admin_update_reg_statut', { id, statut: 'Rejeté' });
+      if (result.status === 'success') { toast(`Dossier ${id} rejeté.`, 'success'); chargerRegularisations(); }
+      else { toast(result.message || 'Erreur.', 'error'); }
+    } catch(e) { toast('Erreur réseau.', 'error'); }
+  });
+}
+
+function supprimerReg(id, nom) {
+  confirmer('Supprimer la régularisation', `Supprimer définitivement le dossier de ${nom} (${id}) ? Action irréversible.`, async () => {
+    try {
+      const result = await apiCall('admin_delete_reg', { id });
+      if (result.status === 'success') { toast(`Dossier ${id} supprimé.`, 'success'); fermerModal('modal-reg'); chargerRegularisations(); chargerDashboard(); }
+      else { toast(result.message || 'Erreur.', 'error'); }
+    } catch(e) { toast('Erreur réseau.', 'error'); }
+  });
 }
 
 /* ================================================================
@@ -1858,43 +1500,30 @@ function badgeStatut(statut) {
   const map = { 'En attente': 'badge-orange', 'Confirmé': 'badge-green', 'Annulé': 'badge-red' };
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
 }
-
 function badgePaiement(statut) {
   const map = { 'En attente': 'badge-orange', 'Reçu': 'badge-yellow', 'Vérifié': 'badge-green' };
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
 }
-
 function badgeRensStatut(statut) {
   const map = { 'Nouveau': 'badge-orange', 'En cours': 'badge-teal', 'Traité': 'badge-green' };
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
 }
-
+function badgeRegStatut(statut) {
+  const map = { 'En attente': 'badge-orange', 'Validé': 'badge-green', 'Rejeté': 'badge-red' };
+  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
+}
 function abrevierFormation(f) {
-  const map = {
-    'Informatique & Bureautique': 'Informatique',
-    'Graphisme & PAO':            'Graphisme',
-    'Sérigraphie':                'Sérigraphie',
-    'Création de sites web':      'Web'
-  };
+  const map = { 'Informatique & Bureautique': 'Informatique', 'Graphisme & PAO': 'Graphisme', 'Sérigraphie': 'Sérigraphie', 'Création de sites web': 'Web' };
   return map[f] || f;
 }
 
 /* ================================================================
    MODAL
 ================================================================ */
-function ouvrirModal(id) {
-  document.getElementById(id).classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function fermerModal(id) {
-  document.getElementById(id).classList.remove('open');
-  document.body.style.overflow = '';
-}
-// Fermer modal en cliquant overlay
+function ouvrirModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function fermerModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) fermerModal(overlay.id);
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) fermerModal(overlay.id); });
 });
 
 /* ================================================================
@@ -1908,20 +1537,15 @@ function confirmer(titre, message, callback) {
   document.getElementById('confirm-overlay').classList.add('open');
 }
 document.getElementById('confirm-ok').addEventListener('click', () => {
-  const cb = confirmCallback;  // sauvegarder avant reset
-  fermerConfirm();             // remet confirmCallback = null
-  if (cb) cb();                // exécuter le callback sauvegardé
+  const cb = confirmCallback; fermerConfirm(); if (cb) cb();
 });
-function fermerConfirm() {
-  document.getElementById('confirm-overlay').classList.remove('open');
-  confirmCallback = null;
-}
+function fermerConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); confirmCallback = null; }
 document.getElementById('confirm-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('confirm-overlay')) fermerConfirm();
 });
 
 /* ================================================================
-   TOAST
+   TOAST — fonction unique : toast(message, type)
 ================================================================ */
 function toast(message, type = 'info') {
   const icons = { success: 'tabler:circle-check', error: 'tabler:circle-x', info: 'tabler:info-circle' };
@@ -1930,10 +1554,7 @@ function toast(message, type = 'info') {
   el.innerHTML = `<span class="iconify" data-icon="${icons[type]}"></span>${message}`;
   document.getElementById('toast-container').appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
-  setTimeout(() => {
-    el.classList.remove('show');
-    setTimeout(() => el.remove(), 350);
-  }, 4500);
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 350); }, 4500);
 }
 
 /* ================================================================
@@ -1946,336 +1567,6 @@ document.addEventListener('keydown', e => {
     document.getElementById('sidebar').classList.remove('open');
   }
 });
-    /* ================================================================
-   RÉGULARISATIONS
-================================================================ */
- 
-let regsCurrentPage = 1;
- 
-async function chargerRegularisations() {
-  document.getElementById('regs-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-  document.getElementById('regs-pagination').style.display = 'none';
- 
-  const filtre    = document.getElementById('filtre-reg-statut')?.value || state.filtre;
-  const recherche = document.getElementById('search-regs')?.value || '';
- 
-  try {
-    const result = await apiCall('admin_get_regs', {
-      page:      regsCurrentPage,
-      perPage:   20,
-      filtre,
-      recherche
-    });
-    if (result.status !== 'success') throw new Error(result.message);
- 
-    document.getElementById('regs-count').textContent = result.total + ' dossier(s)';
-    renderTableauRegularisations(result.regs);
-    renderPaginationRegs(result.page, result.pages, result.total, result.perPage);
- 
-  } catch(e) {
-    document.getElementById('regs-table-container').innerHTML =
-      `<div class="empty-state"><span class="iconify" data-icon="tabler:wifi-off"></span><p>Erreur : ${e.message}</p></div>`;
-  }
-}
- 
-function filtrerRegularisations() {
-  regsCurrentPage = 1;
-  chargerRegularisations();
-}
- 
-function renderTableauRegularisations(regs) {
-  if (!regs.length) {
-    document.getElementById('regs-table-container').innerHTML =
-      '<div class="empty-state"><span class="iconify" data-icon="tabler:folder-off"></span><p>Aucun dossier trouvé</p></div>';
-    return;
-  }
- 
-  document.getElementById('regs-table-container').innerHTML = `
-    <div style="overflow-x:auto;">
-    <table class="data-table">
-      <thead><tr>
-        <th>Référence</th>
-        <th>Apprenant</th>
-        <th>Filière</th>
-        <th>Période</th>
-        <th>Montant payé</th>
-        <th>Statut</th>
-        <th>Actions</th>
-      </tr></thead>
-      <tbody>
-        ${regs.map(r => `<tr>
-          <td>
-            <span class="mono">${r.id}</span><br/>
-            <span style="font-size:11px;color:var(--text-3);">${r.dateSoumission}</span>
-          </td>
-          <td>
-            <strong>${r.prenom} ${r.nom}</strong><br/>
-            <span class="mono">${r.telephone}</span>
-          </td>
-          <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${r.filiere || '—'}</td>
-          <td style="font-size:12px;color:var(--text-3);">
-            ${r.dateEntree || '—'}<br/>→ ${r.dateFin || '—'}
-          </td>
-          <td style="font-family:var(--font-mono);font-size:12px;color:var(--orange);">
-            ${Number(r.montantPaye || 0).toLocaleString('fr-BJ')} F
-          </td>
-          <td>${badgeRegStatut(r.statutDossier)}</td>
-          <td>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-ghost btn-sm" title="Voir le dossier" onclick="ouvrirRegularisation('${r.id}')">
-                <span class="iconify" data-icon="tabler:eye"></span>
-              </button>
-              <button class="btn btn-success btn-sm" title="Valider" onclick="validerReg('${r.id}', '${r.prenom} ${r.nom}')">
-                <span class="iconify" data-icon="tabler:circle-check"></span>
-              </button>
-              <button class="btn btn-danger btn-sm" title="Rejeter" onclick="rejeterReg('${r.id}', '${r.prenom} ${r.nom}')">
-                <span class="iconify" data-icon="tabler:circle-x"></span>
-              </button>
-            </div>
-          </td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>`;
-}
- 
-function renderPaginationRegs(page, pages, total, perPage) {
-  if (pages <= 1) { document.getElementById('regs-pagination').style.display = 'none'; return; }
- 
-  document.getElementById('regs-pagination').style.display = 'flex';
-  const debut = (page - 1) * perPage + 1;
-  const fin   = Math.min(page * perPage, total);
-  document.getElementById('regs-pagination-info').textContent = `${debut}–${fin} sur ${total}`;
- 
-  const btns = document.getElementById('regs-pagination-btns');
-  btns.innerHTML = '';
- 
-  const prev = document.createElement('button');
-  prev.className = 'pg-btn';
-  prev.innerHTML = '<span class="iconify" data-icon="tabler:chevron-left"></span>';
-  prev.disabled  = page === 1;
-  prev.onclick   = () => { regsCurrentPage = page - 1; chargerRegularisations(); };
-  btns.appendChild(prev);
- 
-  for (let i = 1; i <= pages; i++) {
-    if (i === 1 || i === pages || (i >= page - 1 && i <= page + 1)) {
-      const btn = document.createElement('button');
-      btn.className = 'pg-btn' + (i === page ? ' active' : '');
-      btn.textContent = i;
-      btn.onclick = () => { regsCurrentPage = i; chargerRegularisations(); };
-      btns.appendChild(btn);
-    } else if (i === page - 2 || i === page + 2) {
-      const sp = document.createElement('span');
-      sp.textContent = '…';
-      sp.style.cssText = 'color:var(--text-3);font-size:13px;padding:0 4px;align-self:center;';
-      btns.appendChild(sp);
-    }
-  }
- 
-  const next = document.createElement('button');
-  next.className = 'pg-btn';
-  next.innerHTML = '<span class="iconify" data-icon="tabler:chevron-right"></span>';
-  next.disabled  = page === pages;
-  next.onclick   = () => { regsCurrentPage = page + 1; chargerRegularisations(); };
-  btns.appendChild(next);
-}
- 
-async function ouvrirRegularisation(id) {
-  ouvrirModal('modal-reg');
-  document.getElementById('reg-modal-title').textContent = `Régularisation ${id}`;
-  document.getElementById('reg-modal-body').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-  document.getElementById('reg-modal-footer').innerHTML = '';
- 
-  try {
-    const result = await apiCall('admin_get_reg', { id });
-    if (result.status !== 'success') throw new Error(result.message);
-    renderModalReg(result.reg);
-  } catch(e) {
-    document.getElementById('reg-modal-body').innerHTML =
-      `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
-  }
-}
- 
-function renderModalReg(r) {
-  document.getElementById('reg-modal-body').innerHTML = `
- 
-    <div class="modal-section-title">Identité</div>
-    <div class="info-grid">
-      <div class="info-field"><label>Référence (ID apprenant)</label><span class="mono" style="color:var(--teal-l);font-size:15px;font-weight:700;">${r.id}</span></div>
-      <div class="info-field"><label>Date soumission</label><span>${r.dateSoumission}</span></div>
-      <div class="info-field"><label>Prénom(s)</label><span>${r.prenom}</span></div>
-      <div class="info-field"><label>Nom</label><span>${r.nom}</span></div>
-      <div class="info-field"><label>Sexe</label><span>${r.sexe}</span></div>
-      <div class="info-field"><label>Date de naissance</label><span>${r.dateNaissance}</span></div>
-      <div class="info-field"><label>Lieu de naissance</label><span>${r.lieuNaissance}</span></div>
-      <div class="info-field"><label>Nationalité</label><span>${r.nationalite}</span></div>
-      <div class="info-field"><label>Téléphone</label><span><a href="tel:${r.telephone}">${r.telephone}</a></span></div>
-      <div class="info-field"><label>Email</label><span>${r.email ? `<a href="mailto:${r.email}">${r.email}</a>` : '—'}</span></div>
-      <div class="info-field" style="grid-column:1/-1;"><label>Adresse</label><span>${r.adresse}</span></div>
-    </div>
- 
-    <div class="modal-section-title">Filiation parentale</div>
-    <div class="info-grid">
-      <div class="info-field"><label>Mère</label><span>${r.prenomMere} ${r.nomMere}${r.telephoneMere ? ' — ' + r.telephoneMere : ''}</span></div>
-      <div class="info-field"><label>Profession mère</label><span>${r.professionMere || '—'}</span></div>
-      <div class="info-field"><label>Père</label><span>${r.prenomPere} ${r.nomPere}${r.telephonePere ? ' — ' + r.telephonePere : ''}</span></div>
-      <div class="info-field"><label>Profession père</label><span>${r.professionPere || '—'}</span></div>
-      ${r.prenomTuteur ? `<div class="info-field"><label>Tuteur légal</label><span>${r.prenomTuteur} ${r.nomTuteur}</span></div>` : ''}
-    </div>
- 
-    <div class="modal-section-title">Formation suivie</div>
-    <div class="info-grid">
-      <div class="info-field"><label>Filière</label><span style="color:var(--teal-l);font-weight:600;">${r.filiere}</span></div>
-      <div class="info-field"><label>Durée</label><span>${r.dureeFormation}</span></div>
-      <div class="info-field"><label>Date d'entrée</label><span>${r.dateEntree}</span></div>
-      <div class="info-field"><label>Date de fin</label><span>${r.dateFin}</span></div>
-      <div class="info-field"><label>Niveau atteint</label><span>${r.niveauAtteint || '—'}</span></div>
-      <div class="info-field"><label>Montant payé</label><span style="color:var(--orange);font-weight:700;font-family:var(--font-mono);">${Number(r.montantPaye || 0).toLocaleString('fr-BJ')} F CFA</span></div>
-      ${r.observation ? `<div class="info-field" style="grid-column:1/-1;"><label>Observation</label><span>${r.observation}</span></div>` : ''}
-    </div>
- 
-    <div class="modal-section-title">Pièces justificatives</div>
-    <div class="info-grid">
-      <div class="info-field"><label>Type pièce</label><span>${r.typePiece}</span></div>
-      <div class="info-field"><label>N° pièce</label><span class="mono">${r.numeroPiece}</span></div>
-      <div class="info-field"><label>Pièce d'identité</label>
-        <span>${r.pieceUrl ? `<a href="${r.pieceUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
-      </div>
-      <div class="info-field"><label>Photo d'identité</label>
-        <span>${r.photoUrl ? `<a href="${r.photoUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
-      </div>
-      <div class="info-field"><label>Signature numérique</label>
-        <span>${r.signatureUrl ? `<a href="${r.signatureUrl}" target="_blank">Voir la signature</a>` : '—'}</span>
-      </div>
-      <div class="info-field"><label>Dossier complet</label>
-        <span>${r.dossierUrl ? `<a href="${r.dossierUrl}" target="_blank">Dossier Drive</a>` : '—'}</span>
-      </div>
-    </div>
- 
-    <div class="modal-section-title">Consentement</div>
-    <div class="info-grid">
-      <div class="info-field"><label>Clause 1</label><span>${r.clause1}</span></div>
-      <div class="info-field"><label>Clause 2</label><span>${r.clause2}</span></div>
-      <div class="info-field"><label>Date signature</label><span>${r.dateSignature || '—'}</span></div>
-    </div>
- 
-    <div class="modal-section-title">Gestion du statut</div>
-    <div style="margin-bottom:8px;">
-      <label class="auth-label" style="margin-bottom:6px;">Statut dossier</label>
-      <select class="modal-select" id="select-reg-statut">
-        ${['En attente', 'Validé', 'Rejeté'].map(s =>
-          `<option value="${s}" ${r.statutDossier === s ? 'selected' : ''}>${s}</option>`
-        ).join('')}
-      </select>
-    </div>
-    ${r.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${r.traitePar} le ${r.dateTraitement}</p>` : ''}
-  `;
- 
-  document.getElementById('reg-modal-footer').innerHTML = `
-    <button class="btn btn-ghost" onclick="fermerModal('modal-reg')">Fermer</button>
-    <button class="btn btn-danger btn-sm" onclick="supprimerReg('${r.id}', '${r.prenom} ${r.nom}')">
-      <span class="iconify" data-icon="tabler:trash"></span> Supprimer
-    </button>
-    <button class="btn btn-primary" onclick="sauvegarderStatutReg('${r.id}')">
-      <span class="iconify" data-icon="tabler:device-floppy"></span> Sauvegarder
-    </button>
-  `;
-}
-/* ================================================================
-              CARTE D'APPRENTISSAGE
-================================================================ */
-  
-async function sauvegarderStatutReg(id) {
-  const statut = document.getElementById('select-reg-statut').value;
-  try {
-    const result = await apiCall('admin_update_reg_statut', { id, statut });
-    if (result.status === 'success') {
-      toast(result.message, 'success');
-      if (statut === 'Validé') toast('Email de confirmation envoyé à l\'apprenant.', 'info');
-      fermerModal('modal-reg');
-      chargerRegularisations();
-      chargerDashboard();
-    } else {
-      toast(result.message || 'Erreur.', 'error');
-    }
-  } catch(e) { toast('Erreur réseau.', 'error'); }
-}
- 
-function validerReg(id, nom) {
-  confirmer(
-    'Valider le dossier',
-    `Valider le dossier de ${nom} (${id}) ? Un email de confirmation avec l'ID apprenant sera envoyé automatiquement.`,
-    async () => {
-      try {
-        const result = await apiCall('admin_update_reg_statut', { id, statut: 'Validé' });
-        if (result.status === 'success') {
-          toast(`Dossier ${id} validé. Email envoyé.`, 'success');
-          chargerRegularisations();
-          chargerDashboard();
-        } else {
-          toast(result.message || 'Erreur.', 'error');
-        }
-      } catch(e) { toast('Erreur réseau.', 'error'); }
-    }
-  );
-}
- 
-function rejeterReg(id, nom) {
-  confirmer(
-    'Rejeter le dossier',
-    `Rejeter le dossier de ${nom} (${id}) ?`,
-    async () => {
-      try {
-        const result = await apiCall('admin_update_reg_statut', { id, statut: 'Rejeté' });
-        if (result.status === 'success') {
-          toast(`Dossier ${id} rejeté.`, 'success');
-          chargerRegularisations();
-        } else {
-          toast(result.message || 'Erreur.', 'error');
-        }
-      } catch(e) { toast('Erreur réseau.', 'error'); }
-    }
-  );
-}
- 
-function supprimerReg(id, nom) {
-  confirmer(
-    'Supprimer la régularisation',
-    `Supprimer définitivement le dossier de ${nom} (${id}) ? Action irréversible.`,
-    async () => {
-      try {
-        const result = await apiCall('admin_delete_reg', { id });
-        if (result.status === 'success') {
-          toast(`Dossier ${id} supprimé.`, 'success');
-          fermerModal('modal-reg');
-          chargerRegularisations();
-          chargerDashboard();
-        } else {
-          toast(result.message || 'Erreur.', 'error');
-        }
-      } catch(e) { toast('Erreur réseau.', 'error'); }
-    }
-  );
-}
- 
-function badgeRegStatut(statut) {
-  const map = { 'En attente': 'badge-orange', 'Validé': 'badge-green', 'Rejeté': 'badge-red' };
-  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
-}
- async function envoyerCarte(id) {
-  if (!confirm(`Envoyer la carte d'apprentissage pour le dossier ${id} ?`)) return;
-  try {
-    const result = await apiCall('admin_envoyer_carte', { id });
-    if (result.status === 'success') {
-      showToast(`Carte envoyée à ${result.apprenant.email}`, 'success');
-    } else {
-      showToast(result.message || 'Erreur envoi carte', 'error');
-    }
-  } catch (err) {
-    showToast('Erreur connexion', 'error');
-  }
-}
-
 </script>
 </body>
 </html>
