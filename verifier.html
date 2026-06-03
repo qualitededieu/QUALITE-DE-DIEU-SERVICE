@@ -436,7 +436,7 @@
     /* ================================================================
        CONFIG
     ================================================================ */
-    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
 
     /* ================================================================
        UTILITAIRES
@@ -458,7 +458,7 @@
     async function verifierToken(token) {
       const resp = await fetch(GAS_URL, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body:    JSON.stringify({ action: 'carte_verifier', token })
       });
       return resp.json();
