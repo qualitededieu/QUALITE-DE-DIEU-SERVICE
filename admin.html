@@ -478,6 +478,18 @@
       <button class="nav-item" onclick="naviguer('regularisations', 'reg_rejete')">
         <span class="iconify" data-icon="tabler:circle-x"></span> Rejetés
       </button>
+
+      <div class="nav-section-label">Candidatures</div>
+      <button class="nav-item" onclick="naviguer('candidatures')">
+        <span class="iconify" data-icon="tabler:briefcase"></span> Toutes les candidatures
+        <span class="nav-badge" id="badge-candidatures">0</span>
+      </button>
+      <button class="nav-item" onclick="naviguer('candidatures', 'formateur')">
+        <span class="iconify" data-icon="tabler:chalkboard"></span> Formateur / Staff
+      </button>
+      <button class="nav-item" onclick="naviguer('candidatures', 'stage')">
+        <span class="iconify" data-icon="tabler:school"></span> Stage
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user">
@@ -624,6 +636,41 @@
       </div>
     </div>
 
+    <!-- PAGE : CANDIDATURES -->
+    <div class="page" id="page-candidatures">
+      <div class="filters-bar">
+        <div class="search-input-bar">
+          <span class="iconify" data-icon="tabler:search"></span>
+          <input type="text" id="search-cand" placeholder="Nom, ID, téléphone, domaine..." oninput="filtrerCandidatures()" />
+        </div>
+        <select class="filter-select" id="filtre-cand-type" onchange="filtrerCandidatures()">
+          <option value="">Tous les types</option>
+          <option value="formateur">Formateur / Staff</option>
+          <option value="stage">Stage</option>
+        </select>
+        <select class="filter-select" id="filtre-cand-statut" onchange="filtrerCandidatures()">
+          <option value="">Tous les statuts</option>
+          <option value="Nouveau">Nouveau</option>
+          <option value="Vu">Vu</option>
+          <option value="Contacté">Contacté</option>
+          <option value="Retenu">Retenu</option>
+          <option value="Rejeté">Rejeté</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="chargerCandidatures()">
+          <span class="iconify" data-icon="tabler:refresh"></span>
+        </button>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Candidatures</span>
+          <span id="cand-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <div id="cand-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -665,6 +712,20 @@
     </div>
     <div class="modal-body" id="reg-modal-body"><div class="loading-overlay"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="reg-modal-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL CANDIDATURE -->
+<div class="modal-overlay" id="modal-cand">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="cand-modal-title">Candidature</h3>
+      <button class="modal-close" onclick="fermerModal('modal-cand')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="cand-modal-body"><div class="loading-overlay"><div class="spinner"></div></div></div>
+    <div class="modal-footer" id="cand-modal-footer"></div>
   </div>
 </div>
 
@@ -850,12 +911,13 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', regularisations: 'Régularisations' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', regularisations: 'Régularisations', candidatures: 'Candidatures' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
   if (page === 'renseignements')  chargerRenseignements();
   if (page === 'regularisations') chargerRegularisations();
+  if (page === 'candidatures')    chargerCandidatures();
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -864,6 +926,10 @@ function naviguer(page, filtre = '') {
   }
   if (filtre && page === 'regularisations') {
     const sel = document.getElementById('filtre-reg-statut');
+    if (sel) sel.value = filtre;
+  }
+  if (filtre && page === 'candidatures') {
+    const sel = document.getElementById('filtre-cand-type');
     if (sel) sel.value = filtre;
   }
   document.getElementById('sidebar').classList.remove('open');
@@ -1490,6 +1556,179 @@ function supprimerReg(id, nom) {
       if (result.status === 'success') { toast(`Dossier ${id} supprimé.`, 'success'); fermerModal('modal-reg'); chargerRegularisations(); chargerDashboard(); }
       else { toast(result.message || 'Erreur.', 'error'); }
     } catch(e) { toast('Erreur réseau.', 'error'); }
+  });
+}
+
+/* ================================================================
+   CANDIDATURES (page Postuler)
+================================================================ */
+let candidaturesCache = [];
+
+async function chargerCandidatures() {
+  document.getElementById('cand-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_get_candidatures');
+    if (result.status !== 'success') throw new Error(result.message);
+    candidaturesCache = result.candidatures || [];
+    document.getElementById('badge-candidatures').textContent =
+      candidaturesCache.filter(c => c.statut === 'Nouveau').length;
+    filtrerCandidatures();
+  } catch (e) {
+    document.getElementById('cand-table-container').innerHTML =
+      `<div class="empty-state"><span class="iconify" data-icon="tabler:wifi-off"></span><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+function filtrerCandidatures() {
+  const recherche = (document.getElementById('search-cand')?.value || '').toLowerCase();
+  const type      = document.getElementById('filtre-cand-type')?.value || (state.page === 'candidatures' ? state.filtre : '');
+  const statut    = document.getElementById('filtre-cand-statut')?.value || '';
+
+  const filtres = candidaturesCache.filter(c => {
+    if (type && c.type !== type) return false;
+    if (statut && c.statut !== statut) return false;
+    if (recherche) {
+      const hay = `${c.prenom} ${c.nom} ${c.id} ${c.telephone} ${c.domaine}`.toLowerCase();
+      if (!hay.includes(recherche)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('cand-count').textContent = filtres.length + ' candidature(s)';
+  renderTableauCandidatures(filtres);
+}
+
+function badgeCandStatut(statut) {
+  const map = { 'Nouveau': 'badge-orange', 'Vu': 'badge-teal', 'Contacté': 'badge-yellow', 'Retenu': 'badge-green', 'Rejeté': 'badge-red' };
+  return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
+}
+
+function renderTableauCandidatures(candidatures) {
+  if (!candidatures.length) {
+    document.getElementById('cand-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:briefcase-off"></span><p>Aucune candidature trouvée</p></div>';
+    return;
+  }
+  document.getElementById('cand-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th><th>Candidat</th><th>Type</th><th>Domaine</th><th>Statut</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${candidatures.map(c => `<tr>
+        <td><span class="mono">${c.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${c.dateCandidature}</span></td>
+        <td><strong>${c.prenom} ${c.nom}</strong><br/><span class="mono">${c.telephone}</span></td>
+        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}</td>
+        <td style="font-size:12px;color:var(--text-3);">${c.domaine || '—'}</td>
+        <td>${badgeCandStatut(c.statut)}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" title="Voir" onclick="ouvrirCandidature('${c.id}')">
+            <span class="iconify" data-icon="tabler:eye"></span>
+          </button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function ouvrirCandidature(id) {
+  const c = candidaturesCache.find(x => x.id === id);
+  if (!c) return;
+  ouvrirModal('modal-cand');
+  document.getElementById('cand-modal-title').textContent = `Candidature ${c.id}`;
+  renderModalCandidature(c);
+}
+
+function renderModalCandidature(c) {
+  const docs = [
+    ['cv', 'CV', c.aCV],
+    ['lettre', 'Lettre de motivation', c.aLettre],
+    ['piece', "Pièce d'identité", c.aPiece],
+    ['recommandation', 'Lettre de recommandation', c.aRecommandation],
+  ];
+
+  document.getElementById('cand-modal-body').innerHTML = `
+    <div class="modal-section-title">Identité</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Type</label><span style="color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}</span></div>
+      <div class="info-field"><label>Candidat</label><span>${c.prenom} ${c.nom}</span></div>
+      <div class="info-field"><label>Téléphone</label><span><a href="tel:${c.telephone}">${c.telephone}</a></span></div>
+      <div class="info-field"><label>Email</label><span>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}</span></div>
+      <div class="info-field"><label>Date de naissance</label><span>${c.dateNaissance || '—'}</span></div>
+      <div class="info-field" style="grid-column:1/-1;"><label>Adresse</label><span>${c.adresse || '—'}</span></div>
+    </div>
+    <div class="modal-section-title">Parcours</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Domaine</label><span>${c.domaine || '—'}</span></div>
+      ${c.type === 'formateur'
+        ? `<div class="info-field" style="grid-column:1/-1;"><label>Expérience</label><span>${c.experience || '—'}</span></div>`
+        : `<div class="info-field"><label>Établissement</label><span>${c.etablissement || '—'}</span></div>
+           <div class="info-field"><label>Niveau d'études</label><span>${c.niveauEtudes || '—'}</span></div>
+           <div class="info-field"><label>Durée souhaitée</label><span>${c.dureeStage || '—'}</span></div>`}
+      <div class="info-field"><label>Disponibilité</label><span>${c.disponibilite || '—'}</span></div>
+      <div class="info-field" style="grid-column:1/-1;"><label>Motivation</label><span>${c.motivation || '—'}</span></div>
+    </div>
+    <div class="modal-section-title">Documents</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+      ${docs.map(([type, label, present]) => present
+        ? `<button class="btn btn-sm" style="background:var(--teal-dim);color:var(--teal-l);" onclick="voirDocumentCandidature('${c.id}','${type}')">
+             <span class="iconify" data-icon="tabler:file-download"></span> ${label}
+           </button>`
+        : `<span class="btn btn-sm" style="opacity:.4;">${label} — absent</span>`
+      ).join('')}
+    </div>
+    <div class="modal-section-title">Gestion du statut</div>
+    <div style="margin-bottom:8px;">
+      <label class="auth-label" style="margin-bottom:6px;">Statut candidature</label>
+      <select class="modal-select" id="select-cand-statut">
+        ${['Nouveau','Vu','Contacté','Retenu','Rejeté'].map(s => `<option value="${s}" ${c.statut === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    ${c.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${c.traitePar} le ${c.dateTraitement}</p>` : ''}`;
+
+  document.getElementById('cand-modal-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="fermerModal('modal-cand')">Fermer</button>
+    <button class="btn btn-danger btn-sm" onclick="supprimerCandidature('${c.id}', '${c.prenom} ${c.nom}')">
+      <span class="iconify" data-icon="tabler:trash"></span> Supprimer
+    </button>
+    <button class="btn btn-primary" onclick="changerStatutCandidature('${c.id}')">
+      <span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer le statut
+    </button>`;
+}
+
+async function changerStatutCandidature(id) {
+  const statut = document.getElementById('select-cand-statut').value;
+  try {
+    const result = await apiCall('admin_update_statut_candidature', { id, statut });
+    if (result.status === 'success') {
+      toast('Statut mis à jour.', 'success');
+      fermerModal('modal-cand');
+      chargerCandidatures();
+    } else { toast(result.message || 'Erreur.', 'error'); }
+  } catch (e) { toast('Erreur réseau.', 'error'); }
+}
+
+async function voirDocumentCandidature(id, typeDocument) {
+  toast('Chargement du document...', 'info');
+  try {
+    const result = await apiCall('admin_obtenir_doc_candidature', { id, typeDocument });
+    if (result.status !== 'success') { toast(result.message || 'Document introuvable.', 'error'); return; }
+    const octets = atob(result.base64);
+    const tableau = new Uint8Array(octets.length);
+    for (let i = 0; i < octets.length; i++) tableau[i] = octets.charCodeAt(i);
+    const blob = new Blob([tableau], { type: result.mimeType || 'application/octet-stream' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { toast('Erreur lors du chargement du document.', 'error'); }
+}
+
+function supprimerCandidature(id, nom) {
+  confirmer('Supprimer la candidature', `Supprimer définitivement la candidature de ${nom} (${id}) ? Action irréversible.`, async () => {
+    try {
+      const result = await apiCall('admin_delete_candidature', { id });
+      if (result.status === 'success') { toast(`Candidature ${id} supprimée.`, 'success'); fermerModal('modal-cand'); chargerCandidatures(); }
+      else { toast(result.message || 'Erreur.', 'error'); }
+    } catch (e) { toast('Erreur réseau.', 'error'); }
   });
 }
 
