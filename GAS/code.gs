@@ -139,6 +139,9 @@ function doPost(e) {
   if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
   if (action === 'renseignement') return traiterRenseignement(data);
   if (action === 'regularisation') return traiterRegularisation(data);
+  if (action === 'chat_rdv') return enregistrerRdvChat(data);
+  if (action === 'chat_lead') return enregistrerLeadChat(data);
+  if (action === 'candidature') return enregistrerCandidature(data);
     return traiterInscription(data);
 
   } catch (err) {

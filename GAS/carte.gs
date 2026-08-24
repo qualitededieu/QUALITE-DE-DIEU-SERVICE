@@ -28,9 +28,31 @@ const CARTE_CONFIG = {
 
 
 // =====================================================================
+// HELPER — Normalisation téléphone
+// Google Sheets peut stocker un numéro saisi "+229 01 97 95 12 30" sous
+// forme de nombre et supprimer le "+" et les espaces. Comparer les
+// numéros bruts provoque alors de faux négatifs ("Aucun dossier
+// trouvé" alors que le dossier existe). On compare après normalisation.
+// =====================================================================
+function _normaliserTel(tel) {
+  return String(tel || '').replace(/[\s+\-().]/g, '');
+}
+
+
+// =====================================================================
 // ROUTE PUBLIC — Récupérer les données carte (apprenant)
 // Vérification : ID dossier + téléphone
 // Cherche dans "Toutes les inscriptions" ET "Régularisations"
+//
+// FIX (audit) : un dossier de régularisation existe dans le Sheet dès
+// sa soumission, avec le statut initial 'En attente' — bien avant
+// validation admin. L'ancienne version arrêtait la recherche dès qu'un
+// ID+téléphone correspondait dans "Régularisations", même non validé,
+// ce qui bloquait l'accès à la carte pour un apprenant qui avait
+// pourtant déjà un dossier "Confirmé" valide dans "Toutes les
+// inscriptions". Désormais, si le dossier de régularisation trouvé
+// n'est pas encore validé, on continue la recherche dans "Toutes les
+// inscriptions" avant d'abandonner.
 // =====================================================================
 function getCarte(data) {
   const id        = String(data.id        || '').trim();
@@ -43,6 +65,8 @@ function getCarte(data) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
+  let dossierTrouveNonValide = false;
+
   // --- Recherche dans "Régularisations" (priorité : données complètes) ---
   const feuilleRegs = ss.getSheetByName('Régularisations');
   if (feuilleRegs) {
@@ -54,11 +78,13 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       const telRow = String(row[8] || '').trim(); // col 8 = téléphone dans Régularisations
 
-      if (idRow === id && telRow === telephone) {
-        // Vérifier que le dossier est validé
+      if (idRow === id && _normaliserTel(telRow) === _normaliserTel(telephone)) {
         const statut = String(row[37] || '').trim();
         if (statut !== 'Validé') {
-          return reponseJSON({ status: 'error', message: 'Votre dossier n\'est pas encore validé.' });
+          // Ne pas sortir tout de suite : le même apprenant peut avoir
+          // un dossier d'inscription déjà confirmé (voir plus bas).
+          dossierTrouveNonValide = true;
+          break;
         }
 
         const apprenant = _mapperApprenantReg(row);
@@ -80,11 +106,9 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       const telRow = String(row[4] || '').trim(); // col 4 = téléphone dans inscriptions
 
-      if (idRow === id && telRow === telephone) {
+      if (idRow === id && _normaliserTel(telRow) === _normaliserTel(telephone)) {
         const statut = String(row[9] || '').trim();
-        if (statut !== 'Confirmé') {
-          return reponseJSON({ status: 'error', message: 'Votre dossier n\'est pas encore confirmé.' });
-        }
+        if (statut !== 'Confirmé') continue; // on continue au cas où une autre ligne correspond
 
         const apprenant = _mapperApprenantInscription(row);
         const token     = _genererTokenCarte(apprenant);
@@ -92,6 +116,10 @@ function getCarte(data) {
         return reponseJSON({ status: 'success', apprenant, token });
       }
     }
+  }
+
+  if (dossierTrouveNonValide) {
+    return reponseJSON({ status: 'error', message: 'Votre dossier de régularisation est en cours de traitement et n\'est pas encore validé.' });
   }
 
   return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });
@@ -138,34 +166,7 @@ function envoyerCarteAdmin(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
 
-  let apprenant = null;
-
-  // Chercher dans Régularisations d'abord
-  const feuilleRegs = ss.getSheetByName('Régularisations');
-  if (feuilleRegs) {
-    const donneesR = feuilleRegs.getDataRange().getValues();
-    for (let i = 1; i < donneesR.length; i++) {
-      if (String(donneesR[i][0]).trim() === id) {
-        apprenant = _mapperApprenantReg(donneesR[i]);
-        break;
-      }
-    }
-  }
-
-  // Fallback : Toutes les inscriptions
-  if (!apprenant) {
-    const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
-    if (feuilleMaitre) {
-      const donnees = feuilleMaitre.getDataRange().getValues();
-      for (let i = 1; i < donnees.length; i++) {
-        if (String(donnees[i][0]).trim() === id) {
-          apprenant = _mapperApprenantInscription(donnees[i]);
-          break;
-        }
-      }
-    }
-  }
-
+  const apprenant = _trouverApprenantParId(ss, id);
   if (!apprenant) {
     return reponseJSON({ status: 'error', message: `Dossier ${id} introuvable.` });
   }
@@ -175,10 +176,9 @@ function envoyerCarteAdmin(data, email) {
   }
 
   const token = _genererTokenCarte(apprenant);
-  const lienVerif = `${CARTE_CONFIG.VERIF_URL}?t=${encodeURIComponent(token)}`;
 
   // Envoi email avec lien de téléchargement de la carte
-  _envoyerEmailCarte(apprenant, token, lienVerif);
+  _envoyerEmailCarte(apprenant, token);
 
   console.log(`[Admin:${email}] Carte envoyée → ${apprenant.email} (${id})`);
   return reponseJSON({
@@ -187,6 +187,37 @@ function envoyerCarteAdmin(data, email) {
     apprenant,
     token
   });
+}
+
+
+// =====================================================================
+// HELPER — Cherche un apprenant par ID seul (usage admin), dans
+// "Régularisations" puis "Toutes les inscriptions", sans condition de
+// statut. Centralise la logique déjà utilisée par envoyerCarteAdmin()
+// et réutilisable par toute future route admin sur un dossier précis.
+// =====================================================================
+function _trouverApprenantParId(ss, id) {
+  const feuilleRegs = ss.getSheetByName('Régularisations');
+  if (feuilleRegs) {
+    const donneesR = feuilleRegs.getDataRange().getValues();
+    for (let i = 1; i < donneesR.length; i++) {
+      if (String(donneesR[i][0]).trim() === id) {
+        return _mapperApprenantReg(donneesR[i]);
+      }
+    }
+  }
+
+  const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
+  if (feuilleMaitre) {
+    const donnees = feuilleMaitre.getDataRange().getValues();
+    for (let i = 1; i < donnees.length; i++) {
+      if (String(donnees[i][0]).trim() === id) {
+        return _mapperApprenantInscription(donnees[i]);
+      }
+    }
+  }
+
+  return null;
 }
 
 
@@ -205,7 +236,7 @@ function _mapperApprenantReg(row) {
     filiere:      String(row[21] || ''),
     dateEntree:   String(row[23] || ''),
     dateFin:      String(row[24] || ''),
-    photoUrl:     String(row[31] || ''),
+    photoUrl:     _urlImageDriveDirecte(String(row[31] || '')),
     source:       'regularisation'
   };
 }
@@ -234,9 +265,35 @@ function _mapperApprenantInscription(row) {
     filiere:      String(row[6]  || '').replace(/ \| /g, ', '),
     dateEntree:   row[1] ? new Date(row[1]).toISOString().split('T')[0] : '',
     dateFin:      dateFin,
-    photoUrl:     String(row[12] || ''),
+    photoUrl:     _urlImageDriveDirecte(String(row[12] || '')),
     source:       'inscription'
   };
+}
+
+
+// =====================================================================
+// HELPER — Convertit un lien de partage Google Drive (page "view") en
+// URL d'image directement affichable dans une balise <img> ou <canvas>.
+//
+// FIX (audit) : sauvegarderFichierDrive() (code.gs) renvoie fichier.getUrl(),
+// c-à-d un lien du type "https://drive.google.com/file/d/{ID}/view?usp=...".
+// Ce lien pointe vers une page HTML de prévisualisation, pas vers l'image
+// brute : utilisé tel quel comme src d'une <img>, il ne s'affiche jamais
+// (icône image cassée sur verifier.html, sur la carte, l'attestation, la
+// fiche et le badge). On extrait l'ID du fichier et on reconstruit une URL
+// d'image directe.
+// =====================================================================
+function _urlImageDriveDirecte(url) {
+  if (!url) return '';
+  const patterns = [
+    /\/d\/([a-zA-Z0-9_-]{20,})/,     // .../file/d/{ID}/view
+    /[?&]id=([a-zA-Z0-9_-]{20,})/    // .../open?id={ID} ou uc?id={ID}
+  ];
+  for (const re of patterns) {
+    const m = String(url).match(re);
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w800`;
+  }
+  return url; // déjà une URL directe (ou format inconnu) — inchangée
 }
 
 
@@ -297,7 +354,7 @@ function _signerCarte(data) {
 // =====================================================================
 // EMAIL — Envoi carte à l'apprenant
 // =====================================================================
-function _envoyerEmailCarte(apprenant, token, lienVerif) {
+function _envoyerEmailCarte(apprenant, token) {
   const lienCarte = `${CONFIG.SITE_URL}/verifier.html?t=${encodeURIComponent(token)}`;
   const annee     = new Date().getFullYear();
 
@@ -362,12 +419,18 @@ function _envoyerEmailCarte(apprenant, token, lienVerif) {
       Ce lien contient votre carte sécurisée. Ne le partagez qu'avec des tiers de confiance.<br/>
       La carte peut être scannée pour vérifier son authenticité.
     </p>
+
+    <p style="margin:20px 0 0;font-size:13px;color:#6B7280;text-align:center;line-height:1.7;">
+      Votre attestation de fin de formation, votre fiche apprenant et votre badge de
+      certification sont aussi disponibles depuis l'espace apprenant du site, avec les
+      mêmes identifiants (numéro de dossier + téléphone).
+    </p>
   </td></tr>
 
   <!-- Pied -->
   <tr><td style="background:#F3F4F6;padding:18px 36px;text-align:center;">
     <p style="margin:0;font-size:12px;color:#9CA3AF;">
-      © ${annee} Les Qualités de Dieu Service SARL — Cotonou, Bénin
+      © ${annee} Les Qualités de Dieu Service SARL — Comé, Bénin
     </p>
   </td></tr>
 

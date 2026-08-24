@@ -1,0 +1,78 @@
+=====================================================================
+LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
+=====================================================================
+
+Ce zip contient l'INTÉGRALITÉ du projet dans son état final (23
+fichiers), pas seulement les fichiers modifiés. Tu peux remplacer
+tout ton dépôt GitHub par ce contenu.
+
+---------------------------------------------------------------------
+1. CE QUI A CHANGÉ PAR RAPPORT À TON DÉPÔT ACTUEL
+---------------------------------------------------------------------
+  Modifiés  : GAS/admin.gs, GAS/carte.gs, GAS/code.gs,
+              admin.html, index.html, vercel.json
+  Nouveaux  : GAS/candidatures.gs, GAS/chat.gs, postuler.html,
+              js/attestation_generator.js,
+              js/badge_certification_generator.js,
+              js/chat-widget.js,
+              js/fiche_apprenant_generator.js
+  Supprimé  : GAS/admin_regularisation.gs (absent de ce zip — normal,
+              c'était un doublon exact de regularisation.gs qui
+              cassait tout le backend Apps Script)
+  Inchangés : GAS/init.gs, GAS/regularisation.gs, admin.gs (partiel),
+              icons/logoqds.jpg, manifest.json, regularisation.html,
+              sw.js, verifier.html
+
+---------------------------------------------------------------------
+2. DÉPLOIEMENT GITHUB / VERCEL (le site)
+---------------------------------------------------------------------
+  1. Sur ton dépôt GitHub, remplace tout le contenu de la branche
+     main par celui de ce zip (ou fais un commit qui écrase les
+     anciens fichiers avec ceux-ci).
+  2. Vérifie bien que le dossier js/ a été créé avec ses 4 fichiers,
+     et que postuler.html est à la racine.
+  3. Vercel redéploie automatiquement après le push.
+
+---------------------------------------------------------------------
+3. DÉPLOIEMENT GOOGLE APPS SCRIPT (le backend — IMPORTANT)
+---------------------------------------------------------------------
+  Le zip contient le dossier GAS/ à titre indicatif (utile pour tout
+  reconstituer si besoin), mais l'éditeur Apps Script n'est PAS
+  synchronisé avec GitHub — il faut y coller les fichiers à la main :
+
+  1. Ouvre l'éditeur Apps Script de ton projet.
+  2. Supprime le fichier "admin_regularisation.gs" s'il existe
+     encore (c'est LA cause du bug qui empêchait tout de fonctionner).
+  3. Remplace le contenu de admin.gs, carte.gs et code.gs par celui
+     des fichiers du même nom dans GAS/ (ce zip).
+  4. Ajoute deux nouveaux fichiers de script : candidatures.gs et
+     chat.gs (copie leur contenu depuis GAS/ dans ce zip).
+  5. Vérifie que init.gs et regularisation.gs sont identiques à ceux
+     déjà dans ton éditeur (ils n'ont pas changé, mais autant
+     confirmer qu'ils sont bien présents).
+  6. Déployer > Gérer les déploiements > (crayon sur le déploiement
+     existant) > Nouvelle version > Déployer.
+     C'est cette étape qui active réellement tes changements sur
+     l'URL Web App déjà utilisée par le site — sans elle, rien ne
+     change côté utilisateur.
+
+---------------------------------------------------------------------
+4. À VÉRIFIER APRÈS DÉPLOIEMENT
+---------------------------------------------------------------------
+  - https://qualitededieu.vercel.app/postuler s'affiche
+  - Section "Vos documents officiels" (index.html) : après avoir
+    entré un numéro de dossier + téléphone valides, 4 boutons
+    apparaissent (Carte / Attestation / Fiche apprenant / Badge)
+  - Le widget de chat (bulle ronde en bas à droite) apparaît sur
+    index.html
+  - admin.html : un nouvel onglet "Candidatures" apparaît dans le
+    menu latéral, avec sous-entrées Formateur/Staff et Stage
+
+---------------------------------------------------------------------
+5. FICHIERS OPTIONNELS NON FOURNIS
+---------------------------------------------------------------------
+  icons/signature.png et icons/cachet.png n'existent pas — les
+  documents (attestation, fiche, badge) se génèrent normalement sans,
+  simplement sans visuel de signature/cachet. Ajoute ces deux images
+  dans icons/ pour les faire apparaître automatiquement (aucun code
+  à changer, les générateurs les cherchent déjà à cet emplacement).
