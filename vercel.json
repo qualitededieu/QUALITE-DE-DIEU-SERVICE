@@ -40,16 +40,16 @@
     }
   ],
   "rewrites": [
-    { "source": "/inscription",       "destination": "/inscription.html" },
-    { "source": "/espace-apprenant",  "destination": "/espace-apprenant.html" },
-    { "source": "/paiement",          "destination": "/paiement.html" },
     { "source": "/admin",             "destination": "/admin.html" },
+    { "source": "/postuler",          "destination": "/postuler.html" },
+    { "source": "/regularisation",    "destination": "/regularisation.html" },
+    { "source": "/verifier",          "destination": "/verifier.html" },
     { "source": "/",                  "destination": "/index.html" }
   ],
   "redirects": [
-    { "source": "/inscription.html",      "destination": "/inscription",      "permanent": true },
-    { "source": "/espace-apprenant.html", "destination": "/espace-apprenant", "permanent": true },
-    { "source": "/paiement.html",         "destination": "/paiement",         "permanent": true },
-    { "source": "/admin.html",            "destination": "/admin",            "permanent": true }
+    { "source": "/admin.html",            "destination": "/admin",            "permanent": true },
+    { "source": "/postuler.html",         "destination": "/postuler",         "permanent": true },
+    { "source": "/regularisation.html",   "destination": "/regularisation",   "permanent": true },
+    { "source": "/verifier.html",         "destination": "/verifier",         "permanent": true }
   ]
 }
