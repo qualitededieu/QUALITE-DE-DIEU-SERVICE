@@ -26,13 +26,13 @@ const ADMIN_CONFIG = {
 
 
 // =====================================================================
-// CONFIG CARTE D'APPRENTISSAGE
+// CONFIG CARTE D'APPRENTISSAGE — voir CARTE_CONFIG dans carte.gs.
+// (Ne pas redéclarer ici : dans un projet Apps Script, tous les fichiers
+// .gs partagent le même espace global — une seconde déclaration `const
+// CARTE_CONFIG` provoque une erreur "Identifier has already been
+// declared" qui empêche l'exécution de TOUT le script, pas seulement
+// de la carte.)
 // =====================================================================
-const CARTE_CONFIG = {
-  SECRET:    'lqd-carte-secret-2026-Xm7kP9nQ2rW4vZ6j',
-  VERIF_URL: 'https://qualitededieu.vercel.app/verifier.html',
-  VERSION:   '1.0'
-};
 
 
 // =====================================================================
@@ -69,6 +69,12 @@ function routerAdmin(data, action) {
       case 'carte_get_data':            return getCarte(data);
       case 'carte_verifier':            return verifierCarte(data);
       case 'admin_envoyer_carte':       return requireAuth(data, envoyerCarteAdmin);
+
+      // CANDIDATURES (page Postuler — admin uniquement, l'envoi est public via action 'candidature')
+      case 'admin_get_candidatures':          return requireAuth(data, adminGetCandidatures);
+      case 'admin_update_statut_candidature': return requireAuth(data, adminUpdateStatutCandidature);
+      case 'admin_obtenir_doc_candidature':   return requireAuth(data, adminObtenirDocumentCandidature);
+      case 'admin_delete_candidature':        return requireAuth(data, adminDeleteCandidature);
 
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
@@ -520,293 +526,6 @@ function adminExportCSV(data, email) {
   const csv = '\uFEFF' + lignes.join('\r\n');
   console.log(`[Admin:${email}] Export CSV — ${donnees.length - 1} lignes`);
   return reponseJSON({ status: 'success', csv, total: donnees.length - 1 });
-}
-
-
-// =====================================================================
-// CARTE — Normalisation téléphone
-// Sheets supprime le + et les espaces sur les numéros stockés comme nombres
-// Cette fonction normalise avant comparaison pour éviter les faux négatifs
-// =====================================================================
-function _normaliserTel(tel) {
-  return String(tel || '').replace(/[\s+\-().]/g, '');
-}
-
-
-// =====================================================================
-// CARTE — Récupérer données carte (route publique)
-// Vérification : ID dossier + téléphone (normalisé)
-// =====================================================================
-function getCarte(data) {
-  const id        = String(data.id        || '').trim();
-  const telephone = String(data.telephone || '').trim();
-
-  if (!id || !telephone) {
-    return reponseJSON({ status: 'error', message: 'Numéro de dossier et téléphone requis.' });
-  }
-
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
-
-  // Priorité : Régularisations (données complètes avec période)
-  const feuilleRegs = ss.getSheetByName('Régularisations');
-  if (feuilleRegs) {
-    const donneesR = feuilleRegs.getDataRange().getValues();
-    for (let i = 1; i < donneesR.length; i++) {
-      const row = donneesR[i];
-      if (!row[0]) continue;
-      if (String(row[0]).trim() === id && _normaliserTel(row[8]) === _normaliserTel(telephone)) {
-        const statut = String(row[37] || '').trim();
-        if (statut !== 'Validé') {
-          return reponseJSON({ status: 'error', message: 'Votre dossier n\'est pas encore validé.' });
-        }
-        const apprenant = _mapperApprenantReg(row);
-        return reponseJSON({ status: 'success', apprenant, token: _genererTokenCarte(apprenant) });
-      }
-    }
-  }
-
-  // Fallback : Toutes les inscriptions
-  const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
-  if (feuilleMaitre) {
-    const donnees = feuilleMaitre.getDataRange().getValues();
-    for (let i = 1; i < donnees.length; i++) {
-      const row = donnees[i];
-      if (!row[0] || row[0] === 'LQD-EXEMPLE') continue;
-      if (String(row[0]).trim() === id && _normaliserTel(row[4]) === _normaliserTel(telephone)) {
-        const statut = String(row[9] || '').trim();
-        if (statut !== 'Confirmé') {
-          return reponseJSON({ status: 'error', message: 'Votre dossier n\'est pas encore confirmé.' });
-        }
-        const apprenant = _mapperApprenantInscription(row);
-        return reponseJSON({ status: 'success', apprenant, token: _genererTokenCarte(apprenant) });
-      }
-    }
-  }
-
-  return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });
-}
-
-
-// =====================================================================
-// CARTE — Vérifier token (route publique — verifier.html)
-// =====================================================================
-function verifierCarte(data) {
-  const token = String(data.token || '').trim();
-  if (!token) return reponseJSON({ status: 'error', message: 'Token manquant.' });
-
-  const payload = _verifierTokenCarte(token);
-  if (!payload) {
-    return reponseJSON({ status: 'error', message: 'Carte invalide ou falsifiée.' });
-  }
-
-  const maintenant = new Date();
-  const dateFin    = new Date(payload.dateFin);
-
-  if (!isNaN(dateFin.getTime()) && maintenant > dateFin) {
-    return reponseJSON({ status: 'expired', message: 'Cette carte d\'apprentissage est expirée.', apprenant: payload });
-  }
-
-  return reponseJSON({ status: 'success', apprenant: payload, valide: true });
-}
-
-
-// =====================================================================
-// CARTE — Générer et envoyer par email (route admin)
-// =====================================================================
-function envoyerCarteAdmin(data, email) {
-  const id = String(data.id || '').trim();
-  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
-
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
-
-  let apprenant = null;
-
-  const feuilleRegs = ss.getSheetByName('Régularisations');
-  if (feuilleRegs) {
-    const donneesR = feuilleRegs.getDataRange().getValues();
-    for (let i = 1; i < donneesR.length; i++) {
-      if (String(donneesR[i][0]).trim() === id) {
-        apprenant = _mapperApprenantReg(donneesR[i]);
-        break;
-      }
-    }
-  }
-
-  if (!apprenant) {
-    const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
-    if (feuilleMaitre) {
-      const donnees = feuilleMaitre.getDataRange().getValues();
-      for (let i = 1; i < donnees.length; i++) {
-        if (String(donnees[i][0]).trim() === id) {
-          apprenant = _mapperApprenantInscription(donnees[i]);
-          break;
-        }
-      }
-    }
-  }
-
-  if (!apprenant)       return reponseJSON({ status: 'error', message: `Dossier ${id} introuvable.` });
-  if (!apprenant.email) return reponseJSON({ status: 'error', message: 'Pas d\'email pour cet apprenant.' });
-
-  const token = _genererTokenCarte(apprenant);
-  _envoyerEmailCarte(apprenant, token);
-
-  console.log(`[Admin:${email}] Carte envoyée → ${apprenant.email} (${id})`);
-  return reponseJSON({ status: 'success', message: `Carte envoyée à ${apprenant.email}`, apprenant, token });
-}
-
-
-// =====================================================================
-// CARTE — Helpers internes
-// =====================================================================
-function _mapperApprenantReg(row) {
-  return {
-    id:            String(row[0]  || ''),
-    prenom:        String(row[2]  || ''),
-    nom:           String(row[3]  || ''),
-    sexe:          String(row[4]  || ''),
-    dateNaissance: String(row[5]  || ''),
-    telephone:     String(row[8]  || ''),
-    email:         String(row[9]  || ''),
-    filiere:       String(row[21] || ''),
-    dateEntree:    String(row[23] || ''),
-    dateFin:       String(row[24] || ''),
-    photoUrl:      String(row[31] || ''),
-    source:        'regularisation'
-  };
-}
-
-function _mapperApprenantInscription(row) {
-  let dateFin = '';
-  if (row[1]) {
-    const d = new Date(row[1]);
-    d.setFullYear(d.getFullYear() + 1);
-    dateFin = d.toISOString().split('T')[0];
-  }
-  return {
-    id:            String(row[0]  || ''),
-    prenom:        String(row[2]  || ''),
-    nom:           String(row[3]  || ''),
-    sexe:          '',
-    dateNaissance: '',
-    telephone:     String(row[4]  || ''),
-    email:         String(row[5]  || ''),
-    filiere:       String(row[6]  || '').replace(/ \| /g, ', '),
-    dateEntree:    row[1] ? new Date(row[1]).toISOString().split('T')[0] : '',
-    dateFin,
-    photoUrl:      String(row[12] || ''),
-    source:        'inscription'
-  };
-}
-
-function _genererTokenCarte(apprenant) {
-  const payload = {
-    id:            apprenant.id,
-    prenom:        apprenant.prenom,
-    nom:           apprenant.nom,
-    sexe:          apprenant.sexe,
-    dateNaissance: apprenant.dateNaissance,
-    telephone:     apprenant.telephone,
-    filiere:       apprenant.filiere,
-    dateEntree:    apprenant.dateEntree,
-    dateFin:       apprenant.dateFin,
-    photoUrl:      apprenant.photoUrl,
-    emis:          new Date().toISOString(),
-    v:             CARTE_CONFIG.VERSION
-  };
-  const payloadB64 = Utilities.base64EncodeWebSafe(JSON.stringify(payload));
-  const signature  = _signerCarte(payloadB64);
-  return `${payloadB64}.${signature}`;
-}
-
-function _verifierTokenCarte(token) {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 2) return null;
-    const [payloadB64, signatureRecue] = parts;
-    if (_signerCarte(payloadB64) !== signatureRecue) return null;
-    return JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(payloadB64)).getDataAsString());
-  } catch(e) {
-    console.error('[_verifierTokenCarte]', e.toString());
-    return null;
-  }
-}
-
-function _signerCarte(data) {
-  return Utilities.base64EncodeWebSafe(
-    Utilities.computeHmacSha256Signature(data, CARTE_CONFIG.SECRET)
-  );
-}
-
-function _envoyerEmailCarte(apprenant, token) {
-  const lienCarte = `${CARTE_CONFIG.VERIF_URL}?t=${encodeURIComponent(token)}`;
-  const annee     = new Date().getFullYear();
-
-  const htmlBody = `<!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0"
-  style="max-width:560px;background:#FFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-  <tr><td style="background:#04342C;padding:28px 36px;text-align:center;">
-    <img src="${CONFIG.LOGO_URL}" width="60" style="border-radius:8px;margin:0 auto 12px;display:block;"/>
-    <h1 style="margin:0;font-size:18px;color:#FFF;font-weight:700;">Les Qualités de Dieu Service</h1>
-    <p style="margin:6px 0 0;font-size:13px;color:#A7C4BC;">Carte d'apprentissage</p>
-  </td></tr>
-  <tr><td style="padding:32px 36px;">
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.75;">
-      Bonjour <strong>${apprenant.prenom} ${apprenant.nom}</strong>,<br/><br/>
-      Votre carte d'apprentissage officielle LQD Service est prête.
-      Elle atteste de votre inscription en <strong>${apprenant.filiere}</strong>.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0"
-      style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">
-      <tr style="background:#F9FAFB;">
-        <td style="padding:10px 16px;color:#6B7280;font-weight:600;width:40%;">Référence</td>
-        <td style="padding:10px 16px;color:#111827;font-family:monospace;">${apprenant.id}</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 16px;color:#6B7280;font-weight:600;">Filière</td>
-        <td style="padding:10px 16px;color:#111827;">${apprenant.filiere}</td>
-      </tr>
-      <tr style="background:#F9FAFB;">
-        <td style="padding:10px 16px;color:#6B7280;font-weight:600;">Début</td>
-        <td style="padding:10px 16px;color:#111827;">${apprenant.dateEntree || '—'}</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 16px;color:#6B7280;font-weight:600;">Fin de validité</td>
-        <td style="padding:10px 16px;color:#E05C2A;font-weight:700;">${apprenant.dateFin || '—'}</td>
-      </tr>
-    </table>
-    <div style="text-align:center;margin:28px 0;">
-      <a href="${lienCarte}"
-        style="display:inline-block;background:#04342C;color:#FFF;padding:14px 32px;
-               border-radius:8px;font-size:15px;font-weight:700;text-decoration:none;">
-        Voir et télécharger ma carte
-      </a>
-    </div>
-    <p style="margin:16px 0 0;font-size:12px;color:#9CA3AF;text-align:center;line-height:1.6;">
-      Ce lien contient votre carte sécurisée. Ne le partagez qu'avec des tiers de confiance.
-    </p>
-  </td></tr>
-  <tr><td style="background:#F3F4F6;padding:18px 36px;text-align:center;">
-    <p style="margin:0;font-size:12px;color:#9CA3AF;">
-      © ${annee} Les Qualités de Dieu Service SARL — Cotonou, Bénin
-    </p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
-
-  GmailApp.sendEmail(
-    apprenant.email,
-    `Votre carte d'apprentissage — LQD Service (${apprenant.id})`,
-    `Bonjour ${apprenant.prenom}, votre carte d'apprentissage LQD Service : ${lienCarte}`,
-    { htmlBody, name: CONFIG.EXPEDITEUR_NOM, replyTo: CONFIG.ADMIN_EMAIL }
-  );
 }
 
 
