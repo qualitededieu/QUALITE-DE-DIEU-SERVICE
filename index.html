@@ -351,7 +351,8 @@
           <li><a href="#blog"           class="nav-link">Blog</a></li>
           <li><a href="#contact"        class="nav-link">Contact</a></li>
           <li><a href="https://academyphanos.vercel.app/" class="nav-link">Phanos Kosmos</a></li>
-           <li><a href="/regularisation.html"        class="nav-link">Régularisation</a></li>
+           <li><a href="/regularisation"        class="nav-link">Régularisation</a></li>
+           <li><a href="/postuler"               class="nav-link">Postuler</a></li>
           <li><a href="#inscription"    class="btn-nav-cta">S'inscrire</a></li>
         </ul>
         <button class="nav-burger" id="navBurger" aria-label="Menu">
@@ -366,7 +367,8 @@
         <li><a href="#blog"          onclick="closeMobileNav()">Blog</a></li>
         <li><a href="#contact"       onclick="closeMobileNav()">Contact</a></li>
         <li><a href="https://academyphanos.vercel.app/" onclick="closeMobileNav()">Phanos Kosmos</a></li>
-         <li><a href="/regularisation.html"       onclick="closeMobileNav()">Régualisation</a></li>
+         <li><a href="/regularisation"       onclick="closeMobileNav()">Régualisation</a></li>
+         <li><a href="/postuler"              onclick="closeMobileNav()">Postuler</a></li>
         <li><a href="#inscription"   onclick="closeMobileNav()" style="color:var(--teal-600);font-weight:700;">S'inscrire maintenant</a></li>
       </ul>
     </div>
@@ -975,15 +977,15 @@
   <div class="container">
     <div class="section-header reveal">
       <span class="section-tag">Espace apprenant</span>
-      <h2 class="section-title">Votre carte d'apprentissage</h2>
+      <h2 class="section-title">Vos documents officiels</h2>
       <p class="section-subtitle">
-        Téléchargez votre carte officielle LQD Service en quelques secondes.
-        Saisissez votre numéro de dossier et votre téléphone.
+        Carte d'apprentissage, attestation de fin de formation, fiche apprenant et badge de
+        certification. Saisissez votre numéro de dossier et votre téléphone pour y accéder.
       </p>
     </div>
 
     <div style="max-width:460px;margin:0 auto;" class="reveal">
-      <div style="background:#FFF;border-radius:16px;padding:32px;box-shadow:0 8px 40px rgba(4,52,44,0.10);">
+      <div id="espace-form-card" style="background:#FFF;border-radius:16px;padding:32px;box-shadow:0 8px 40px rgba(4,52,44,0.10);">
 
         <div id="carte-msg" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:14px;"></div>
 
@@ -1008,13 +1010,126 @@
         <button id="carte-btn" onclick="obtenirCarte()"
           style="width:100%;padding:14px;background:#04342C;color:#FFF;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;transition:background .2s;">
           <span class="iconify" data-icon="tabler:id-badge-2"></span>
-          Accéder à ma carte
+          Accéder à mes documents
         </button>
 
       </div>
+
+      <!-- Dashboard documents — affiché après identification réussie -->
+      <div id="espace-dashboard" style="display:none;background:#FFF;border-radius:16px;padding:28px;box-shadow:0 8px 40px rgba(4,52,44,0.10);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span class="iconify" data-icon="tabler:user-check" style="font-size:22px;color:#0D7A8A;"></span>
+          </div>
+          <div>
+            <div id="espace-nom" style="font-weight:700;color:#04342C;font-size:15px;"></div>
+            <div id="espace-filiere" style="font-size:12px;color:#7A9E95;"></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <button class="btn-doc-espace" onclick="ouvrirCarteApprenant()">
+            <span class="iconify" data-icon="tabler:id-badge-2"></span> Ma carte
+          </button>
+          <button class="btn-doc-espace" onclick="ouvrirDocument('attestation')">
+            <span class="iconify" data-icon="tabler:certificate"></span> Attestation
+          </button>
+          <button class="btn-doc-espace" onclick="ouvrirDocument('fiche')">
+            <span class="iconify" data-icon="tabler:file-description"></span> Fiche apprenant
+          </button>
+          <button class="btn-doc-espace" onclick="ouvrirDocument('badge')">
+            <span class="iconify" data-icon="tabler:award"></span> Badge
+          </button>
+        </div>
+
+        <button onclick="reinitialiserEspace()" style="margin-top:18px;width:100%;background:none;border:none;color:#7A9E95;font-size:13px;cursor:pointer;font-family:inherit;">
+          &larr; Changer de dossier
+        </button>
+      </div>
+      <style>
+        .btn-doc-espace{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 10px;
+          background:#F0F4F2;border:1.5px solid transparent;border-radius:12px;cursor:pointer;
+          font-family:inherit;font-size:13px;font-weight:600;color:#04342C;transition:all .2s;}
+        .btn-doc-espace .iconify{font-size:24px;color:#0D7A8A;}
+        .btn-doc-espace:hover{background:#E1F5EE;border-color:#0D7A8A;}
+      </style>
     </div>
   </div>
 </section>
+
+<!-- MODALES DOCUMENTS (attestation / fiche / badge) -->
+<div class="pk-modal-overlay" id="modal-attestation">
+  <div class="pk-modal-box">
+    <div class="pk-modal-header">
+      <span>Attestation de fin de formation</span>
+      <button onclick="PK.closeModal('modal-attestation')" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="pk-modal-body" id="attestation-preview"></div>
+    <div class="pk-modal-footer">
+      <button class="btn-modal-secondary" id="btn-telecharger-attestation-png">
+        <span class="iconify" data-icon="tabler:photo"></span> PNG
+      </button>
+      <button class="btn-modal-primary" id="btn-telecharger-attestation-pdf">
+        <span class="iconify" data-icon="tabler:file-type-pdf"></span> Télécharger le PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="pk-modal-overlay" id="modal-fiche-apprenant">
+  <div class="pk-modal-box">
+    <div class="pk-modal-header">
+      <span>Fiche apprenant</span>
+      <button onclick="PK.closeModal('modal-fiche-apprenant')" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="pk-modal-body" id="fiche-preview"></div>
+    <div class="pk-modal-footer">
+      <button class="btn-modal-secondary" id="btn-telecharger-fiche">
+        <span class="iconify" data-icon="tabler:photo"></span> PNG
+      </button>
+      <button class="btn-modal-primary" id="btn-telecharger-fiche-pdf">
+        <span class="iconify" data-icon="tabler:file-type-pdf"></span> Télécharger le PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="pk-modal-overlay" id="modal-badge-certification">
+  <div class="pk-modal-box">
+    <div class="pk-modal-header">
+      <span>Badge de certification</span>
+      <button onclick="PK.closeModal('modal-badge-certification')" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="pk-modal-body" id="badge-preview"></div>
+    <div class="pk-modal-footer">
+      <button class="btn-modal-primary" id="btn-telecharger-badge" style="width:100%;">
+        <span class="iconify" data-icon="tabler:download"></span> Télécharger l'image
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .pk-modal-overlay{display:none;position:fixed;inset:0;background:rgba(4,52,44,0.55);z-index:9999;
+    align-items:center;justify-content:center;padding:20px;}
+  .pk-modal-overlay.open{display:flex;}
+  .pk-modal-box{background:#12241f;border-radius:16px;width:100%;max-width:640px;max-height:88vh;
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+  .pk-modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;
+    background:#04342C;color:#fff;font-weight:700;font-size:15px;}
+  .pk-modal-header button{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;opacity:.75;}
+  .pk-modal-header button:hover{opacity:1;}
+  .pk-modal-body{flex:1;overflow-y:auto;padding:18px;}
+  .pk-modal-footer{display:flex;gap:10px;padding:16px 22px;background:#0d1f1a;}
+  .btn-modal-primary,.btn-modal-secondary{flex:1;padding:12px;border-radius:10px;border:none;
+    font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;gap:8px;}
+  .btn-modal-primary{background:#F5A623;color:#04342C;}
+  .btn-modal-primary:hover{background:#FABD50;}
+  .btn-modal-secondary{background:rgba(255,255,255,0.08);color:#fff;}
+  .btn-modal-secondary:hover{background:rgba(255,255,255,0.15);}
+  @keyframes pk-spin{to{transform:rotate(360deg);}}
+</style>
 
   <!-- FOOTER -->
   <footer>
@@ -1040,6 +1155,7 @@
             <li><a href="#renseignement">Renseignements</a></li>
             <li><a href="#galerie">Galerie</a></li>
             <li><a href="#contact">Nous trouver</a></li>
+            <li><a href="/postuler">Postuler (formateur / stage)</a></li>
           </ul>
         </div>
         <div class="footer-col">
@@ -1496,6 +1612,8 @@
     /* ================================================================
    CARTE D'APPRENTISSAGE
 ================================================================ */
+let _espaceApprenant = null; // { apprenant, token } — rempli après identification réussie
+
 async function obtenirCarte() {
   const id  = document.getElementById('carte-id').value.trim();
   const tel = document.getElementById('carte-tel').value.trim();
@@ -1524,7 +1642,8 @@ async function obtenirCarte() {
     const result = await resp.json();
 
     if (result.status === 'success') {
-      window.open('verifier.html?t=' + encodeURIComponent(result.token), '_blank');
+      _espaceApprenant = { apprenant: result.apprenant, token: result.token };
+      afficherDashboardEspace(result.apprenant);
     } else {
       msg.style.display    = 'block';
       msg.style.background = 'rgba(224,92,42,0.1)';
@@ -1540,8 +1659,77 @@ async function obtenirCarte() {
   }
 
   btn.disabled = false;
-  btn.innerHTML = '<span class="iconify" data-icon="tabler:id-badge-2"></span> Accéder à ma carte';
+  btn.innerHTML = '<span class="iconify" data-icon="tabler:id-badge-2"></span> Accéder à mes documents';
 }
+
+/* ================================================================
+   ESPACE APPRENANT — dashboard documents
+================================================================ */
+function afficherDashboardEspace(apprenant) {
+  document.getElementById('espace-form-card').style.display = 'none';
+  document.getElementById('espace-dashboard').style.display = 'block';
+  document.getElementById('espace-nom').textContent     = `${apprenant.prenom} ${apprenant.nom}`;
+  document.getElementById('espace-filiere').textContent = apprenant.filiere || '—';
+}
+
+function reinitialiserEspace() {
+  _espaceApprenant = null;
+  document.getElementById('espace-dashboard').style.display = 'none';
+  document.getElementById('espace-form-card').style.display = 'block';
+  document.getElementById('carte-id').value  = '';
+  document.getElementById('carte-tel').value = '';
+}
+
+function ouvrirCarteApprenant() {
+  if (!_espaceApprenant) return;
+  window.open('verifier.html?t=' + encodeURIComponent(_espaceApprenant.token), '_blank');
+}
+
+async function ouvrirDocument(type) {
+  if (!_espaceApprenant) return;
+  const { apprenant, token } = _espaceApprenant;
+
+  if (type === 'attestation') {
+    PK.openModal('modal-attestation');
+    afficherAttestationCanvas(apprenant, token);
+  } else if (type === 'fiche') {
+    PK.openModal('modal-fiche-apprenant');
+    afficherFicheApprenant(apprenant, token);
+  } else if (type === 'badge') {
+    PK.openModal('modal-badge-certification');
+    afficherBadgeCertification(apprenant, token);
+  }
+}
+
+/* ================================================================
+   PK — utilitaires partagés par les générateurs de documents
+   (modales + toast, réutilise le système de toast existant)
+================================================================ */
+window.PK = {
+  openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('open');
+  },
+  closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  },
+  showToast(msg, type) { showToast(msg, type === 'error' ? 'error' : 'success'); },
+  showLoader() {},
+  hideLoader() {}
+};
+
+// Fermeture des modales par clic sur le fond
+document.querySelectorAll('.pk-modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
   </script>
+
+  <script src="js/attestation_generator.js"></script>
+  <script src="js/fiche_apprenant_generator.js"></script>
+  <script src="js/badge_certification_generator.js"></script>
+  <script src="js/chat-widget.js" defer></script>
 </body>
 </html>
