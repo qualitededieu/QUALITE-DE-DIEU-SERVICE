@@ -136,7 +136,7 @@ function doPost(e) {
     const data   = JSON.parse(raw);
     const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
 // Routing admin — doit être en premier
-  if (action.startsWith('admin_')) return routerAdmin(data, action);
+  if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
   if (action === 'renseignement') return traiterRenseignement(data);
   if (action === 'regularisation') return traiterRegularisation(data);
     return traiterInscription(data);
