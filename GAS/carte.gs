@@ -100,6 +100,11 @@ function getCarte(data) {
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
   let dossierTrouveNonValide = false;
+  // ID trouvé sur au moins une ligne, mais téléphone non correspondant
+  // sur cette même ligne — permet un message bien plus utile que le
+  // générique "Aucun dossier trouvé" (même principe que
+  // candidatureAttestationGetData() dans candidatures.gs).
+  let idTrouveTelIncorrect = false;
 
   // --- Recherche dans "Régularisations" (priorité : données complètes) ---
   const feuilleRegs = ss.getSheetByName('Régularisations');
@@ -110,22 +115,23 @@ function getCarte(data) {
       if (!row[0]) continue;
 
       const idRow  = String(row[0]).trim();
+      if (idRow !== id) continue;
+
       const telRow = String(row[8] || '').trim(); // col 8 = téléphone dans Régularisations
+      if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
-      if (idRow === id && _telephonesEquivalents(telRow, telephone)) {
-        const statut = String(row[37] || '').trim();
-        if (statut !== 'Validé') {
-          // Ne pas sortir tout de suite : le même apprenant peut avoir
-          // un dossier d'inscription déjà confirmé (voir plus bas).
-          dossierTrouveNonValide = true;
-          break;
-        }
-
-        const apprenant = _mapperApprenantReg(row);
-        const token     = _genererTokenCarte(apprenant);
-
-        return reponseJSON({ status: 'success', apprenant, token });
+      const statut = String(row[37] || '').trim();
+      if (statut !== 'Validé') {
+        // Ne pas sortir tout de suite : le même apprenant peut avoir
+        // un dossier d'inscription déjà confirmé (voir plus bas).
+        dossierTrouveNonValide = true;
+        break;
       }
+
+      const apprenant = _mapperApprenantReg(row);
+      const token     = _genererTokenCarte(apprenant);
+
+      return reponseJSON({ status: 'success', apprenant, token });
     }
   }
 
@@ -138,22 +144,30 @@ function getCarte(data) {
       if (!row[0] || row[0] === 'LQD-EXEMPLE') continue;
 
       const idRow  = String(row[0]).trim();
+      if (idRow !== id) continue;
+
       const telRow = String(row[4] || '').trim(); // col 4 = téléphone dans inscriptions
+      if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
-      if (idRow === id && _telephonesEquivalents(telRow, telephone)) {
-        const statut = String(row[9] || '').trim();
-        if (statut !== 'Confirmé') continue; // on continue au cas où une autre ligne correspond
+      const statut = String(row[9] || '').trim();
+      if (statut !== 'Confirmé') continue; // on continue au cas où une autre ligne correspond
 
-        const apprenant = _mapperApprenantInscription(row);
-        const token     = _genererTokenCarte(apprenant);
+      const apprenant = _mapperApprenantInscription(row);
+      const token     = _genererTokenCarte(apprenant);
 
-        return reponseJSON({ status: 'success', apprenant, token });
-      }
+      return reponseJSON({ status: 'success', apprenant, token });
     }
   }
 
   if (dossierTrouveNonValide) {
     return reponseJSON({ status: 'error', message: 'Votre dossier de régularisation est en cours de traitement et n\'est pas encore validé.' });
+  }
+
+  if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
+  }
+  if (idTrouveTelIncorrect) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas.' });
   }
 
   if (_telephoneSembleIncomplet(telephone)) {

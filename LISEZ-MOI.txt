@@ -1,44 +1,64 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : cachet du PDG agrandi sur l'attestation
+Mise à jour : cachet du PDG encore agrandi + messages intelligents
 =====================================================================
 
 Ce zip contient l'INTÉGRALITÉ du projet, basé sur ta dernière version
-en ligne (avec la mise en page retravaillée, les "missions de stage"
-et le vrai cachet+signature de M. ATO Blaise), avec un seul changement
-en plus : le cachet du PDG agrandi.
+en ligne (mise en page retravaillée, "missions de stage", vrai cachet
++ signature de M. ATO Blaise), avec deux changements en plus.
 
 ---------------------------------------------------------------------
 1. NOUVEAU DEPUIS TA DERNIÈRE VERSION EN LIGNE
 ---------------------------------------------------------------------
-  ✅ Cachet du PDG agrandi sur l'attestation (icons/signature-pdg.png,
-     qui contient le cachet et la signature dans un seul fichier).
-     Il était dessiné à 380px de large sur un document de 3508px —
-     trop petit, comme tu l'as signalé. Il fait maintenant 460px, en
-     restant bien positionné (sous le titre "Président Directeur
-     Général", au-dessus de la ligne pointillée et du nom).
+  ✅ Cachet du PDG encore agrandi (icons/signature-pdg.png, cachet +
+     signature dans un seul fichier) : 560px de large maintenant
+     (était 380px, puis 460px dans l'essai précédent). Toujours bien
+     positionné, sans toucher le titre ni la ligne pointillée.
 
-  Un seul fichier a changé : js/attestation_generator.js
-  → Si tu préfères aller vite, tu peux juste remplacer ce fichier-là
-    sur GitHub au lieu de tout le zip. Aucun fichier GAS n'a changé,
-    pas besoin de retoucher l'éditeur Apps Script.
+  ✅ Message intelligent quand un numéro de dossier est reconnu mais
+     que le téléphone ne correspond pas — pour la carte d'apprentissage
+     ET l'attestation de fin de formation (GAS/carte.gs). Avant, dans
+     ce cas précis, le site affichait le même message générique
+     "Aucun dossier trouvé" que pour un numéro de dossier totalement
+     inconnu — trompeur, puisque le dossier existait bel et bien.
+     Le message dit maintenant clairement : "Numéro de dossier
+     reconnu, mais le téléphone ne correspond pas." (+ le rappel du
+     préfixe 01 si le numéro semble incomplet). C'était déjà le cas
+     pour l'attestation de fin de STAGE (candidatures.gs) — c'est
+     maintenant harmonisé partout.
+
+  ⚠️ Ce lot-ci touche un fichier GAS (GAS/carte.gs) : il FAUT recopier
+     son contenu dans l'éditeur Apps Script et redéployer une nouvelle
+     version du Web App (voir section 3).
 
 ---------------------------------------------------------------------
 2. DÉPLOIEMENT GITHUB / VERCEL (le site)
 ---------------------------------------------------------------------
-  1. Remplace js/attestation_generator.js (ou tout le dépôt) par le
-     contenu de ce zip.
+  1. Remplace tout le contenu de la branche main par celui de ce zip
+     (au minimum : js/attestation_generator.js).
   2. Vercel redéploie automatiquement après le push.
 
 ---------------------------------------------------------------------
-3. À VÉRIFIER APRÈS DÉPLOIEMENT
+3. DÉPLOIEMENT APPS SCRIPT (le backend — pour GAS/carte.gs)
 ---------------------------------------------------------------------
-  - Régénère l'attestation de JOANICE ALOTCHO (ou une autre) : le
-    cachet rouge de M. ATO Blaise doit apparaître nettement plus
-    grand et lisible, toujours bien placé.
+  1. Ouvre ton projet Apps Script (script.google.com).
+  2. Ouvre le fichier "carte" dans l'éditeur.
+  3. Remplace tout son contenu par celui de GAS/carte.gs dans ce zip.
+  4. Déployer → Gérer les déploiements → ✏️ (modifier) → Version :
+     Nouvelle version → Déployer.
 
 ---------------------------------------------------------------------
-4. RAPPEL — CE QUI EST DÉJÀ EN PLACE
+4. À VÉRIFIER APRÈS DÉPLOIEMENT
+---------------------------------------------------------------------
+  - Régénère l'attestation de JOANICE ALOTCHO (ou une autre) : le
+    cachet rouge de M. ATO Blaise doit être bien visible et net.
+  - Sur la carte d'apprentissage ou l'attestation de formation, teste
+    avec un bon numéro de dossier mais un mauvais téléphone : le
+    message doit dire "Numéro de dossier reconnu, mais le téléphone
+    ne correspond pas." au lieu de "Aucun dossier trouvé."
+
+---------------------------------------------------------------------
+5. RAPPEL — CE QUI EST DÉJÀ EN PLACE
 ---------------------------------------------------------------------
   Panel "Régularisations" admin, matching téléphone souple (+229,
   00229, préfixe 01), numéros de téléphone en texte dans les Sheets,

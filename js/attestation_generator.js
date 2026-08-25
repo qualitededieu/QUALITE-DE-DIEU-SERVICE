@@ -484,13 +484,13 @@ async function genererAttestationCanvas(apprenant, token) {
       // fichier (tampon + paraphe scannés ensemble) : on dessine cette
       // image unique, en conservant ses vraies proportions, et on NE
       // redessine PAS le cachet séparé en-dessous (il y serait en
-      // double, l'un par-dessus l'autre). Agrandie (largeur 460, était
+      // double, l'un par-dessus l'autre). Agrandie (largeur 560, était
       // 340) — le cachet paraissait trop petit sur le document complet.
       if (signatureImg) {
         const ratio = signatureImg.height / signatureImg.width;
-        const largeur = 460;
+        const largeur = 560;
         const hauteur = Math.round(largeur * ratio);
-        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 85, largeur, hauteur);
+        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 80, largeur, hauteur);
       }
     } else {
       if (signatureImg) {
