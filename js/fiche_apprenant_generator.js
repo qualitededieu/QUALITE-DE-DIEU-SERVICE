@@ -96,7 +96,7 @@ function _fLigne(ctx, icone, x, y, label, valeur, tailleLabel = 22, tailleValeur
 // token     : token carte HMAC (QR de vérification)
 async function genererFicheApprenant(apprenant, token) {
   const LOGO_URL = FICHE_ENTREPRISE.LOGO_URL;
-  const SIG_SRC    = typeof SIGNATURE_DATA !== "undefined" ? SIGNATURE_DATA : "icons/signature.png";
+  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png"; // même fichier que sur l'attestation
   const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png";
   const lienVerif = token
     ? `https://${FICHE_ENTREPRISE.SITE}/verifier.html?t=${encodeURIComponent(token)}`
@@ -280,14 +280,17 @@ async function genererFicheApprenant(apprenant, token) {
   ctx.restore();
 
   _fFont(ctx, 20, "700"); ctx.fillStyle = FICHE.OR;
-  ctx.fillText("SIGNATURE ET CACHET", M, SIG_Y + 40);
+  ctx.fillText("SIGNATURE ET CACHET DU PDG", M, SIG_Y + 40);
   const SIG_W = 190;
   if (sig) { const ratio = sig.height / sig.width; const sigH = Math.min(Math.round(SIG_W * ratio), 84); ctx.drawImage(sig, M, SIG_Y + 54, SIG_W, sigH); }
   if (cachet) { ctx.save(); ctx.globalAlpha = 0.92; ctx.drawImage(cachet, M + 140, SIG_Y + 30, 150, 150); ctx.restore(); }
   const blocSigCentreX = M + 145;
   _fFont(ctx, 22, "700"); ctx.fillStyle = FICHE.MARINE;
-  const nomTxt = FICHE_ENTREPRISE.NOM;
+  const nomTxt = "M. ATO Blaise";
   ctx.fillText(nomTxt, blocSigCentreX - _fMw(ctx, nomTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, nomTxt) / 2, SIG_Y + 196);
+  _fFont(ctx, 17, "500"); ctx.fillStyle = FICHE.GRIS;
+  const titreTxt = "Président Directeur Général";
+  ctx.fillText(titreTxt, blocSigCentreX - _fMw(ctx, titreTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, titreTxt) / 2, SIG_Y + 220);
 
   // ── Footer ──
   const FOOTER_Y = H - 70;

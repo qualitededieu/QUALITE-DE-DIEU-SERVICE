@@ -20,9 +20,13 @@ const ATT = {
   H: 2480,
 };
 
-// Signataire — à compléter une fois le nom officiel communiqué.
-// Si ATT_SIGNATAIRE.nom reste vide, seul le titre est affiché.
-const ATT_SIGNATAIRE = { nom: "", titre: "Le Responsable de Formation" };
+// Signataires — l'attestation LQD Service porte toujours deux
+// signatures/cachets : le Formateur à gauche, le PDG à droite.
+// Si .nom reste vide, seul le titre est affiché (cas du Formateur,
+// dont le nom varie selon la session — à renseigner au cas par cas
+// si besoin).
+const ATT_SIGNATAIRE_FORMATEUR = { nom: "", titre: "Le Formateur" };
+const ATT_SIGNATAIRE_PDG       = { nom: "M. ATO Blaise", titre: "Président Directeur Général" };
 
 const ATT_ENTREPRISE = {
   NOM:      "LES QUALITÉS DE DIEU SERVICE",
@@ -178,12 +182,13 @@ async function genererAttestationCanvas(apprenant, token) {
     : `https://${ATT_ENTREPRISE.SITE}/verifier.html`;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=2&data=" + encodeURIComponent(lienVerif);
 
-  const [logo, qr, photo, sig, cachet] = await Promise.all([
+  const [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
     _loadImg(ATT_ENTREPRISE.LOGO_URL),
     _loadImg(QR_URL),
     _loadImg(apprenant.photoUrl),
-    _loadImg(typeof SIGNATURE_DATA !== "undefined" ? SIGNATURE_DATA : "icons/signature.png"),
-    _loadImg(typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png"),
+    _loadImg(typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png"),
+    _loadImg(typeof SIGNATURE_PDG_DATA       !== "undefined" ? SIGNATURE_PDG_DATA       : "icons/signature-pdg.png"),
+    _loadImg(typeof CACHET_DATA              !== "undefined" ? CACHET_DATA              : "icons/cachet.png"), // cachet officiel, partagé par les deux signatures
   ]);
 
   // ── FOND ──
@@ -401,94 +406,84 @@ async function genererAttestationCanvas(apprenant, token) {
   _font(ctx, 42, "bold");
   ctx.fillText(dateAujourdhui, CX + _mw(ctx, ld1), posY);
 
-  // ── SIGNATURE / QR / RUBAN ──
+  // ── RUBAN D'APPRÉCIATION — ligne compacte, position fixe (juste
+  // au-dessus du bloc signatures) pour ne jamais chevaucher le corps,
+  // même quand la description occupe 2 lignes. Pas de système de
+  // notation chez LQD : mention générique.
+  const RUBAN_Y = 1500;
+  _font(ctx, 34, "italic");
+  ctx.fillStyle = ATT.OR;
+  const ruban = estStage
+    ? "✦  STAGE VALIDÉ — Assiduité et sérieux reconnus par le centre  ✦"
+    : "✦  FORMATION VALIDÉE — Assiduité et sérieux reconnus par le centre  ✦";
+  ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, RUBAN_Y);
+
+  // ── DEUX SIGNATURES — Formateur à gauche, PDG à droite ──
+  // Bloc réutilisable, translaté horizontalement (ancrage = bord gauche
+  // de la ligne pointillée) pour dupliquer exactement la même
+  // composition (signature légèrement sous le cachet — chevauchement
+  // volontaire, mesure anti-fraude) des deux côtés.
   const SIG_Y = 1560;
+  function _dessinerSignataire(ancrageX, signatureImg, titre, nom) {
+    const centreTitre = ancrageX + 480;
 
-  _font(ctx, 42, "normal");
-  ctx.fillStyle = ATT.TEXTE;
-  const titreSignataire = estStage ? "La Direction" : ATT_SIGNATAIRE.titre;
-  ctx.fillText(titreSignataire, 2840 - _mw(ctx, titreSignataire) / 2, SIG_Y + 95);
+    _font(ctx, 40, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 95);
 
-  if (qr) {
-    _roundRect(ctx, CX, SIG_Y + 90, 300, 300, 14, ATT.BLANC);
-    ctx.drawImage(qr, CX + 8, SIG_Y + 98, 284, 284);
+    const SIG_W = 300;
+    if (signatureImg) {
+      const ratio = signatureImg.height / signatureImg.width;
+      const SIG_H = Math.min(Math.round(SIG_W * ratio), 150);
+      ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 320, SIG_W, SIG_H);
+    }
+    const CACHET_W = 380;
+    if (cachet) ctx.drawImage(cachet, ancrageX + 240, SIG_Y + 80, CACHET_W, CACHET_W);
+
+    ctx.save();
+    ctx.strokeStyle = ATT.OR; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
+    ctx.beginPath();
+    ctx.moveTo(ancrageX, SIG_Y + 510);
+    ctx.lineTo(ancrageX + 908, SIG_Y + 510);
+    ctx.stroke();
+    ctx.restore();
+
+    if (nom) {
+      _font(ctx, 46, "bold");
+      ctx.fillStyle = ATT.MARINE;
+      ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 570);
+    }
+    _font(ctx, 32, "normal", "DM Sans");
+    ctx.fillStyle = ATT.GRIS;
+    const titreY = nom ? SIG_Y + 614 : SIG_Y + 580;
+    ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, titreY);
   }
-  _font(ctx, 28, "normal", "DM Sans");
-  ctx.fillStyle = ATT.GRIS;
-  ctx.fillText("Scanner pour vérifier", CX + 16, SIG_Y + 408);
 
-  // Ruban de validation générique (pas de système de notation chez LQD)
-  const BADGE_X = 620, BADGE_W = 1660, BADGE_Y = SIG_Y + 50, BADGE_H = 340;
-  const BADGE_CX = BADGE_X + BADGE_W / 2;
+  const titreFormateur = estStage ? "Le Responsable du Stage" : ATT_SIGNATAIRE_FORMATEUR.titre;
+  _dessinerSignataire(CX, sigFormateur, titreFormateur, ATT_SIGNATAIRE_FORMATEUR.nom);
+  _dessinerSignataire(ATT.W - CX - 908, sigPdg, ATT_SIGNATAIRE_PDG.titre, ATT_SIGNATAIRE_PDG.nom);
 
-  ctx.save();
-  ctx.strokeStyle = "rgba(245,166,35,0.35)"; ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(BADGE_X + 20, BADGE_Y);
-  ctx.lineTo(BADGE_X + BADGE_W - 20, BADGE_Y);
-  ctx.quadraticCurveTo(BADGE_X + BADGE_W, BADGE_Y, BADGE_X + BADGE_W, BADGE_Y + 20);
-  ctx.lineTo(BADGE_X + BADGE_W, BADGE_Y + BADGE_H - 20);
-  ctx.quadraticCurveTo(BADGE_X + BADGE_W, BADGE_Y + BADGE_H, BADGE_X + BADGE_W - 20, BADGE_Y + BADGE_H);
-  ctx.lineTo(BADGE_X + 20, BADGE_Y + BADGE_H);
-  ctx.quadraticCurveTo(BADGE_X, BADGE_Y + BADGE_H, BADGE_X, BADGE_Y + BADGE_H - 20);
-  ctx.lineTo(BADGE_X, BADGE_Y + 20);
-  ctx.quadraticCurveTo(BADGE_X, BADGE_Y, BADGE_X + 20, BADGE_Y);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.restore();
-
-  _font(ctx, 26, "normal", "DM Sans");
-  ctx.fillStyle = ATT.GRIS;
-  const lbl1 = "APPRÉCIATION GÉNÉRALE";
-  ctx.fillText(lbl1, BADGE_CX - _mw(ctx, lbl1) / 2, BADGE_Y + 70);
-
-  _font(ctx, 58, "bold");
-  ctx.fillStyle = ATT.OR;
-  const msg1 = "FORMATION VALIDÉE";
-  ctx.fillText(msg1, BADGE_CX - _mw(ctx, msg1) / 2, BADGE_Y + 165);
-
-  _font(ctx, 32, "italic");
-  ctx.fillStyle = ATT.GRIS;
-  const msg2 = "Assiduité et sérieux reconnus par le centre de formation.";
-  ctx.fillText(msg2, BADGE_CX - _mw(ctx, msg2) / 2, BADGE_Y + 230);
-
-  _font(ctx, 40, "normal");
-  ctx.fillStyle = ATT.OR;
-  ctx.fillText("✦ ✦ ✦", BADGE_CX - _mw(ctx, "✦ ✦ ✦") / 2, BADGE_Y + 295);
-
-  // ── Groupe signature + cachet ──
-  const SIG_IMG_X = 2500, SIG_W = 300;
-  if (sig) {
-    const ratio = sig.height / sig.width;
-    const SIG_H = Math.min(Math.round(SIG_W * ratio), 150);
-    ctx.drawImage(sig, SIG_IMG_X, SIG_Y + 320, SIG_W, SIG_H);
-  }
-  const CACHET_X = 2600, CACHET_W = 472;
-  if (cachet) ctx.drawImage(cachet, CACHET_X, SIG_Y + 80, CACHET_W, CACHET_W);
-
-  ctx.save();
-  ctx.strokeStyle = ATT.OR; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
-  ctx.beginPath();
-  ctx.moveTo(2360, SIG_Y + 510);
-  ctx.lineTo(ATT.W - CX, SIG_Y + 510);
-  ctx.stroke();
-  ctx.restore();
-
-  const NOM_CX = 2840;
-  if (ATT_SIGNATAIRE.nom) {
-    _font(ctx, 48, "bold");
-    ctx.fillStyle = ATT.MARINE;
-    ctx.fillText(ATT_SIGNATAIRE.nom, NOM_CX - _mw(ctx, ATT_SIGNATAIRE.nom) / 2, SIG_Y + 570);
-  }
-  _font(ctx, 36, "normal", "DM Sans");
-  ctx.fillStyle = ATT.GRIS;
-  const titreY = ATT_SIGNATAIRE.nom ? SIG_Y + 618 : SIG_Y + 580;
-  ctx.fillText(ATT_ENTREPRISE.NOM, NOM_CX - _mw(ctx, ATT_ENTREPRISE.NOM) / 2, titreY);
+  // ── QR de vérification — repositionné dans le bandeau du pied de
+  // page (l'espace central est désormais occupé par les deux
+  // signatures) ──
+  const QR_FOOTER_S = 130;
 
   // ── FOOTER ──
   const FTR_Y = ATT.H - 280;
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
   _rect(ctx, 0, FTR_Y + 10, ATT.W, 270, ATT.MARINE);
+
+  if (qr) {
+    const qrY = FTR_Y + (270 - QR_FOOTER_S) / 2;
+    _roundRect(ctx, CX - 8, qrY - 8, QR_FOOTER_S + 16, QR_FOOTER_S + 16, 10, ATT.BLANC);
+    ctx.drawImage(qr, CX, qrY, QR_FOOTER_S, QR_FOOTER_S);
+    _font(ctx, 20, "normal", "DM Sans");
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    const lblQr = "Scanner pour";
+    const lblQr2 = "vérifier";
+    ctx.fillText(lblQr,  CX + (QR_FOOTER_S - _mw(ctx, lblQr)) / 2,  qrY + QR_FOOTER_S + 26);
+    ctx.fillText(lblQr2, CX + (QR_FOOTER_S - _mw(ctx, lblQr2)) / 2, qrY + QR_FOOTER_S + 50);
+  }
 
   _font(ctx, 32, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";

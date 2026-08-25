@@ -1,81 +1,67 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : régularisations admin, numéros de téléphone, PDF vides
+Mise à jour : attestation à deux signatures (Formateur + PDG)
 =====================================================================
 
 Ce zip contient l'INTÉGRALITÉ du projet dans son état final. Tu peux
 remplacer tout ton dépôt GitHub par ce contenu.
 
 ---------------------------------------------------------------------
-1. NOUVEAU DEPUIS LE DERNIER ZIP — 4 corrections
+1. NOUVEAU DEPUIS LE DERNIER ZIP
 ---------------------------------------------------------------------
+  L'attestation porte maintenant DEUX signatures/cachets, comme sur
+  les vraies attestations LQD Service :
+    - Formateur, à gauche (titre seul, pas de nom — variable selon
+      la session)
+    - PDG M. ATO Blaise, à droite ("Président Directeur Général")
+  Le ruban "FORMATION VALIDÉE" est devenu une ligne compacte
+  au-dessus des signatures, et le QR de vérification est passé dans
+  le bandeau du pied de page (il occupait l'espace maintenant utilisé
+  par les deux signatures).
 
-a) Panel admin "Régularisations" qui affichait "Erreur interne admin."
-   Bug présent depuis le tout début du projet (avant toute intervention
-   de ma part) : 4 fonctions admin pour gérer les régularisations
-   n'avaient jamais été écrites. Corrigé dans GAS/admin.gs.
+  La fiche apprenant affiche aussi "M. ATO Blaise — Président
+  Directeur Général" au lieu du nom de l'entreprise.
 
-b) Recherche par téléphone (carte + attestation de stage) trop stricte.
-   Un numéro tapé avec l'indicatif (+229, 00229) ou sans le "01"
-   (nouveau format béninois depuis 2021, ex: 0197951230 au lieu de
-   l'ancien 97951230) ne retrouvait pas toujours le dossier. Maintenant
-   les deux formats sont reconnus comme équivalents dans les deux sens.
-   Si la saisie ressemble à un numéro à 8 chiffres sans le 01, un
-   message explicite le signale au lieu d'un simple "dossier introuvable".
-
-c) Numéros de téléphone qui perdaient leur "0" de tête dans les Google
-   Sheets (Google Sheets les convertissait en nombre). Toutes les
-   feuilles (Toutes les inscriptions, Régularisations, Candidatures,
-   RDV, Leads, Renseignements) forcent maintenant le format Texte sur
-   la colonne téléphone à l'écriture.
-
-d) PDF téléchargés vides pour l'attestation et la fiche apprenant (le
-   PNG fonctionnait). Cause : l'ancienne méthode (html2pdf.js) prenait
-   une "capture d'écran" d'une image encore en cours de chargement.
-   Remplacé par une insertion directe de l'image déjà générée dans le
-   PDF (jsPDF), sans étape de capture — la même méthode déjà utilisée
-   avec succès sur verifier.html.
+  Fichiers modifiés : js/attestation_generator.js,
+  js/fiche_apprenant_generator.js
 
 ---------------------------------------------------------------------
-2. DÉPLOIEMENT GITHUB / VERCEL (le site)
+2. IMAGES À AJOUTER POUR VOIR LES SIGNATURES/CACHETS
+---------------------------------------------------------------------
+  Le document se génère normalement sans ces fichiers (juste sans
+  visuel de signature/cachet à la place). Pour les faire apparaître,
+  ajoute dans icons/ :
+
+    icons/signature-formateur.png   ← signature du formateur (gauche)
+    icons/signature-pdg.png         ← signature de M. ATO Blaise (droite,
+                                       utilisée aussi sur la fiche apprenant)
+    icons/cachet.png                ← cachet officiel de l'entreprise
+                                       (partagé entre les deux signatures)
+
+  Aucun code à modifier, ces chemins sont déjà câblés.
+
+---------------------------------------------------------------------
+3. DÉPLOIEMENT GITHUB / VERCEL (le site)
 ---------------------------------------------------------------------
   1. Remplace tout le contenu de la branche main par celui de ce zip.
   2. Vercel redéploie automatiquement après le push.
-
----------------------------------------------------------------------
-3. DÉPLOIEMENT GOOGLE APPS SCRIPT (le backend — IMPORTANT)
----------------------------------------------------------------------
-  1. Ouvre l'éditeur Apps Script de ton projet.
-  2. Vérifie qu'il n'y a PAS de fichier "admin_regularisation" (à
-     supprimer s'il existe encore).
-  3. Remplace le contenu de TOUS les fichiers .gs par ceux de GAS/
-     dans ce zip (admin.gs, candidatures.gs, carte.gs, chat.gs, code.gs,
-     init.gs, regularisation.gs) — cette fois-ci presque tous les
-     fichiers ont changé, plus simple de tout remplacer d'un coup.
-  4. Déployer > Gérer les déploiements > (crayon) > Nouvelle version >
-     Déployer. Sans cette étape, rien ne change côté utilisateur.
+  (Cette mise à jour ne touche à aucun fichier GAS — pas besoin de
+  retoucher l'éditeur Apps Script pour ce lot-ci.)
 
 ---------------------------------------------------------------------
 4. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
-  - Le panel "Régularisations" de admin.html affiche la liste des
-    dossiers au lieu de "Erreur interne admin."
-  - Recherche de carte/attestation avec un numéro saisi SANS le "01"
-    (si le dossier a été enregistré avec le nouveau format) : le
-    système doit soit trouver le dossier, soit expliquer clairement
-    qu'il faut ajouter le 01
-  - Un nouveau dossier (inscription, régularisation, candidature, RDV,
-    chat) : le numéro de téléphone s'affiche bien avec son "0" de tête
-    dans le Google Sheet correspondant (déjà existant : le 0 des
-    anciennes lignes ne se corrige pas rétroactivement, seulement les
-    nouvelles lignes à partir de maintenant)
-  - Télécharger une attestation ou une fiche apprenant en PDF : le
-    fichier n'est plus vide
+  - Génère une attestation (formation ou stage) depuis l'espace
+    apprenant ou depuis Postuler : deux blocs signature doivent
+    apparaître, Formateur à gauche et "M. ATO Blaise — Président
+    Directeur Général" à droite
+  - Le QR apparaît maintenant dans le bandeau bleu du bas, coin gauche
+  - La fiche apprenant affiche "M. ATO Blaise" comme signataire
 
 ---------------------------------------------------------------------
-5. FICHIERS OPTIONNELS NON FOURNIS
+5. RAPPEL — CE QUI RESTE DES ZIPS PRÉCÉDENTS
 ---------------------------------------------------------------------
-  icons/signature.png et icons/cachet.png n'existent pas — les
-  documents se génèrent normalement sans, simplement sans visuel de
-  signature/cachet. Ajoute ces deux images dans icons/ pour les faire
-  apparaître automatiquement (aucun code à changer).
+  Panel "Régularisations" admin, matching téléphone souple (+229,
+  00229, préfixe 01), numéros de téléphone en texte dans les Sheets,
+  PDF non vides (attestation/fiche), attestation de fin de stage pour
+  les candidats Postuler : tout est déjà inclus dans ce zip complet.
