@@ -1,6 +1,6 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : attestation à deux signatures (Formateur + PDG)
+Mise à jour : signature du Formateur ajoutée
 =====================================================================
 
 Ce zip contient l'INTÉGRALITÉ du projet dans son état final. Tu peux
@@ -9,34 +9,28 @@ remplacer tout ton dépôt GitHub par ce contenu.
 ---------------------------------------------------------------------
 1. NOUVEAU DEPUIS LE DERNIER ZIP
 ---------------------------------------------------------------------
-  L'attestation porte maintenant DEUX signatures/cachets, comme sur
-  les vraies attestations LQD Service :
-    - Formateur, à gauche (titre seul, pas de nom — variable selon
-      la session)
-    - PDG M. ATO Blaise, à droite ("Président Directeur Général")
-  Le ruban "FORMATION VALIDÉE" est devenu une ligne compacte
-  au-dessus des signatures, et le QR de vérification est passé dans
-  le bandeau du pied de page (il occupait l'espace maintenant utilisé
-  par les deux signatures).
-
-  La fiche apprenant affiche aussi "M. ATO Blaise — Président
-  Directeur Général" au lieu du nom de l'entreprise.
-
-  Fichiers modifiés : js/attestation_generator.js,
-  js/fiche_apprenant_generator.js
+  ✅ icons/signature-formateur.png — DÉJÀ INCLUSE dans ce zip
+     (signature de M. TOSSOU C. Philippe, récupérée depuis le projet
+     ACADEMY_PHANOS-SECURE). Elle apparaîtra automatiquement sur
+     l'attestation, côté "Formateur" (gauche).
 
 ---------------------------------------------------------------------
-2. IMAGES À AJOUTER POUR VOIR LES SIGNATURES/CACHETS
+2. IMAGES QUI RESTENT À FOURNIR
 ---------------------------------------------------------------------
-  Le document se génère normalement sans ces fichiers (juste sans
-  visuel de signature/cachet à la place). Pour les faire apparaître,
-  ajoute dans icons/ :
+  Le document se génère normalement sans elles (juste sans le visuel
+  à la place). Pour les faire apparaître, ajoute dans icons/ :
 
-    icons/signature-formateur.png   ← signature du formateur (gauche)
-    icons/signature-pdg.png         ← signature de M. ATO Blaise (droite,
-                                       utilisée aussi sur la fiche apprenant)
-    icons/cachet.png                ← cachet officiel de l'entreprise
-                                       (partagé entre les deux signatures)
+    icons/signature-pdg.png  ← signature de M. ATO Blaise (droite sur
+                                l'attestation, utilisée aussi sur la
+                                fiche apprenant)
+    icons/cachet.png         ← cachet OFFICIEL LES QUALITÉS DE DIEU
+                                SERVICE SARL (partagé entre les deux
+                                signatures)
+
+  ⚠️ Un cachet a été trouvé dans ACADEMY_PHANOS-SECURE mais porte le
+  nom d'une autre société (PHANOS KOSMOS) — volontairement PAS repris
+  pour ne pas faire apparaître le nom d'une autre entreprise sur un
+  document officiel LQD. Il faut le vrai cachet LQD Service SARL.
 
   Aucun code à modifier, ces chemins sont déjà câblés.
 
@@ -45,18 +39,18 @@ remplacer tout ton dépôt GitHub par ce contenu.
 ---------------------------------------------------------------------
   1. Remplace tout le contenu de la branche main par celui de ce zip.
   2. Vercel redéploie automatiquement après le push.
-  (Cette mise à jour ne touche à aucun fichier GAS — pas besoin de
-  retoucher l'éditeur Apps Script pour ce lot-ci.)
+  (Ne touche à aucun fichier GAS — pas besoin de retoucher l'éditeur
+  Apps Script pour ce lot-ci.)
 
 ---------------------------------------------------------------------
 4. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
-  - Génère une attestation (formation ou stage) depuis l'espace
-    apprenant ou depuis Postuler : deux blocs signature doivent
-    apparaître, Formateur à gauche et "M. ATO Blaise — Président
-    Directeur Général" à droite
-  - Le QR apparaît maintenant dans le bandeau bleu du bas, coin gauche
-  - La fiche apprenant affiche "M. ATO Blaise" comme signataire
+  - Génère une attestation : la signature de M. TOSSOU C. Philippe
+    apparaît maintenant du côté "Formateur" (gauche)
+  - Le côté PDG (droite) reste sans visuel de signature en attendant
+    icons/signature-pdg.png
+  - Aucun cachet n'apparaît encore des deux côtés, en attendant
+    icons/cachet.png (le vrai cachet LQD)
 
 ---------------------------------------------------------------------
 5. RAPPEL — CE QUI RESTE DES ZIPS PRÉCÉDENTS
@@ -64,4 +58,5 @@ remplacer tout ton dépôt GitHub par ce contenu.
   Panel "Régularisations" admin, matching téléphone souple (+229,
   00229, préfixe 01), numéros de téléphone en texte dans les Sheets,
   PDF non vides (attestation/fiche), attestation de fin de stage pour
-  les candidats Postuler : tout est déjà inclus dans ce zip complet.
+  les candidats Postuler, attestation à deux signatures : tout est
+  déjà inclus dans ce zip complet.
