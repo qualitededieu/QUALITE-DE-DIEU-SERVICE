@@ -1,75 +1,48 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : correction du chevauchement sur l'attestation
+Mise à jour : cachet du PDG agrandi sur l'attestation
 =====================================================================
 
-Ce zip contient l'INTÉGRALITÉ du projet dans son état final. Tu peux
-remplacer tout ton dépôt GitHub par ce contenu.
+Ce zip contient l'INTÉGRALITÉ du projet, basé sur ta dernière version
+en ligne (avec la mise en page retravaillée, les "missions de stage"
+et le vrai cachet+signature de M. ATO Blaise), avec un seul changement
+en plus : le cachet du PDG agrandi.
 
 ---------------------------------------------------------------------
-1. NOUVEAU DEPUIS LE DERNIER ZIP (suite à ton retour sur l'attestation
-   de JOANICE ALOTCHO)
+1. NOUVEAU DEPUIS TA DERNIÈRE VERSION EN LIGNE
 ---------------------------------------------------------------------
-  ✅ Nom du Formateur corrigé : "M. TOSSOU C. Philippe" s'affiche
-     maintenant bien sous sa signature (il manquait avant).
+  ✅ Cachet du PDG agrandi sur l'attestation (icons/signature-pdg.png,
+     qui contient le cachet et la signature dans un seul fichier).
+     Il était dessiné à 380px de large sur un document de 3508px —
+     trop petit, comme tu l'as signalé. Il fait maintenant 460px, en
+     restant bien positionné (sous le titre "Président Directeur
+     Général", au-dessus de la ligne pointillée et du nom).
 
-  ✅ Chevauchement de texte corrigé : le ruban ("ATTESTATION DE...")
-     et le texte du corps (description, dates, "En foi de quoi...")
-     pouvaient se chevaucher quand le texte était un peu long (c'est
-     ce qui s'est passé sur l'attestation de stage de JOANICE ALOTCHO).
-     Le ruban et le bloc signatures suivent maintenant la position
-     réelle du texte au lieu d'une position fixe — ils ne peuvent
-     plus être recouverts, quel que soit le contenu.
-
-  Aucun fichier GAS n'a changé dans ce lot : uniquement
-  js/attestation_generator.js (site). Pas besoin de retoucher
-  l'éditeur Apps Script pour cette mise à jour.
+  Un seul fichier a changé : js/attestation_generator.js
+  → Si tu préfères aller vite, tu peux juste remplacer ce fichier-là
+    sur GitHub au lieu de tout le zip. Aucun fichier GAS n'a changé,
+    pas besoin de retoucher l'éditeur Apps Script.
 
 ---------------------------------------------------------------------
-2. IMAGES QUI RESTENT À FOURNIR
+2. DÉPLOIEMENT GITHUB / VERCEL (le site)
 ---------------------------------------------------------------------
-  Le document se génère normalement sans elles (juste sans le visuel
-  à la place). Pour les faire apparaître, ajoute dans icons/ :
-
-    icons/signature-pdg.png  ← signature de M. ATO Blaise (droite sur
-                                l'attestation, utilisée aussi sur la
-                                fiche apprenant)
-    icons/cachet.png         ← cachet OFFICIEL LES QUALITÉS DE DIEU
-                                SERVICE SARL (partagé entre les deux
-                                signatures)
-
-  ⚠️ Un cachet a été trouvé dans ACADEMY_PHANOS-SECURE mais porte le
-  nom d'une autre société (PHANOS KOSMOS) — volontairement PAS repris
-  pour ne pas faire apparaître le nom d'une autre entreprise sur un
-  document officiel LQD. Il faut le vrai cachet LQD Service SARL.
-
-  Aucun code à modifier, ces chemins sont déjà câblés.
-
----------------------------------------------------------------------
-3. DÉPLOIEMENT GITHUB / VERCEL (le site)
----------------------------------------------------------------------
-  1. Remplace tout le contenu de la branche main par celui de ce zip.
+  1. Remplace js/attestation_generator.js (ou tout le dépôt) par le
+     contenu de ce zip.
   2. Vercel redéploie automatiquement après le push.
-  (Ne touche à aucun fichier GAS — pas besoin de retoucher l'éditeur
-  Apps Script pour ce lot-ci.)
 
 ---------------------------------------------------------------------
-4. À VÉRIFIER APRÈS DÉPLOIEMENT
+3. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
-  - Régénère une attestation (formation ou stage) : plus de
-    chevauchement entre le ruban et le texte, même sur un texte long
-  - Le nom "M. TOSSOU C. Philippe" apparaît bien sous sa signature,
-    côté Formateur (gauche)
-  - Le côté PDG (droite) reste sans visuel de signature en attendant
-    icons/signature-pdg.png
-  - Aucun cachet n'apparaît encore des deux côtés, en attendant
-    icons/cachet.png (le vrai cachet LQD)
+  - Régénère l'attestation de JOANICE ALOTCHO (ou une autre) : le
+    cachet rouge de M. ATO Blaise doit apparaître nettement plus
+    grand et lisible, toujours bien placé.
 
 ---------------------------------------------------------------------
-5. RAPPEL — CE QUI RESTE DES ZIPS PRÉCÉDENTS
+4. RAPPEL — CE QUI EST DÉJÀ EN PLACE
 ---------------------------------------------------------------------
   Panel "Régularisations" admin, matching téléphone souple (+229,
   00229, préfixe 01), numéros de téléphone en texte dans les Sheets,
-  PDF non vides (attestation/fiche), attestation de fin de stage pour
-  les candidats Postuler, attestation à deux signatures : tout est
-  déjà inclus dans ce zip complet.
+  PDF non vides, attestation de fin de stage pour les candidats
+  Postuler, attestation à deux signatures (Formateur à gauche, PDG à
+  droite avec cachet officiel), missions de stage sélectionnables
+  côté admin : tout est déjà inclus dans ce zip complet.
