@@ -55,6 +55,28 @@ function _attDescription(filiere) {
   return "Formation professionnelle qualifiante dispensée par le centre.";
 }
 
+// ─── Description de stage à partir des missions cochées en admin ───
+// Construit une phrase française correcte à partir d'une liste de
+// fragments (déjà rédigés pour s'enchaîner naturellement après
+// "notamment"), avec "et" avant le dernier élément plutôt qu'une
+// simple virgule. Retombe sur la phrase générique si la liste est
+// vide (dossier créé avant l'ajout de cette fonctionnalité, ou aucune
+// mission cochée).
+function _joindreListeFr(items) {
+  if (!items || items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  return items.slice(0, -1).join(", ") + " et " + items[items.length - 1];
+}
+
+function _attDescriptionStage(missionsStage) {
+  const missions = Array.isArray(missionsStage) ? missionsStage.filter(Boolean) : [];
+  if (missions.length === 0) {
+    return "Stage effectué avec sérieux et professionnalisme au sein de notre structure.";
+  }
+  return "Stage effectué avec sérieux et professionnalisme, portant notamment sur " +
+    _joindreListeFr(missions) + ".";
+}
+
 // ─── Utilitaires canvas ─────────────────────────────────────
 function _font(ctx, size, style = "normal", family = "Times New Roman") {
   ctx.font = `${style} ${size}px '${family}', Times, serif`;
@@ -377,7 +399,7 @@ async function genererAttestationCanvas(apprenant, token) {
   _font(ctx, 33, "italic");
   ctx.fillStyle = ATT.GRIS;
   const descriptionTexte = estStage
-    ? "Stage effectué avec sérieux et professionnalisme au sein de notre structure."
+    ? _attDescriptionStage(apprenant.missionsStage)
     : _attDescription(apprenant.filiere);
   posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 42) + 14;
 
