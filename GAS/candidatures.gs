@@ -121,6 +121,7 @@ function enregistrerCandidature(data) {
     'Nouveau', '', '',
     nettoyer(data.sexe || ''), '', ''
   ]);
+  forcerTelephoneTexte(feuille, 6, telephone); // colonne 6 = Téléphone
 
   try { _envoyerEmailConfirmationCandidature(data, id, type); } catch (e) { console.error('[enregistrerCandidature] mail candidat', e.toString()); }
   try { _envoyerEmailAdminCandidature(data, id, type); } catch (e) { console.error('[enregistrerCandidature] mail admin', e.toString()); }
@@ -244,11 +245,12 @@ function candidatureAttestationGetData(data) {
   if (!feuille) return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé.' });
 
   const rows = feuille.getDataRange().getValues();
+  let idTrouveTelIncorrect = false;
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (!r[0]) continue;
     if (String(r[0]).trim() !== id) continue;
-    if (_normaliserTel(r[5]) !== _normaliserTel(telephone)) continue;
+    if (!_telephonesEquivalents(r[5], telephone)) { idTrouveTelIncorrect = true; continue; }
 
     if (String(r[1]).trim() !== 'stage') {
       return reponseJSON({ status: 'error', message: 'Ce dossier n\'est pas une candidature de stage.' });
@@ -277,6 +279,13 @@ function candidatureAttestationGetData(data) {
 
     const token = _genererTokenCarte(candidat);
     return reponseJSON({ status: 'success', apprenant: candidat, token });
+  }
+
+  if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
+  }
+  if (idTrouveTelIncorrect) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas.' });
   }
 
   return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });

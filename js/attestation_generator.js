@@ -560,32 +560,31 @@ async function telechargerAttestation(canvas, id, format = "pdf") {
     return;
   }
 
-  if (!window.html2pdf) {
+  // FIX : l'ancienne version passait par html2pdf.js (rendu d'un <img>
+  // dans le DOM, puis capture html2canvas de cet élément) — le PDF sortait
+  // vide car html2canvas capturait souvent le DOM avant que l'image en
+  // base64 n'ait fini de se décoder (pas d'attente de son "load"). On
+  // insère directement le canvas déjà généré dans un PDF via jsPDF, sans
+  // repasser par un rendu DOM intermédiaire — même approche fiable que
+  // verifier.html.
+  if (!window.jspdf) {
     await new Promise((res, rej) => {
       const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
       s.onload = res;
-      s.onerror = () => rej(new Error("html2pdf non disponible"));
+      s.onerror = () => rej(new Error("jsPDF non disponible"));
       document.head.appendChild(s);
     });
   }
 
   try {
-    const jpegURL = canvas.toDataURL("image/jpeg", 0.98);
-    const wrapper = document.createElement("div");
-    wrapper.style.cssText = "width:297mm;height:210mm;margin:0;padding:0;overflow:hidden;";
-    wrapper.innerHTML = `<img src="${jpegURL}" style="width:297mm;height:210mm;display:block;object-fit:cover;"/>`;
-    document.body.appendChild(wrapper);
-
-    await html2pdf().set({
-      margin: 0,
-      filename: `Attestation_${id}_${dateISO}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
-    }).from(wrapper).save();
-
-    document.body.removeChild(wrapper);
+    const { jsPDF } = window.jspdf;
+    const imgData = canvas.toDataURL("image/jpeg", 0.98);
+    const pdf     = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW   = pdf.internal.pageSize.getWidth();
+    const pageH   = pdf.internal.pageSize.getHeight();
+    pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH);
+    pdf.save(`Attestation_${id}_${dateISO}.pdf`);
     if (window.showToast) showToast("PDF téléchargé avec succès", "success");
   } catch (err) {
     if (window.showToast) showToast("Erreur PDF : " + err.message, "error");

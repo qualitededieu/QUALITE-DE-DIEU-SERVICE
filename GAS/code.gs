@@ -502,12 +502,12 @@ function enregistrerInscription(inscription, montants, formations) {
     inscription.rappelEnvoye
   ];
 
-  // Feuille maître (toutes les inscriptions)
-  ajouterLigneFeuille(ss, 'Toutes les inscriptions', ENTETES_INSCRIPTION, ligne);
+  // Feuille maître (toutes les inscriptions) — colonne 5 = Téléphone
+  ajouterLigneFeuille(ss, 'Toutes les inscriptions', ENTETES_INSCRIPTION, ligne, 5);
 
   // Feuille par catégorie
   const nomFeuille = formations.length === 1 ? formations[0] : 'Multi-formations';
-  ajouterLigneFeuille(ss, nomFeuille, ENTETES_INSCRIPTION, ligne);
+  ajouterLigneFeuille(ss, nomFeuille, ENTETES_INSCRIPTION, ligne, 5);
 }
 
 
@@ -535,14 +535,18 @@ function enregistrerRenseignement(renseignement) {
     renseignement.statut
   ];
 
-  ajouterLigneFeuille(ss, 'Renseignements', ENTETES_RENSEIGNEMENT, ligne);
+  ajouterLigneFeuille(ss, 'Renseignements', ENTETES_RENSEIGNEMENT, ligne, 5); // colonne 5 = Téléphone
 }
 
 
 // =====================================================================
 // HELPER — Créer/alimenter une feuille Sheets
+// colTelephone (optionnel, 1-based) : colonne du numéro de téléphone.
+// Si fournie, force le format Texte sur cette cellule pour empêcher
+// Google Sheets de le convertir en nombre et de manger le "0" initial
+// (ex. "0197951230" affiché "197951230" ou en notation scientifique).
 // =====================================================================
-function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne) {
+function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colTelephone) {
 
   let feuille = ss.getSheetByName(nomFeuille);
 
@@ -559,6 +563,8 @@ function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne) {
 
     const largeurs = [120,160,110,110,140,180,260,80,200,120,140,200,200,200,200,110,110,110,110,110,140,120,140];
     largeurs.forEach((l, i) => { if (i < entetes.length) feuille.setColumnWidth(i + 1, l); });
+
+    if (colTelephone) feuille.getRange(2, colTelephone, feuille.getMaxRows() - 1).setNumberFormat('@');
   }
 
   feuille.appendRow(ligne);
@@ -567,6 +573,27 @@ function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne) {
   if (derniereLigne % 2 === 0) {
     feuille.getRange(derniereLigne, 1, 1, entetes.length).setBackground('#F0F9FA');
   }
+
+  if (colTelephone) {
+    const celluleTel = feuille.getRange(derniereLigne, colTelephone);
+    celluleTel.setNumberFormat('@');
+    celluleTel.setValue(String(ligne[colTelephone - 1] || ''));
+  }
+}
+
+
+// =====================================================================
+// HELPER — Force l'affichage en texte d'un numéro de téléphone déjà
+// écrit (feuilles alimentées par appendRow() direct plutôt que par
+// ajouterLigneFeuille : candidatures.gs, chat.gs). Empêche Google
+// Sheets de perdre le "0" initial ("0197951230" → "197951230").
+// À appeler juste après feuille.appendRow([...]).
+// =====================================================================
+function forcerTelephoneTexte(feuille, colTelephone, telephone) {
+  const derniereLigne = feuille.getLastRow();
+  const cellule = feuille.getRange(derniereLigne, colTelephone);
+  cellule.setNumberFormat('@');
+  cellule.setValue(String(telephone || ''));
 }
 
 

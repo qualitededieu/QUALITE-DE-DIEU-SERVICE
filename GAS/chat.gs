@@ -62,6 +62,7 @@ function enregistrerRdvChat(data) {
     nettoyer(data.message || ''),
     'Nouveau'
   ]);
+  forcerTelephoneTexte(feuille, 4, telephone); // colonne 4 = Téléphone
 
   try {
     _notifierAdminChat('Nouvelle demande de RDV', [
@@ -113,6 +114,7 @@ function enregistrerLeadChat(data) {
     nettoyer(data.message || ''),
     'Nouveau'
   ]);
+  forcerTelephoneTexte(feuille, 4, telephone); // colonne 4 = Téléphone
 
   try {
     _notifierAdminChat('Nouveau contact via le chat du site', [

@@ -1,79 +1,79 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : ajout de l'attestation de fin de stage (candidats Postuler)
+Mise à jour : régularisations admin, numéros de téléphone, PDF vides
 =====================================================================
 
 Ce zip contient l'INTÉGRALITÉ du projet dans son état final. Tu peux
 remplacer tout ton dépôt GitHub par ce contenu.
 
 ---------------------------------------------------------------------
-1. NOUVEAU DEPUIS LE DERNIER ZIP
+1. NOUVEAU DEPUIS LE DERNIER ZIP — 4 corrections
 ---------------------------------------------------------------------
-  Les candidats ayant fait un STAGE (pas les apprenants en formation)
-  peuvent maintenant récupérer leur attestation de fin de stage :
-  - Nouvelle section "Vous avez déjà effectué votre stage ?" sur
-    postuler.html (ID dossier CAND-... + téléphone)
-  - Dans admin.html, sur une candidature de type "Stage" : nouveau
-    statut "Terminé" + champs pour fixer les dates de début/fin —
-    c'est ce qui rend l'attestation accessible au candidat
-  - Champ "Sexe" ajouté au formulaire de candidature (pour un
-    civilité correct M./Mme sur l'attestation)
 
-  ⚠️ Fichiers modifiés par rapport au zip précédent : GAS/admin.gs,
-  GAS/candidatures.gs, GAS/code.gs, admin.html, postuler.html,
-  verifier.html, js/attestation_generator.js,
-  js/badge_certification_generator.js, js/fiche_apprenant_generator.js
+a) Panel admin "Régularisations" qui affichait "Erreur interne admin."
+   Bug présent depuis le tout début du projet (avant toute intervention
+   de ma part) : 4 fonctions admin pour gérer les régularisations
+   n'avaient jamais été écrites. Corrigé dans GAS/admin.gs.
 
----------------------------------------------------------------------
-2. SI TU AS DÉJÀ DÉPLOYÉ LE ZIP PRÉCÉDENT ET TESTÉ (feuille
-   "Candidatures" déjà créée avec ta candidature test CAND-260825-LXK9)
----------------------------------------------------------------------
-  Rien ne casse — les 3 nouvelles colonnes (Sexe, Date début stage,
-  Date fin stage) sont ajoutées EN FIN de tableau, donc les colonnes
-  déjà utilisées (documents, statut...) ne bougent pas.
+b) Recherche par téléphone (carte + attestation de stage) trop stricte.
+   Un numéro tapé avec l'indicatif (+229, 00229) ou sans le "01"
+   (nouveau format béninois depuis 2021, ex: 0197951230 au lieu de
+   l'ancien 97951230) ne retrouvait pas toujours le dossier. Maintenant
+   les deux formats sont reconnus comme équivalents dans les deux sens.
+   Si la saisie ressemble à un numéro à 8 chiffres sans le 01, un
+   message explicite le signale au lieu d'un simple "dossier introuvable".
 
-  Seul point cosmétique : la ligne d'en-tête de ta feuille "Candidatures"
-  existante n'aura pas automatiquement les libellés "Sexe", "Date début
-  stage", "Date fin stage" dans les colonnes W/X/Y (23-25) — les
-  nouvelles données s'y enregistreront quand même correctement. Si tu
-  veux les libellés propres, ajoute-les toi-même à la main dans ces
-  3 colonnes de la ligne 1 de la feuille Google Sheet.
+c) Numéros de téléphone qui perdaient leur "0" de tête dans les Google
+   Sheets (Google Sheets les convertissait en nombre). Toutes les
+   feuilles (Toutes les inscriptions, Régularisations, Candidatures,
+   RDV, Leads, Renseignements) forcent maintenant le format Texte sur
+   la colonne téléphone à l'écriture.
+
+d) PDF téléchargés vides pour l'attestation et la fiche apprenant (le
+   PNG fonctionnait). Cause : l'ancienne méthode (html2pdf.js) prenait
+   une "capture d'écran" d'une image encore en cours de chargement.
+   Remplacé par une insertion directe de l'image déjà générée dans le
+   PDF (jsPDF), sans étape de capture — la même méthode déjà utilisée
+   avec succès sur verifier.html.
 
 ---------------------------------------------------------------------
-3. DÉPLOIEMENT GITHUB / VERCEL (le site)
+2. DÉPLOIEMENT GITHUB / VERCEL (le site)
 ---------------------------------------------------------------------
   1. Remplace tout le contenu de la branche main par celui de ce zip.
   2. Vercel redéploie automatiquement après le push.
 
 ---------------------------------------------------------------------
-4. DÉPLOIEMENT GOOGLE APPS SCRIPT (le backend — IMPORTANT)
+3. DÉPLOIEMENT GOOGLE APPS SCRIPT (le backend — IMPORTANT)
 ---------------------------------------------------------------------
   1. Ouvre l'éditeur Apps Script de ton projet.
-  2. Vérifie qu'il n'y a PAS de fichier "admin_regularisation" (cause
-     du bug qui empêchait tout de fonctionner — à supprimer s'il existe
-     encore).
-  3. Remplace le contenu de admin.gs, candidatures.gs, carte.gs, code.gs
-     par celui des fichiers du même nom dans GAS/ (ce zip).
-  4. Vérifie que chat.gs, init.gs et regularisation.gs sont bien présents
-     et à jour.
-  5. Déployer > Gérer les déploiements > (crayon) > Nouvelle version >
+  2. Vérifie qu'il n'y a PAS de fichier "admin_regularisation" (à
+     supprimer s'il existe encore).
+  3. Remplace le contenu de TOUS les fichiers .gs par ceux de GAS/
+     dans ce zip (admin.gs, candidatures.gs, carte.gs, chat.gs, code.gs,
+     init.gs, regularisation.gs) — cette fois-ci presque tous les
+     fichiers ont changé, plus simple de tout remplacer d'un coup.
+  4. Déployer > Gérer les déploiements > (crayon) > Nouvelle version >
      Déployer. Sans cette étape, rien ne change côté utilisateur.
 
 ---------------------------------------------------------------------
-5. À VÉRIFIER APRÈS DÉPLOIEMENT
+4. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
-  - https://qualitededieu.vercel.app/postuler : la section "Vous avez
-    déjà effectué votre stage ?" apparaît en bas de page
-  - Dans admin.html, ouvre une candidature de type "Stage" : les champs
-    "Date de début" / "Date de fin" et le statut "Terminé" apparaissent
-  - Marque une candidature stage comme "Terminé" avec des dates, puis
-    teste la récupération de l'attestation depuis postuler.html avec
-    l'ID + téléphone de cette candidature
-  - Le reste (carte, attestation formation, fiche, badge, chat) comme
-    déjà vérifié précédemment
+  - Le panel "Régularisations" de admin.html affiche la liste des
+    dossiers au lieu de "Erreur interne admin."
+  - Recherche de carte/attestation avec un numéro saisi SANS le "01"
+    (si le dossier a été enregistré avec le nouveau format) : le
+    système doit soit trouver le dossier, soit expliquer clairement
+    qu'il faut ajouter le 01
+  - Un nouveau dossier (inscription, régularisation, candidature, RDV,
+    chat) : le numéro de téléphone s'affiche bien avec son "0" de tête
+    dans le Google Sheet correspondant (déjà existant : le 0 des
+    anciennes lignes ne se corrige pas rétroactivement, seulement les
+    nouvelles lignes à partir de maintenant)
+  - Télécharger une attestation ou une fiche apprenant en PDF : le
+    fichier n'est plus vide
 
 ---------------------------------------------------------------------
-6. FICHIERS OPTIONNELS NON FOURNIS
+5. FICHIERS OPTIONNELS NON FOURNIS
 ---------------------------------------------------------------------
   icons/signature.png et icons/cachet.png n'existent pas — les
   documents se génèrent normalement sans, simplement sans visuel de

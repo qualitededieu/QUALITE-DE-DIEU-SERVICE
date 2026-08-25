@@ -28,14 +28,48 @@ const CARTE_CONFIG = {
 
 
 // =====================================================================
-// HELPER — Normalisation téléphone
+// HELPER — Normalisation téléphone (Bénin)
 // Google Sheets peut stocker un numéro saisi "+229 01 97 95 12 30" sous
 // forme de nombre et supprimer le "+" et les espaces. Comparer les
 // numéros bruts provoque alors de faux négatifs ("Aucun dossier
-// trouvé" alors que le dossier existe). On compare après normalisation.
+// trouvé" alors que le dossier existe).
+//
+// _normaliserTel() retire tout ce qui n'est pas un chiffre, puis retire
+// l'indicatif Bénin quelle que soit sa forme (+229, 00229, 229...).
+//
+// _formesTelephone()/_telephonesEquivalents() vont plus loin : depuis
+// 2021, les numéros béninois ont un préfixe "01" ajouté devant l'ancien
+// numéro à 8 chiffres. Un apprenant qui tape son numéro sans ce "01"
+// (ex. "97951230" au lieu de "0197951230") ne doit pas être bloqué —
+// on considère les deux formes comme équivalentes, dans les deux sens
+// (numéro stocké ancien format vs saisie nouveau format, et l'inverse).
 // =====================================================================
 function _normaliserTel(tel) {
-  return String(tel || '').replace(/[\s+\-().]/g, '');
+  let s = String(tel || '').replace(/\D/g, '');
+  if (s.indexOf('00229') === 0) s = s.slice(5);
+  else if (s.indexOf('229') === 0 && s.length > 10) s = s.slice(3);
+  return s;
+}
+
+function _formesTelephone(tel) {
+  const base   = _normaliserTel(tel);
+  const formes = [base];
+  if (base.length === 8) formes.push('01' + base);                        // ancien format saisi sans le 01
+  if (base.length === 10 && base.indexOf('01') === 0) formes.push(base.slice(2)); // nouveau format vs numéro stocké à l'ancien format
+  return formes;
+}
+
+function _telephonesEquivalents(telA, telB) {
+  const formesA = _formesTelephone(telA);
+  const formesB = _formesTelephone(telB);
+  return formesA.some(f => formesB.indexOf(f) !== -1);
+}
+
+// Numéro visiblement incomplet pour le Bénin (8 chiffres, sans le
+// préfixe "01" obligatoire depuis 2021) — sert à affiner le message
+// d'erreur quand aucun dossier n'est trouvé.
+function _telephoneSembleIncomplet(tel) {
+  return _normaliserTel(tel).length === 8;
 }
 
 
@@ -78,7 +112,7 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       const telRow = String(row[8] || '').trim(); // col 8 = téléphone dans Régularisations
 
-      if (idRow === id && _normaliserTel(telRow) === _normaliserTel(telephone)) {
+      if (idRow === id && _telephonesEquivalents(telRow, telephone)) {
         const statut = String(row[37] || '').trim();
         if (statut !== 'Validé') {
           // Ne pas sortir tout de suite : le même apprenant peut avoir
@@ -106,7 +140,7 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       const telRow = String(row[4] || '').trim(); // col 4 = téléphone dans inscriptions
 
-      if (idRow === id && _normaliserTel(telRow) === _normaliserTel(telephone)) {
+      if (idRow === id && _telephonesEquivalents(telRow, telephone)) {
         const statut = String(row[9] || '').trim();
         if (statut !== 'Confirmé') continue; // on continue au cas où une autre ligne correspond
 
@@ -120,6 +154,10 @@ function getCarte(data) {
 
   if (dossierTrouveNonValide) {
     return reponseJSON({ status: 'error', message: 'Votre dossier de régularisation est en cours de traitement et n\'est pas encore validé.' });
+  }
+
+  if (_telephoneSembleIncomplet(telephone)) {
+    return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
   }
 
   return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });

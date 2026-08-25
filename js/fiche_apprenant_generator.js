@@ -326,27 +326,26 @@ async function afficherFicheApprenant(apprenant, token) {
   }
 }
 
+// FIX : ancienne version via html2pdf.js (capture DOM d'un <img>) — le
+// PDF sortait vide, l'image base64 n'ayant pas fini de se décoder avant
+// la capture html2canvas. On insère directement l'image déjà rendue
+// dans un PDF via jsPDF, sans repasser par le DOM.
 async function telechargerFichePDF(dataURL, idApprenant) {
-  if (!window.html2pdf) {
+  if (!window.jspdf) {
     await new Promise((res, rej) => {
       const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-      s.onload = res; s.onerror = () => rej(new Error("html2pdf non disponible"));
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      s.onload = res; s.onerror = () => rej(new Error("jsPDF non disponible"));
       document.head.appendChild(s);
     });
   }
   try {
-    const wrapper = document.createElement("div");
-    wrapper.style.cssText = `width:148mm;height:210mm;margin:0;padding:0;`;
-    wrapper.innerHTML = `<img src="${dataURL}" style="width:148mm;height:210mm;display:block;" />`;
-    document.body.appendChild(wrapper);
-    await html2pdf().set({
-      margin: 0, filename: `Fiche_Apprenant_${idApprenant}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: "mm", format: "a5", orientation: "portrait" }
-    }).from(wrapper).save();
-    document.body.removeChild(wrapper);
+    const { jsPDF } = window.jspdf;
+    const pdf   = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    pdf.addImage(dataURL, "PNG", 0, 0, pageW, pageH);
+    pdf.save(`Fiche_Apprenant_${idApprenant}.pdf`);
     if (window.showToast) showToast("Fiche apprenant (PDF A5) téléchargée", "success");
   } catch (err) {
     if (window.showToast) showToast("Erreur PDF : " + err.message, "error");

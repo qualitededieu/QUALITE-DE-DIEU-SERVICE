@@ -531,6 +531,183 @@ function adminExportCSV(data, email) {
 
 
 // =====================================================================
+// RÉGULARISATIONS — admin (BUG FIX)
+// Ces 4 fonctions étaient appelées par routerAdmin() (admin_get_regs,
+// admin_get_reg, admin_update_reg_statut, admin_delete_reg) mais
+// n'existaient nulle part dans le projet d'origine — chaque appel
+// levait une ReferenceError, rattrapée par le catch générique de
+// routerAdmin() et renvoyée comme "Erreur interne admin.". Le panel
+// "Régularisations" de l'admin n'a donc jamais fonctionné. Écrites ici
+// sur le même modèle que les fonctions équivalentes pour les dossiers
+// d'inscription (adminGetDossiers / adminGetDossier / adminUpdateStatut
+// / adminDeleteDossier ci-dessus).
+// =====================================================================
+
+// Mappe une ligne de la feuille "Régularisations" (voir
+// ENTETES_REGULARISATION dans regularisation.gs) vers un objet exploité
+// par admin.html (renderTableauRegularisations / renderModalReg).
+function _mapperLigneRegularisation(row, ligneIndex) {
+  return {
+    ligneIndex,
+    id:                   row[0],
+    dateSoumission:       row[1],
+    prenom:                row[2],
+    nom:                   row[3],
+    sexe:                  row[4],
+    dateNaissance:         row[5],
+    lieuNaissance:         row[6],
+    nationalite:           row[7],
+    telephone:             String(row[8] || ''),
+    email:                 row[9],
+    adresse:               row[10],
+    prenomMere:            row[11],
+    nomMere:               row[12],
+    telephoneMere:         row[13],
+    professionMere:        row[14],
+    prenomPere:            row[15],
+    nomPere:               row[16],
+    telephonePere:         row[17],
+    professionPere:        row[18],
+    prenomTuteur:          row[19],
+    nomTuteur:             row[20],
+    filiere:               row[21],
+    dureeFormation:        row[22],
+    dateEntree:            row[23],
+    dateFin:               row[24],
+    niveauAtteint:         row[25],
+    montantPaye:           row[26],
+    observation:           row[27],
+    typePiece:             row[28],
+    numeroPiece:           row[29],
+    pieceUrl:              row[30],
+    photoUrl:              row[31],
+    signatureUrl:          row[32],
+    dossierUrl:            row[33],
+    clause1:               row[34],
+    clause2:               row[35],
+    dateSignature:         row[36],
+    statutDossier:         row[37] || 'En attente',
+    traitePar:             row[38] || '',
+    dateTraitement:        row[39] || ''
+  };
+}
+
+// LECTURE — Liste des dossiers de régularisation
+function adminGetRegularisations(data, email) {
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
+
+  const feuille = ss.getSheetByName('Régularisations');
+  if (!feuille) return reponseJSON({ status: 'success', regs: [], total: 0, page: 1, perPage: 20, pages: 0 });
+
+  const donnees   = feuille.getDataRange().getValues();
+  const page      = Number(data.page    || 1);
+  const perPage   = Number(data.perPage || 20);
+  const filtre    = data.filtre    || '';
+  const recherche = (data.recherche || '').toLowerCase();
+  const MAP_FILTRE = { reg_attente: 'En attente', reg_valide: 'Validé', reg_rejete: 'Rejeté' };
+  let regs = [];
+
+  for (let i = 1; i < donnees.length; i++) {
+    const row = donnees[i];
+    if (!row[0]) continue;
+    const reg = _mapperLigneRegularisation(row, i + 1);
+
+    if (MAP_FILTRE[filtre] && reg.statutDossier !== MAP_FILTRE[filtre]) continue;
+
+    if (recherche) {
+      const haystack = `${reg.id} ${reg.prenom} ${reg.nom} ${reg.telephone} ${reg.filiere}`.toLowerCase();
+      if (!haystack.includes(recherche)) continue;
+    }
+    regs.push(reg);
+  }
+
+  regs.sort((a, b) => b.ligneIndex - a.ligneIndex);
+  const total = regs.length;
+  const debut = (page - 1) * perPage;
+  const page_ = regs.slice(debut, debut + perPage);
+
+  return reponseJSON({ status: 'success', regs: page_, total, page, perPage, pages: Math.ceil(total / perPage) });
+}
+
+// LECTURE — Un dossier de régularisation précis
+function adminGetRegularisation(data, email) {
+  const id = data.id || '';
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
+
+  const feuille = ss.getSheetByName('Régularisations');
+  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
+
+  const donnees = feuille.getDataRange().getValues();
+  for (let i = 1; i < donnees.length; i++) {
+    if (String(donnees[i][0]).trim() === id) {
+      return reponseJSON({ status: 'success', reg: _mapperLigneRegularisation(donnees[i], i + 1) });
+    }
+  }
+  return reponseJSON({ status: 'error', message: `Dossier ${id} introuvable.` });
+}
+
+// WRITE — Statut d'un dossier de régularisation
+function adminUpdateRegStatut(data, email) {
+  const id     = data.id || '';
+  const statut = data.statut || '';
+  const valeursValides = ['En attente', 'Validé', 'Rejeté'];
+
+  if (!id || !valeursValides.includes(statut)) {
+    return reponseJSON({ status: 'error', message: 'ID ou statut invalide.' });
+  }
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  const feuille = ss && ss.getSheetByName('Régularisations');
+  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
+
+  const donnees = feuille.getDataRange().getValues();
+  for (let i = 1; i < donnees.length; i++) {
+    if (String(donnees[i][0]).trim() !== id) continue;
+    feuille.getRange(i + 1, 38).setValue(statut);                    // "Statut dossier" (38e, 1-based)
+    feuille.getRange(i + 1, 39).setValue(email);                     // "Traité par"
+    feuille.getRange(i + 1, 40).setValue(new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' })); // "Date traitement"
+    console.log(`[Admin:${email}] Statut régularisation ${id} → ${statut}`);
+    return reponseJSON({ status: 'success', message: `Statut mis à jour : ${statut}` });
+  }
+  return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
+}
+
+// WRITE — Suppression d'un dossier de régularisation
+function adminDeleteRegularisation(data, email) {
+  const id = data.id || '';
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
+
+  const feuille = ss.getSheetByName('Régularisations');
+  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
+
+  const donnees = feuille.getDataRange().getValues();
+  for (let i = donnees.length - 1; i >= 1; i--) {
+    if (String(donnees[i][0]).trim() !== id) continue;
+
+    const dossierUrl = donnees[i][33]; // "Dossier Drive"
+    if (dossierUrl) {
+      try {
+        const idDrive = String(dossierUrl).match(/[-\w]{25,}/);
+        if (idDrive) DriveApp.getFolderById(idDrive[0]).setTrashed(true);
+      } catch (e) { console.error('[adminDeleteRegularisation] Drive', e.toString()); }
+    }
+
+    feuille.deleteRow(i + 1);
+    console.log(`[Admin:${email}] Dossier régularisation supprimé : ${id}`);
+    return reponseJSON({ status: 'success', message: `Dossier ${id} supprimé.` });
+  }
+  return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
+}
+
+
+// =====================================================================
 // EMAIL — OTP
 // =====================================================================
 function envoyerEmailOTP(email, otp) {

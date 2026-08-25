@@ -361,7 +361,7 @@ function enregistrerRegularisation(apprenant) {
     apprenant.dateTraitement || '—'
   ];
 
-  ajouterLigneFeuille(ss, 'Régularisations', ENTETES_REGULARISATION, ligne);
+  ajouterLigneFeuille(ss, 'Régularisations', ENTETES_REGULARISATION, ligne, 9); // colonne 9 = Téléphone
 }
 
 
