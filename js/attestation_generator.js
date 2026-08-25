@@ -487,9 +487,17 @@ async function genererAttestationCanvas(apprenant, token) {
       // (il y serait en double, l'un par-dessus l'autre).
       if (signatureImg) {
         const ratio = signatureImg.height / signatureImg.width;
-        const largeur = CACHET_W + 40; // légèrement plus large que le cachet seul : la signature déborde du rond à droite sur ce fichier
+        // Taille volontairement généreuse : cette image contient à la
+        // fois le cachet ET la signature (contrairement au côté
+        // Formateur, où les deux sont dessinés séparément), donc elle
+        // doit occuper une présence visuelle comparable à l'ensemble
+        // cachet+signature de l'autre côté, pas juste à une signature
+        // seule. Démarre à SIG_Y+110 (sous le titre "Président
+        // Directeur Général", qui occupe environ SIG_Y+50 à SIG_Y+90)
+        // pour ne jamais chevaucher le texte au-dessus.
+        const largeur = 460;
         const hauteur = Math.round(largeur * ratio);
-        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 60, largeur, hauteur);
+        ctx.drawImage(signatureImg, ancrageX + 210, SIG_Y + 110, largeur, hauteur);
       }
     } else {
       if (signatureImg) {
