@@ -158,8 +158,8 @@ async function genererFicheApprenant(apprenant, token) {
   else { ctx.fillStyle = "#E5E0D5"; ctx.fillRect(PH_X, PH_Y, PH_W, PH_H); }
   ctx.restore();
 
-  const civ = apprenant.sexe === "F" ? "Mme" : "M.";
-  const nomComplet = civ + " " + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
+  const civ = apprenant.sexe === "F" ? "Mme" : (apprenant.sexe === "M" ? "M." : "");
+  const nomComplet = (civ ? civ + " " : "") + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
   _fFont(ctx, 38, "700"); ctx.fillStyle = FICHE.MARINE;
   _fWrap(ctx, nomComplet, M, HEADER_H + 90, PH_X - M - 30, 46);
   ctx.save(); ctx.fillStyle = FICHE.OR; ctx.fillRect(M, HEADER_H + 108, 100, 5); ctx.restore();

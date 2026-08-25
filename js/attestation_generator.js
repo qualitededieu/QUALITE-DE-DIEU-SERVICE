@@ -153,6 +153,12 @@ async function _chargerPoliceScript() {
 async function genererAttestationCanvas(apprenant, token) {
   await _chargerPoliceScript();
 
+  // Deux origines possibles pour cette attestation : un apprenant qui a
+  // suivi une formation (source par défaut, cartes.gs), ou un candidat
+  // qui a effectué un stage via la page Postuler (source explicite
+  // "candidature-stage", voir GAS/candidatures.gs). Le texte s'adapte.
+  const estStage = apprenant.source === "candidature-stage";
+
   const canvas = document.createElement("canvas");
   canvas.width  = ATT.W;
   canvas.height = ATT.H;
@@ -316,7 +322,9 @@ async function genererAttestationCanvas(apprenant, token) {
   _font(ctx, 46, "normal");
   const intro1 = "Nous soussignés, ";
   const intro2 = ATT_ENTREPRISE.NOM;
-  const intro3 = ", centre de formation professionnelle, attestons que :";
+  const intro3 = estStage
+    ? ", attestons que :"
+    : ", centre de formation professionnelle, attestons que :";
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro1, CX, posY);
   let ix = CX + _mw(ctx, intro1);
@@ -329,8 +337,8 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillText(intro3, ix, posY);
   posY += 80;
 
-  const civilite   = apprenant.sexe === "F" ? "Mme." : "M.";
-  const nomComplet = `${civilite} ${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
+  const civilite   = apprenant.sexe === "F" ? "Mme. " : (apprenant.sexe === "M" ? "M. " : "");
+  const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
   const BANNER_CX  = 1512.5;
   _roundRect(ctx, 210, posY - 52, 2605, 158, 24, ATT.MARINE);
   _font(ctx, 90, "bold");
@@ -340,10 +348,15 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 46, "normal");
   ctx.fillStyle = ATT.TEXTE;
-  ctx.fillText("a suivi avec assiduité et a validé la formation en :", CX, posY);
+  ctx.fillText(
+    estStage
+      ? "a effectué avec assiduité un stage professionnel dans le domaine de :"
+      : "a suivi avec assiduité et a validé la formation en :",
+    CX, posY
+  );
   posY += 82;
 
-  const intitule = apprenant.filiere || "Formation professionnelle";
+  const intitule = apprenant.filiere || (estStage ? "Stage professionnel" : "Formation professionnelle");
   ctx.font = document.fonts.check("120px 'Great Vibes'")
     ? "120px 'Great Vibes'"
     : "italic bold 90px 'Times New Roman', Times, serif";
@@ -358,7 +371,10 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 33, "italic");
   ctx.fillStyle = ATT.GRIS;
-  posY = _wrapCentre(ctx, _attDescription(apprenant.filiere), posY, CW - 120, 46) + 18;
+  const descriptionTexte = estStage
+    ? "Stage effectué avec sérieux et professionnalisme au sein de notre structure."
+    : _attDescription(apprenant.filiere);
+  posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 46) + 18;
 
   _font(ctx, 46, "normal");
   const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
@@ -371,7 +387,10 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 44, "normal");
   ctx.fillStyle = ATT.TEXTE;
-  posY = _wrap(ctx, "Cette formation lui a permis d'acquérir des compétences pratiques et professionnelles dans le domaine concerné.", CX, posY, CW, 60);
+  posY = _wrap(ctx, estStage
+    ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
+    : "Cette formation lui a permis d'acquérir des compétences pratiques et professionnelles dans le domaine concerné.",
+    CX, posY, CW, 60);
   posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 60);
 
   posY += 30;
@@ -387,7 +406,8 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 42, "normal");
   ctx.fillStyle = ATT.TEXTE;
-  ctx.fillText(ATT_SIGNATAIRE.titre, 2840 - _mw(ctx, ATT_SIGNATAIRE.titre) / 2, SIG_Y + 95);
+  const titreSignataire = estStage ? "La Direction" : ATT_SIGNATAIRE.titre;
+  ctx.fillText(titreSignataire, 2840 - _mw(ctx, titreSignataire) / 2, SIG_Y + 95);
 
   if (qr) {
     _roundRect(ctx, CX, SIG_Y + 90, 300, 300, 14, ATT.BLANC);

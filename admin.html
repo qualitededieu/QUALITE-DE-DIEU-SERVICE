@@ -1599,7 +1599,7 @@ function filtrerCandidatures() {
 }
 
 function badgeCandStatut(statut) {
-  const map = { 'Nouveau': 'badge-orange', 'Vu': 'badge-teal', 'Contacté': 'badge-yellow', 'Retenu': 'badge-green', 'Rejeté': 'badge-red' };
+  const map = { 'Nouveau': 'badge-orange', 'Vu': 'badge-teal', 'Contacté': 'badge-yellow', 'Retenu': 'badge-green', 'Terminé': 'badge-green', 'Rejeté': 'badge-red' };
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
 }
 
@@ -1653,6 +1653,7 @@ function renderModalCandidature(c) {
       <div class="info-field"><label>Candidat</label><span>${c.prenom} ${c.nom}</span></div>
       <div class="info-field"><label>Téléphone</label><span><a href="tel:${c.telephone}">${c.telephone}</a></span></div>
       <div class="info-field"><label>Email</label><span>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}</span></div>
+      <div class="info-field"><label>Sexe</label><span>${c.sexe === 'F' ? 'Féminin' : (c.sexe === 'M' ? 'Masculin' : '—')}</span></div>
       <div class="info-field"><label>Date de naissance</label><span>${c.dateNaissance || '—'}</span></div>
       <div class="info-field" style="grid-column:1/-1;"><label>Adresse</label><span>${c.adresse || '—'}</span></div>
     </div>
@@ -1676,12 +1677,30 @@ function renderModalCandidature(c) {
         : `<span class="btn btn-sm" style="opacity:.4;">${label} — absent</span>`
       ).join('')}
     </div>
+    ${c.type === 'stage' ? `
+    <div class="modal-section-title">Période de stage <span style="font-weight:400;color:var(--text-3);font-size:11px;">(utilisée sur l'attestation de fin de stage)</span></div>
+    <div class="info-grid" style="margin-bottom:8px;">
+      <div class="info-field">
+        <label>Date de début</label>
+        <input type="date" class="modal-select" id="input-cand-date-debut" value="${c.dateDebutStage || ''}" />
+      </div>
+      <div class="info-field">
+        <label>Date de fin</label>
+        <input type="date" class="modal-select" id="input-cand-date-fin" value="${c.dateFinStage || ''}" />
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="margin-bottom:16px;" onclick="enregistrerPeriodeStage('${c.id}')">
+      <span class="iconify" data-icon="tabler:calendar-event"></span> Enregistrer la période
+    </button>
+    ` : ''}
     <div class="modal-section-title">Gestion du statut</div>
     <div style="margin-bottom:8px;">
       <label class="auth-label" style="margin-bottom:6px;">Statut candidature</label>
       <select class="modal-select" id="select-cand-statut">
-        ${['Nouveau','Vu','Contacté','Retenu','Rejeté'].map(s => `<option value="${s}" ${c.statut === s ? 'selected' : ''}>${s}</option>`).join('')}
+        ${(c.type === 'stage' ? ['Nouveau','Vu','Contacté','Retenu','Terminé','Rejeté'] : ['Nouveau','Vu','Contacté','Retenu','Rejeté'])
+          .map(s => `<option value="${s}" ${c.statut === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
+      ${c.type === 'stage' ? `<p style="font-size:11px;color:var(--text-3);margin-top:6px;">"Terminé" rend l'attestation de fin de stage accessible au candidat (avec la période ci-dessus renseignée).</p>` : ''}
     </div>
     ${c.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${c.traitePar} le ${c.dateTraitement}</p>` : ''}`;
 
@@ -1693,6 +1712,19 @@ function renderModalCandidature(c) {
     <button class="btn btn-primary" onclick="changerStatutCandidature('${c.id}')">
       <span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer le statut
     </button>`;
+}
+
+async function enregistrerPeriodeStage(id) {
+  const dateDebutStage = document.getElementById('input-cand-date-debut').value;
+  const dateFinStage   = document.getElementById('input-cand-date-fin').value;
+  try {
+    const result = await apiCall('admin_set_periode_stage', { id, dateDebutStage, dateFinStage });
+    if (result.status === 'success') {
+      toast('Période de stage enregistrée.', 'success');
+      const c = candidaturesCache.find(x => x.id === id);
+      if (c) { c.dateDebutStage = dateDebutStage; c.dateFinStage = dateFinStage; }
+    } else { toast(result.message || 'Erreur.', 'error'); }
+  } catch (e) { toast('Erreur réseau.', 'error'); }
 }
 
 async function changerStatutCandidature(id) {

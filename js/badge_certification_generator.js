@@ -191,8 +191,8 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.restore();
 
   // ── 8. NOM ──
-  const civ = apprenant.sexe === "F" ? "Mme" : "M.";
-  const nomComplet = civ + " " + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
+  const civ = apprenant.sexe === "F" ? "Mme" : (apprenant.sexe === "M" ? "M." : "");
+  const nomComplet = (civ ? civ + " " : "") + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
   _bFont(ctx, 40, "700");
   _bCenterText(ctx, nomComplet.length > 26 ? nomComplet.slice(0, 26) + "…" : nomComplet, CX, 648, "#FFFFFF");
 

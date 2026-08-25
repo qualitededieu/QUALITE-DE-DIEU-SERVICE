@@ -250,9 +250,20 @@
 
               <div class="form-row">
                 <div class="form-group">
+                  <label>Sexe <span class="opt">(optionnel)</span></label>
+                  <select id="sexe">
+                    <option value="">Préférez ne pas préciser</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </div>
+                <div class="form-group">
                   <label>Date de naissance <span class="opt">(optionnel)</span></label>
                   <input type="date" id="dateNaissance" />
                 </div>
+              </div>
+
+              <div class="form-row full">
                 <div class="form-group">
                   <label>Adresse <span class="opt">(optionnel)</span></label>
                   <input type="text" id="adresse" placeholder="Ville, quartier" />
@@ -443,9 +454,78 @@
           </div>
 
         </form>
+
+        <!-- ESPACE STAGIAIRE — récupération de l'attestation de fin de stage -->
+        <div class="form-card" id="espace-stagiaire-card">
+          <div class="form-card-header" style="cursor:pointer;" onclick="toggleEspaceStagiaire()">
+            <div class="step-num"><span class="iconify" data-icon="tabler:certificate"></span></div>
+            <div>
+              <h2>Vous avez déjà effectué votre stage ?</h2>
+              <p>Récupérez votre attestation de fin de stage avec votre numéro de dossier</p>
+            </div>
+          </div>
+          <div class="form-card-body" id="espace-stagiaire-body" style="display:none;">
+            <div id="stagiaire-msg" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:14px;"></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Numéro de dossier</label>
+                <input type="text" id="stagiaire-id" placeholder="CAND-XXXXXX-XXXX" style="font-family:monospace;" />
+              </div>
+              <div class="form-group">
+                <label>Téléphone</label>
+                <input type="tel" id="stagiaire-tel" placeholder="+229 01 XX XX XX XX" />
+              </div>
+            </div>
+            <button type="button" class="btn-next" id="btn-stagiaire" onclick="obtenirAttestationStage()">
+              <span class="iconify" data-icon="tabler:certificate"></span> Récupérer mon attestation
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
+
+  <!-- MODALE ATTESTATION DE STAGE -->
+  <div class="pk-modal-overlay" id="modal-attestation">
+    <div class="pk-modal-box">
+      <div class="pk-modal-header">
+        <span>Attestation de fin de stage</span>
+        <button onclick="PK.closeModal('modal-attestation')" aria-label="Fermer">&times;</button>
+      </div>
+      <div class="pk-modal-body" id="attestation-preview"></div>
+      <div class="pk-modal-footer">
+        <button class="btn-modal-secondary" id="btn-telecharger-attestation-png">
+          <span class="iconify" data-icon="tabler:photo"></span> PNG
+        </button>
+        <button class="btn-modal-primary" id="btn-telecharger-attestation-pdf">
+          <span class="iconify" data-icon="tabler:file-type-pdf"></span> Télécharger le PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .pk-modal-overlay{display:none;position:fixed;inset:0;background:rgba(4,52,44,0.55);z-index:9999;
+      align-items:center;justify-content:center;padding:20px;}
+    .pk-modal-overlay.open{display:flex;}
+    .pk-modal-box{background:#12241f;border-radius:16px;width:100%;max-width:640px;max-height:88vh;
+      display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+    .pk-modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;
+      background:#04342C;color:#fff;font-weight:700;font-size:15px;}
+    .pk-modal-header button{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;opacity:.75;}
+    .pk-modal-header button:hover{opacity:1;}
+    .pk-modal-body{flex:1;overflow-y:auto;padding:18px;}
+    .pk-modal-footer{display:flex;gap:10px;padding:16px 22px;background:#0d1f1a;}
+    .btn-modal-primary,.btn-modal-secondary{flex:1;padding:12px;border-radius:10px;border:none;
+      font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;
+      justify-content:center;gap:8px;}
+    .btn-modal-primary{background:#F5A623;color:#04342C;}
+    .btn-modal-primary:hover{background:#FABD50;}
+    .btn-modal-secondary{background:rgba(255,255,255,0.08);color:#fff;}
+    .btn-modal-secondary:hover{background:rgba(255,255,255,0.15);}
+    @keyframes pk-spin{to{transform:rotate(360deg);}}
+  </style>
 
   <div id="toast" role="alert" aria-live="polite"></div>
 
@@ -605,6 +685,7 @@
 
         prenom:        document.getElementById('prenom').value.trim(),
         nom:           document.getElementById('nom').value.trim(),
+        sexe:          document.getElementById('sexe').value,
         telephone:     document.getElementById('telephone').value.trim(),
         email:         document.getElementById('email').value.trim(),
         dateNaissance: document.getElementById('dateNaissance').value,
@@ -666,6 +747,86 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
     }
+
+    /* =====================================================================
+       ESPACE STAGIAIRE — récupération de l'attestation de fin de stage
+    ===================================================================== */
+    function toggleEspaceStagiaire() {
+      const body = document.getElementById('espace-stagiaire-body');
+      body.style.display = body.style.display === 'none' ? '' : 'none';
+    }
+
+    async function obtenirAttestationStage() {
+      const id  = document.getElementById('stagiaire-id').value.trim();
+      const tel = document.getElementById('stagiaire-tel').value.trim();
+      const msg = document.getElementById('stagiaire-msg');
+      const btn = document.getElementById('btn-stagiaire');
+
+      if (!id || !tel) {
+        msg.style.display    = 'block';
+        msg.style.background = 'rgba(226,75,74,0.1)';
+        msg.style.color      = '#E24B4A';
+        msg.textContent      = 'Veuillez remplir le numéro de dossier et le téléphone.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Vérification…';
+      msg.style.display = 'none';
+
+      try {
+        const resp = await fetch(GAS_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body:    JSON.stringify({ action: 'candidature_attestation_get_data', id, telephone: tel })
+        });
+        const result = await resp.json();
+
+        if (result.status === 'success') {
+          PK.openModal('modal-attestation');
+          afficherAttestationCanvas(result.apprenant, result.token);
+        } else {
+          msg.style.display    = 'block';
+          msg.style.background = 'rgba(226,75,74,0.1)';
+          msg.style.color      = '#E24B4A';
+          msg.textContent      = result.message || 'Dossier introuvable. Vérifiez vos informations.';
+        }
+      } catch (err) {
+        msg.style.display    = 'block';
+        msg.style.background = 'rgba(226,75,74,0.1)';
+        msg.style.color      = '#E24B4A';
+        msg.textContent      = 'Erreur de connexion. Réessayez.';
+        console.error('[obtenirAttestationStage]', err);
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<span class="iconify" data-icon="tabler:certificate"></span> Récupérer mon attestation';
+    }
+
+    /* =====================================================================
+       PK — utilitaires partagés par js/attestation_generator.js
+    ===================================================================== */
+    window.PK = {
+      openModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('open');
+      },
+      closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('open');
+      },
+      showToast(msg, type) { afficherToast(msg, type === 'error'); },
+      showLoader() {},
+      hideLoader() {}
+    };
+
+    document.querySelectorAll('.pk-modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('open');
+      });
+    });
   </script>
+
+  <script src="js/attestation_generator.js"></script>
 </body>
 </html>

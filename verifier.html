@@ -409,7 +409,7 @@
     <img src="icons/logoqds.jpg" alt="LQD Service"/>
     <div class="brand">
       <span class="brand-name">LQD Service</span>
-      <span class="brand-sub">VÉRIFICATION DE CARTE</span>
+      <span class="brand-sub">VÉRIFICATION DE DOCUMENT</span>
     </div>
     <div class="verif-badge">
       <iconify-icon icon="tabler:shield-check"></iconify-icon>
@@ -499,6 +499,8 @@
        RENDU — CARTE VALIDE
     ================================================================ */
     function renderCarte(a, tokenBrut) {
+      const estStage = a.source === 'candidature-stage';
+
       const photoHtml = a.photoUrl
         ? `<img src="${esc(a.photoUrl)}" alt="Photo" onerror="this.parentElement.innerHTML='<iconify-icon icon=\\'tabler:user\\' class=\\"no-photo\\"></iconify-icon>'"/>`
         : `<iconify-icon icon="tabler:user" class="no-photo"></iconify-icon>`;
@@ -513,7 +515,7 @@
           <div class="statut-banner">
             <span class="valide-dot"></span>
             <iconify-icon icon="tabler:shield-check"></iconify-icon>
-            CARTE AUTHENTIFIÉE — VALIDE
+            DOCUMENT AUTHENTIFIÉ — VALIDE
           </div>
 
           <!-- Corps -->
@@ -526,7 +528,7 @@
                 <div class="apprenant-nom">${esc(a.prenom)} ${esc(a.nom)}</div>
                 <div class="apprenant-id">${esc(a.id)}</div>
                 <div class="filiere-tag">
-                  <iconify-icon icon="tabler:school"></iconify-icon>
+                  <iconify-icon icon="${estStage ? 'tabler:briefcase' : 'tabler:school'}"></iconify-icon>
                   ${esc(a.filiere)}
                 </div>
               </div>
@@ -543,16 +545,16 @@
                 <div class="info-value ${a.dateNaissance ? '' : 'empty'}">${a.dateNaissance ? formatDate(a.dateNaissance) : 'Non renseignée'}</div>
               </div>
               <div class="info-cell">
-                <div class="info-label">Début de formation</div>
+                <div class="info-label">${estStage ? 'Début de stage' : 'Début de formation'}</div>
                 <div class="info-value">${formatDate(a.dateEntree)}</div>
               </div>
               <div class="info-cell">
-                <div class="info-label">Fin de validité</div>
+                <div class="info-label">${estStage ? 'Fin de stage' : 'Fin de validité'}</div>
                 <div class="info-value accent">${formatDate(a.dateFin)}</div>
               </div>
               <div class="info-cell" style="grid-column: 1 / -1;">
                 <div class="info-label">Établissement</div>
-                <div class="info-value">Les Qualités de Dieu Service SARL — Cotonou, Bénin</div>
+                <div class="info-value">Les Qualités de Dieu Service SARL — Comé, Bénin</div>
               </div>
             </div>
 
@@ -570,7 +572,7 @@
           <!-- Bouton PDF -->
           <button class="btn-pdf" id="btn-pdf" onclick="telechargerPDF()">
             <iconify-icon icon="tabler:file-type-pdf"></iconify-icon>
-            Télécharger la carte en PDF
+            Télécharger en PDF
           </button>
 
         </div>`;

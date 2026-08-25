@@ -142,6 +142,7 @@ function doPost(e) {
   if (action === 'chat_rdv') return enregistrerRdvChat(data);
   if (action === 'chat_lead') return enregistrerLeadChat(data);
   if (action === 'candidature') return enregistrerCandidature(data);
+  if (action === 'candidature_attestation_get_data') return candidatureAttestationGetData(data);
     return traiterInscription(data);
 
   } catch (err) {

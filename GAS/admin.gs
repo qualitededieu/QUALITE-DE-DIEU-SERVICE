@@ -75,6 +75,7 @@ function routerAdmin(data, action) {
       case 'admin_update_statut_candidature': return requireAuth(data, adminUpdateStatutCandidature);
       case 'admin_obtenir_doc_candidature':   return requireAuth(data, adminObtenirDocumentCandidature);
       case 'admin_delete_candidature':        return requireAuth(data, adminDeleteCandidature);
+      case 'admin_set_periode_stage':         return requireAuth(data, adminSetPeriodeStage);
 
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
