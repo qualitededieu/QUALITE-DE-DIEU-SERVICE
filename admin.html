@@ -1564,6 +1564,26 @@ function supprimerReg(id, nom) {
 ================================================================ */
 let candidaturesCache = [];
 
+// Liste des missions de stage proposées en cases à cocher (modale
+// candidature). DOIT rester identique à MISSIONS_STAGE_OPTIONS dans
+// GAS/candidatures.gs — c'est GAS qui filtre les valeurs reçues contre
+// sa propre copie de cette liste avant sauvegarde, donc toute entrée
+// ajoutée ici sans l'ajouter aussi côté serveur sera silencieusement
+// rejetée à l'enregistrement.
+const MISSIONS_STAGE_OPTIONS = [
+  'la photocopie',
+  "l'impression de documents",
+  'la plastification',
+  'la reliure de documents',
+  'la numérisation de documents',
+  'le découpage de papier',
+  "l'accueil et l'orientation des clients",
+  "l'entretien courant du matériel",
+  'les démarches administratives (RCCM, IFU, passeport, ANIP)',
+  'la conception graphique',
+  'un projet de développement web',
+];
+
 async function chargerCandidatures() {
   document.getElementById('cand-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   try {
@@ -1689,8 +1709,18 @@ function renderModalCandidature(c) {
         <input type="date" class="modal-select" id="input-cand-date-fin" value="${c.dateFinStage || ''}" />
       </div>
     </div>
+    <label class="auth-label" style="margin-bottom:6px;display:block;">Missions effectuées <span style="font-weight:400;color:var(--text-3);font-size:11px;">(génère automatiquement la description sur l'attestation)</span></label>
+    <div id="missions-stage-checkboxes" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:12px;">
+      ${MISSIONS_STAGE_OPTIONS.map((libelle, idx) => `
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);cursor:pointer;">
+          <input type="checkbox" class="missions-stage-check" value="${libelle.replace(/"/g, '&quot;')}"
+                 ${(c.missionsStage || []).includes(libelle) ? 'checked' : ''} />
+          ${libelle.charAt(0).toUpperCase() + libelle.slice(1)}
+        </label>
+      `).join('')}
+    </div>
     <button class="btn btn-ghost btn-sm" style="margin-bottom:16px;" onclick="enregistrerPeriodeStage('${c.id}')">
-      <span class="iconify" data-icon="tabler:calendar-event"></span> Enregistrer la période
+      <span class="iconify" data-icon="tabler:calendar-event"></span> Enregistrer la période et les missions
     </button>
     ` : ''}
     <div class="modal-section-title">Gestion du statut</div>
@@ -1717,12 +1747,14 @@ function renderModalCandidature(c) {
 async function enregistrerPeriodeStage(id) {
   const dateDebutStage = document.getElementById('input-cand-date-debut').value;
   const dateFinStage   = document.getElementById('input-cand-date-fin').value;
+  const missionsStage  = Array.from(document.querySelectorAll('.missions-stage-check:checked'))
+    .map(input => input.value);
   try {
-    const result = await apiCall('admin_set_periode_stage', { id, dateDebutStage, dateFinStage });
+    const result = await apiCall('admin_set_periode_stage', { id, dateDebutStage, dateFinStage, missionsStage });
     if (result.status === 'success') {
-      toast('Période de stage enregistrée.', 'success');
+      toast('Période et missions enregistrées.', 'success');
       const c = candidaturesCache.find(x => x.id === id);
-      if (c) { c.dateDebutStage = dateDebutStage; c.dateFinStage = dateFinStage; }
+      if (c) { c.dateDebutStage = dateDebutStage; c.dateFinStage = dateFinStage; c.missionsStage = missionsStage; }
     } else { toast(result.message || 'Erreur.', 'error'); }
   } catch (e) { toast('Erreur réseau.', 'error'); }
 }
