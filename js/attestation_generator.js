@@ -477,27 +477,20 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
     const SIG_W = 300;
-    const CACHET_W = 340;
+    const CACHET_W = 340; // cachet seul (icons/cachet.png), redessiné sous une signature séparée
 
     if (cachetIntegreDansSignature) {
       // Cas où le cachet officiel et la signature ne font qu'un seul
       // fichier (tampon + paraphe scannés ensemble) : on dessine cette
-      // image unique à la taille du cachet, en conservant ses vraies
-      // proportions, et on NE redessine PAS le cachet séparé en-dessous
-      // (il y serait en double, l'un par-dessus l'autre).
+      // image unique, en conservant ses vraies proportions, et on NE
+      // redessine PAS le cachet séparé en-dessous (il y serait en
+      // double, l'un par-dessus l'autre). Agrandie (largeur 460, était
+      // 340) — le cachet paraissait trop petit sur le document complet.
       if (signatureImg) {
         const ratio = signatureImg.height / signatureImg.width;
-        // Taille volontairement généreuse : cette image contient à la
-        // fois le cachet ET la signature (contrairement au côté
-        // Formateur, où les deux sont dessinés séparément), donc elle
-        // doit occuper une présence visuelle comparable à l'ensemble
-        // cachet+signature de l'autre côté, pas juste à une signature
-        // seule. Démarre à SIG_Y+110 (sous le titre "Président
-        // Directeur Général", qui occupe environ SIG_Y+50 à SIG_Y+90)
-        // pour ne jamais chevaucher le texte au-dessus.
         const largeur = 460;
         const hauteur = Math.round(largeur * ratio);
-        ctx.drawImage(signatureImg, ancrageX + 210, SIG_Y + 110, largeur, hauteur);
+        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 85, largeur, hauteur);
       }
     } else {
       if (signatureImg) {
