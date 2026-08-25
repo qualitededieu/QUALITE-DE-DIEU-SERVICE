@@ -30,10 +30,10 @@
 
 // =====================================================================
 // EN-TÊTES — Feuille "Candidatures"
-// Les 3 dernières colonnes (Sexe, Date début stage, Date fin stage)
-// sont ajoutées EN FIN de tableau exprès : ça préserve les index des
-// colonnes déjà utilisées (documents, statut...) pour les dossiers
-// déjà soumis avant cet ajout.
+// Les 3 avant-dernières colonnes (Sexe, Date début stage, Date fin
+// stage) puis la dernière (Missions stage) sont ajoutées EN FIN de
+// tableau exprès : ça préserve les index des colonnes déjà utilisées
+// (documents, statut...) pour les dossiers déjà soumis avant cet ajout.
 // =====================================================================
 const ENTETES_CANDIDATURE = [
   'ID', 'Type',                 // formateur | stage
@@ -44,10 +44,36 @@ const ENTETES_CANDIDATURE = [
   'CV (Drive ID)', 'Lettre (Drive ID)', 'Pièce identité (Drive ID)', 'Recommandation (Drive ID)',
   'Statut',                     // Nouveau | Vu | Contacté | Retenu | Terminé | Rejeté
   'Traité par', 'Date traitement',
-  'Sexe', 'Date début stage', 'Date fin stage'
+  'Sexe', 'Date début stage', 'Date fin stage',
+  'Missions stage (JSON)'       // ex : ["la photocopie","un projet de développement web"]
 ];
 
 const STATUTS_CANDIDATURE_VALIDES = ['Nouveau', 'Vu', 'Contacté', 'Retenu', 'Terminé', 'Rejeté'];
+
+// =====================================================================
+// MISSIONS DE STAGE — liste fixe proposée en cases à cocher côté admin.
+// Chaque libellé est déjà rédigé pour s'insérer directement dans la
+// phrase de description de l'attestation (voir _phraseMissionsStage
+// plus bas). Garder cette liste synchronisée avec celle codée en dur
+// dans admin.html (section "Période de stage").
+// =====================================================================
+const MISSIONS_STAGE_OPTIONS = [
+  'la photocopie',
+  "l'impression de documents",
+  'la plastification',
+  'la reliure de documents',
+  'la numérisation de documents',
+  'le découpage de papier',
+  "l'accueil et l'orientation des clients",
+  "l'entretien courant du matériel",
+  'les démarches administratives (RCCM, IFU, passeport, ANIP)',
+  'la conception graphique',
+  'un projet de développement web',
+  "l'analyse informatique",
+  'la programmation',
+  "la gestion en entrepreneuriat",
+  "un projet de développement d'application mobile",
+];
 
 
 // =====================================================================
@@ -168,7 +194,8 @@ function adminGetCandidatures(data, email) {
       dureeStage: r[12], disponibilite: r[13], motivation: r[14],
       aCV: !!r[15], aLettre: !!r[16], aPiece: !!r[17], aRecommandation: !!r[18],
       statut: r[19] || 'Nouveau', traitePar: r[20] || '', dateTraitement: r[21] || '',
-      sexe: r[22] || '', dateDebutStage: r[23] || '', dateFinStage: r[24] || ''
+      sexe: r[22] || '', dateDebutStage: r[23] || '', dateFinStage: r[24] || '',
+      missionsStage: _parseMissionsStageJSON(r[25])
     });
   }
   candidatures.sort((a, b) => new Date(b.dateCandidature) - new Date(a.dateCandidature));
@@ -203,13 +230,19 @@ function adminUpdateStatutCandidature(data, email) {
 
 
 // =====================================================================
-// ROUTE ADMIN — Fixer la période de stage (dates début/fin)
-// Utilisé quand l'admin marque un stage comme "Terminé" : ces dates
-// apparaîtront sur l'attestation de fin de stage.
+// ROUTE ADMIN — Fixer la période de stage (dates début/fin) et les
+// missions effectuées (cases à cocher, utilisées sur l'attestation).
+// Utilisé quand l'admin marque un stage comme "Terminé" : ces
+// informations apparaîtront sur l'attestation de fin de stage.
 // =====================================================================
 function adminSetPeriodeStage(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  // Ne garder que des libellés reconnus (évite d'enregistrer n'importe
+  // quoi si jamais le payload est manipulé côté client).
+  const missionsRecues = Array.isArray(data.missionsStage) ? data.missionsStage : [];
+  const missionsValides = missionsRecues.filter(m => MISSIONS_STAGE_OPTIONS.includes(m));
 
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   const feuille = ss && ss.getSheetByName('Candidatures');
@@ -220,9 +253,26 @@ function adminSetPeriodeStage(data, email) {
     if (String(rows[i][0]).trim() !== id) continue;
     feuille.getRange(i + 1, 24).setValue(String(data.dateDebutStage || '')); // colonne "Date début stage" (24e, 1-based)
     feuille.getRange(i + 1, 25).setValue(String(data.dateFinStage   || '')); // colonne "Date fin stage" (25e, 1-based)
+    feuille.getRange(i + 1, 26).setValue(JSON.stringify(missionsValides));  // colonne "Missions stage" (26e, 1-based)
     return reponseJSON({ status: 'success', message: 'Période de stage enregistrée.' });
   }
   return reponseJSON({ status: 'error', message: 'Candidature introuvable.' });
+}
+
+
+// =====================================================================
+// Parse défensif du JSON stocké en colonne 26 — jamais planter si la
+// cellule est vide ou contient une valeur invalide (ancien dossier
+// créé avant cet ajout, par exemple).
+// =====================================================================
+function _parseMissionsStageJSON(valeurCellule) {
+  if (!valeurCellule) return [];
+  try {
+    const arr = JSON.parse(valeurCellule);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 
@@ -273,6 +323,7 @@ function candidatureAttestationGetData(data) {
       filiere:       String(r[8] || 'Stage professionnel'), // domaine
       dateEntree:    String(r[23] || ''), // date début stage
       dateFin:       String(r[24] || ''), // date fin stage
+      missionsStage: _parseMissionsStageJSON(r[25]),
       photoUrl:      '',
       source:        'candidature-stage'
     };

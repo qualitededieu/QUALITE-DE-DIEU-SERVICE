@@ -421,13 +421,6 @@ async function genererAttestationCanvas(apprenant, token) {
   posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
 
   posY += 20;
-  _font(ctx, 40, "normal");
-  const ld1 = "Fait à Comé, le  ";
-  ctx.fillStyle = ATT.TEXTE;
-  ctx.fillText(ld1, CX, posY);
-  _font(ctx, 40, "bold");
-  ctx.fillText(dateAujourdhui, CX + _mw(ctx, ld1), posY);
-  posY += 56;
 
   // ── RUBAN D'APPRÉCIATION — suit désormais le flux dynamique du texte
   // (posY), juste après "Fait à Comé". FIX : l'ancienne version le
@@ -457,21 +450,55 @@ async function genererAttestationCanvas(apprenant, token) {
   // de la ligne pointillée) pour dupliquer exactement la même
   // composition (signature légèrement sous le cachet — chevauchement
   // volontaire, mesure anti-fraude) des deux côtés.
-  function _dessinerSignataire(ancrageX, signatureImg, titre, nom) {
+  function _dessinerSignataire(ancrageX, signatureImg, titre, nom, avecDateFait, cachetIntegreDansSignature) {
     const centreTitre = ancrageX + 480;
+
+    // "Fait à Comé, le [date]" — affiché uniquement au-dessus de la
+    // signature du PDG (là où on signe traditionnellement ce genre de
+    // mention sur un document papier), plus au centre du corps du
+    // texte comme avant : évite la redondance avec la mention réelle
+    // déjà présente sur le tampon/signature scanné du PDG.
+    if (avecDateFait) {
+      _font(ctx, 30, "normal", "DM Sans");
+      ctx.fillStyle = ATT.GRIS;
+      const ld1 = "Fait à Comé, le ";
+      const ld2 = dateAujourdhui;
+      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 30, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 30, "normal", "DM Sans"); return w; })();
+      let fx = centreTitre - largeurTotale / 2;
+      _font(ctx, 30, "normal", "DM Sans");
+      ctx.fillText(ld1, fx, SIG_Y + 20);
+      fx += _mw(ctx, ld1);
+      _font(ctx, 30, "bold", "DM Sans");
+      ctx.fillText(ld2, fx, SIG_Y + 20);
+    }
 
     _font(ctx, 40, "normal");
     ctx.fillStyle = ATT.TEXTE;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
     const SIG_W = 300;
-    if (signatureImg) {
-      const ratio = signatureImg.height / signatureImg.width;
-      const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
-      ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
-    }
     const CACHET_W = 340;
-    if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
+
+    if (cachetIntegreDansSignature) {
+      // Cas où le cachet officiel et la signature ne font qu'un seul
+      // fichier (tampon + paraphe scannés ensemble) : on dessine cette
+      // image unique à la taille du cachet, en conservant ses vraies
+      // proportions, et on NE redessine PAS le cachet séparé en-dessous
+      // (il y serait en double, l'un par-dessus l'autre).
+      if (signatureImg) {
+        const ratio = signatureImg.height / signatureImg.width;
+        const largeur = CACHET_W + 40; // légèrement plus large que le cachet seul : la signature déborde du rond à droite sur ce fichier
+        const hauteur = Math.round(largeur * ratio);
+        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 60, largeur, hauteur);
+      }
+    } else {
+      if (signatureImg) {
+        const ratio = signatureImg.height / signatureImg.width;
+        const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
+        ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
+      }
+      if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
+    }
 
     ctx.save();
     ctx.strokeStyle = ATT.OR; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
@@ -493,12 +520,26 @@ async function genererAttestationCanvas(apprenant, token) {
   }
 
   const titreFormateur = estStage ? "Le Responsable du Stage" : ATT_SIGNATAIRE_FORMATEUR.titre;
-  _dessinerSignataire(CX, sigFormateur, titreFormateur, ATT_SIGNATAIRE_FORMATEUR.nom);
-  _dessinerSignataire(ATT.W - CX - 908, sigPdg, ATT_SIGNATAIRE_PDG.titre, ATT_SIGNATAIRE_PDG.nom);
+  _dessinerSignataire(CX, sigFormateur, titreFormateur, ATT_SIGNATAIRE_FORMATEUR.nom, false, false);
+  _dessinerSignataire(ATT.W - CX - 908, sigPdg, ATT_SIGNATAIRE_PDG.titre, ATT_SIGNATAIRE_PDG.nom, true, true);
 
-  // ── QR de vérification — dans le bandeau du pied de page (l'espace
-  // central est occupé par les deux signatures) ──
-  const QR_FOOTER_S = 120;
+  // ── QR de vérification — centré dans l'espace vide entre les deux
+  // blocs de signature (1212px de large exactement, entre 1148 et 2360
+  // sur une largeur totale de 3508 — vérifié par calcul, pas occupé
+  // par les signatures contrairement à ce que suggérait l'ancien
+  // commentaire à cet endroit). Remplace l'ancienne version, plus
+  // petite, qui vivait dans le pied de page.
+  const QR_CENTRE_S = 300;
+  if (qr) {
+    const qrX = (ATT.W - QR_CENTRE_S) / 2;
+    const qrY = SIG_Y + 60;
+    _roundRect(ctx, qrX - 10, qrY - 10, QR_CENTRE_S + 20, QR_CENTRE_S + 20, 12, ATT.BLANC);
+    ctx.drawImage(qr, qrX, qrY, QR_CENTRE_S, QR_CENTRE_S);
+    _font(ctx, 24, "normal", "DM Sans");
+    ctx.fillStyle = ATT.GRIS;
+    const lblQr = "Scanner pour vérifier";
+    ctx.fillText(lblQr, (ATT.W - _mw(ctx, lblQr)) / 2, qrY + QR_CENTRE_S + 38);
+  }
 
   // ── FOOTER — hauteur réduite (200 au lieu de 270) pour dégager de la
   // marge au-dessus, quitte à ce que SIG_Y grandisse sur un document
@@ -507,16 +548,6 @@ async function genererAttestationCanvas(apprenant, token) {
   const FTR_Y = ATT.H - 210;
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
   _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, ATT.MARINE);
-
-  if (qr) {
-    const qrY = FTR_Y + 30;
-    _roundRect(ctx, CX - 8, qrY - 8, QR_FOOTER_S + 16, QR_FOOTER_S + 16, 10, ATT.BLANC);
-    ctx.drawImage(qr, CX, qrY, QR_FOOTER_S, QR_FOOTER_S);
-    _font(ctx, 18, "normal", "DM Sans");
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    const lblQr = "Scanner pour vérifier";
-    ctx.fillText(lblQr, CX + (QR_FOOTER_S - _mw(ctx, lblQr)) / 2 + 10, qrY + QR_FOOTER_S + 28);
-  }
 
   _font(ctx, 28, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";
