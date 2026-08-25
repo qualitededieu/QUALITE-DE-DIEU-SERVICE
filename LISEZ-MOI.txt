@@ -1,18 +1,29 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : signature du Formateur ajoutée
+Mise à jour : correction du chevauchement sur l'attestation
 =====================================================================
 
 Ce zip contient l'INTÉGRALITÉ du projet dans son état final. Tu peux
 remplacer tout ton dépôt GitHub par ce contenu.
 
 ---------------------------------------------------------------------
-1. NOUVEAU DEPUIS LE DERNIER ZIP
+1. NOUVEAU DEPUIS LE DERNIER ZIP (suite à ton retour sur l'attestation
+   de JOANICE ALOTCHO)
 ---------------------------------------------------------------------
-  ✅ icons/signature-formateur.png — DÉJÀ INCLUSE dans ce zip
-     (signature de M. TOSSOU C. Philippe, récupérée depuis le projet
-     ACADEMY_PHANOS-SECURE). Elle apparaîtra automatiquement sur
-     l'attestation, côté "Formateur" (gauche).
+  ✅ Nom du Formateur corrigé : "M. TOSSOU C. Philippe" s'affiche
+     maintenant bien sous sa signature (il manquait avant).
+
+  ✅ Chevauchement de texte corrigé : le ruban ("ATTESTATION DE...")
+     et le texte du corps (description, dates, "En foi de quoi...")
+     pouvaient se chevaucher quand le texte était un peu long (c'est
+     ce qui s'est passé sur l'attestation de stage de JOANICE ALOTCHO).
+     Le ruban et le bloc signatures suivent maintenant la position
+     réelle du texte au lieu d'une position fixe — ils ne peuvent
+     plus être recouverts, quel que soit le contenu.
+
+  Aucun fichier GAS n'a changé dans ce lot : uniquement
+  js/attestation_generator.js (site). Pas besoin de retoucher
+  l'éditeur Apps Script pour cette mise à jour.
 
 ---------------------------------------------------------------------
 2. IMAGES QUI RESTENT À FOURNIR
@@ -45,8 +56,10 @@ remplacer tout ton dépôt GitHub par ce contenu.
 ---------------------------------------------------------------------
 4. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
-  - Génère une attestation : la signature de M. TOSSOU C. Philippe
-    apparaît maintenant du côté "Formateur" (gauche)
+  - Régénère une attestation (formation ou stage) : plus de
+    chevauchement entre le ruban et le texte, même sur un texte long
+  - Le nom "M. TOSSOU C. Philippe" apparaît bien sous sa signature,
+    côté Formateur (gauche)
   - Le côté PDG (droite) reste sans visuel de signature en attendant
     icons/signature-pdg.png
   - Aucun cachet n'apparaît encore des deux côtés, en attendant

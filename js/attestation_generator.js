@@ -25,7 +25,7 @@ const ATT = {
 // Si .nom reste vide, seul le titre est affiché (cas du Formateur,
 // dont le nom varie selon la session — à renseigner au cas par cas
 // si besoin).
-const ATT_SIGNATAIRE_FORMATEUR = { nom: "", titre: "Le Formateur" };
+const ATT_SIGNATAIRE_FORMATEUR = { nom: "M. TOSSOU C. Philippe", titre: "Le Formateur" };
 const ATT_SIGNATAIRE_PDG       = { nom: "M. ATO Blaise", titre: "Président Directeur Général" };
 
 const ATT_ENTREPRISE = {
@@ -359,7 +359,7 @@ async function genererAttestationCanvas(apprenant, token) {
       : "a suivi avec assiduité et a validé la formation en :",
     CX, posY
   );
-  posY += 82;
+  posY += 72;
 
   const intitule = apprenant.filiere || (estStage ? "Stage professionnel" : "Formation professionnelle");
   ctx.font = document.fonts.check("120px 'Great Vibes'")
@@ -369,9 +369,9 @@ async function genererAttestationCanvas(apprenant, token) {
   {
     const iW = _mw(ctx, intitule);
     ctx.fillText(intitule, (ATT.W - iW) / 2, posY + 20);
-    posY += 46;
+    posY += 40;
     _rect(ctx, (ATT.W - iW) / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
-    posY += 76;
+    posY += 65;
   }
 
   _font(ctx, 33, "italic");
@@ -379,7 +379,7 @@ async function genererAttestationCanvas(apprenant, token) {
   const descriptionTexte = estStage
     ? "Stage effectué avec sérieux et professionnalisme au sein de notre structure."
     : _attDescription(apprenant.filiere);
-  posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 46) + 18;
+  posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 42) + 14;
 
   _font(ctx, 46, "normal");
   const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
@@ -388,74 +388,85 @@ async function genererAttestationCanvas(apprenant, token) {
   _font(ctx, 46, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
   _font(ctx, 46, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(p3, cx, posY); cx += _mw(ctx, p3);
   _font(ctx, 46, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p4, cx, posY);
-  posY += 72;
+  posY += 64;
 
-  _font(ctx, 44, "normal");
+  _font(ctx, 42, "normal");
   ctx.fillStyle = ATT.TEXTE;
   posY = _wrap(ctx, estStage
     ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
     : "Cette formation lui a permis d'acquérir des compétences pratiques et professionnelles dans le domaine concerné.",
-    CX, posY, CW, 60);
-  posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 60);
+    CX, posY, CW, 52);
+  posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
 
-  posY += 30;
-  _font(ctx, 42, "normal");
+  posY += 20;
+  _font(ctx, 40, "normal");
   const ld1 = "Fait à Comé, le  ";
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(ld1, CX, posY);
-  _font(ctx, 42, "bold");
+  _font(ctx, 40, "bold");
   ctx.fillText(dateAujourdhui, CX + _mw(ctx, ld1), posY);
+  posY += 56;
 
-  // ── RUBAN D'APPRÉCIATION — ligne compacte, position fixe (juste
-  // au-dessus du bloc signatures) pour ne jamais chevaucher le corps,
-  // même quand la description occupe 2 lignes. Pas de système de
-  // notation chez LQD : mention générique.
-  const RUBAN_Y = 1500;
-  _font(ctx, 34, "italic");
+  // ── RUBAN D'APPRÉCIATION — suit désormais le flux dynamique du texte
+  // (posY), juste après "Fait à Comé". FIX : l'ancienne version le
+  // plaçait à une position FIXE (1500px) calculée en supposant une
+  // description courte sur une seule ligne — dès que le corps du texte
+  // (description + 2 phrases de clôture) dépassait cette estimation,
+  // le ruban se dessinait PAR-DESSUS le texte au lieu d'en dessous
+  // (chevauchement visible sur l'attestation de stage de test). En le
+  // faisant suivre posY, il ne peut plus jamais chevaucher ce qui est
+  // au-dessus, quelle que soit la longueur réelle du texte.
+  _font(ctx, 32, "italic");
   ctx.fillStyle = ATT.OR;
   const ruban = estStage
     ? "✦  STAGE VALIDÉ — Assiduité et sérieux reconnus par le centre  ✦"
     : "✦  FORMATION VALIDÉE — Assiduité et sérieux reconnus par le centre  ✦";
-  ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, RUBAN_Y);
+  ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, posY);
+  posY += 46;
 
   // ── DEUX SIGNATURES — Formateur à gauche, PDG à droite ──
+  // SIG_Y suit lui aussi posY (avec un plancher à 1560 pour ne pas
+  // remonter inutilement sur un document court, et un plafond à 1700
+  // pour ne jamais empiéter sur le pied de page même dans le pire des
+  // cas) — même principe que le ruban ci-dessus.
+  const SIG_Y = Math.min(Math.max(1560, posY + 30), 1700);
+
   // Bloc réutilisable, translaté horizontalement (ancrage = bord gauche
   // de la ligne pointillée) pour dupliquer exactement la même
   // composition (signature légèrement sous le cachet — chevauchement
   // volontaire, mesure anti-fraude) des deux côtés.
-  const SIG_Y = 1560;
   function _dessinerSignataire(ancrageX, signatureImg, titre, nom) {
     const centreTitre = ancrageX + 480;
 
     _font(ctx, 40, "normal");
     ctx.fillStyle = ATT.TEXTE;
-    ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 95);
+    ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
     const SIG_W = 300;
     if (signatureImg) {
       const ratio = signatureImg.height / signatureImg.width;
-      const SIG_H = Math.min(Math.round(SIG_W * ratio), 150);
-      ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 320, SIG_W, SIG_H);
+      const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
+      ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
     }
-    const CACHET_W = 380;
-    if (cachet) ctx.drawImage(cachet, ancrageX + 240, SIG_Y + 80, CACHET_W, CACHET_W);
+    const CACHET_W = 340;
+    if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
 
     ctx.save();
     ctx.strokeStyle = ATT.OR; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
     ctx.beginPath();
-    ctx.moveTo(ancrageX, SIG_Y + 510);
-    ctx.lineTo(ancrageX + 908, SIG_Y + 510);
+    ctx.moveTo(ancrageX, SIG_Y + 450);
+    ctx.lineTo(ancrageX + 908, SIG_Y + 450);
     ctx.stroke();
     ctx.restore();
 
     if (nom) {
-      _font(ctx, 46, "bold");
+      _font(ctx, 44, "bold");
       ctx.fillStyle = ATT.MARINE;
-      ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 570);
+      ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 505);
     }
-    _font(ctx, 32, "normal", "DM Sans");
+    _font(ctx, 30, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
-    const titreY = nom ? SIG_Y + 614 : SIG_Y + 580;
+    const titreY = nom ? SIG_Y + 546 : SIG_Y + 515;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, titreY);
   }
 
@@ -463,42 +474,42 @@ async function genererAttestationCanvas(apprenant, token) {
   _dessinerSignataire(CX, sigFormateur, titreFormateur, ATT_SIGNATAIRE_FORMATEUR.nom);
   _dessinerSignataire(ATT.W - CX - 908, sigPdg, ATT_SIGNATAIRE_PDG.titre, ATT_SIGNATAIRE_PDG.nom);
 
-  // ── QR de vérification — repositionné dans le bandeau du pied de
-  // page (l'espace central est désormais occupé par les deux
-  // signatures) ──
-  const QR_FOOTER_S = 130;
+  // ── QR de vérification — dans le bandeau du pied de page (l'espace
+  // central est occupé par les deux signatures) ──
+  const QR_FOOTER_S = 120;
 
-  // ── FOOTER ──
-  const FTR_Y = ATT.H - 280;
+  // ── FOOTER — hauteur réduite (200 au lieu de 270) pour dégager de la
+  // marge au-dessus, quitte à ce que SIG_Y grandisse sur un document
+  // au texte long (voir plafond 1700 ci-dessus, qui garantit toujours
+  // au moins ~30px de marge avant ce bandeau) ──
+  const FTR_Y = ATT.H - 210;
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
-  _rect(ctx, 0, FTR_Y + 10, ATT.W, 270, ATT.MARINE);
+  _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, ATT.MARINE);
 
   if (qr) {
-    const qrY = FTR_Y + (270 - QR_FOOTER_S) / 2;
+    const qrY = FTR_Y + 30;
     _roundRect(ctx, CX - 8, qrY - 8, QR_FOOTER_S + 16, QR_FOOTER_S + 16, 10, ATT.BLANC);
     ctx.drawImage(qr, CX, qrY, QR_FOOTER_S, QR_FOOTER_S);
-    _font(ctx, 20, "normal", "DM Sans");
+    _font(ctx, 18, "normal", "DM Sans");
     ctx.fillStyle = "rgba(255,255,255,0.55)";
-    const lblQr = "Scanner pour";
-    const lblQr2 = "vérifier";
-    ctx.fillText(lblQr,  CX + (QR_FOOTER_S - _mw(ctx, lblQr)) / 2,  qrY + QR_FOOTER_S + 26);
-    ctx.fillText(lblQr2, CX + (QR_FOOTER_S - _mw(ctx, lblQr2)) / 2, qrY + QR_FOOTER_S + 50);
+    const lblQr = "Scanner pour vérifier";
+    ctx.fillText(lblQr, CX + (QR_FOOTER_S - _mw(ctx, lblQr)) / 2 + 10, qrY + QR_FOOTER_S + 28);
   }
 
-  _font(ctx, 32, "normal", "DM Sans");
+  _font(ctx, 28, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";
   const refTxt = `Réf : ${apprenant.id}   —   Document généré le ${dateAujourdhui}`;
-  ctx.fillText(refTxt, (ATT.W - _mw(ctx, refTxt)) / 2, FTR_Y + 90);
+  ctx.fillText(refTxt, (ATT.W - _mw(ctx, refTxt)) / 2, FTR_Y + 62);
 
-  _font(ctx, 40, "bold", "DM Sans");
+  _font(ctx, 36, "bold", "DM Sans");
   ctx.fillStyle = ATT.OR_LIGHT;
   const sloganTxt = "LA FORMATION AU SERVICE DE VOTRE AVENIR";
-  ctx.fillText(sloganTxt, (ATT.W - _mw(ctx, sloganTxt)) / 2, FTR_Y + 156);
+  ctx.fillText(sloganTxt, (ATT.W - _mw(ctx, sloganTxt)) / 2, FTR_Y + 118);
 
-  _font(ctx, 30, "normal", "DM Sans");
+  _font(ctx, 26, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   const siteTxt = "www." + ATT_ENTREPRISE.SITE + "  —  " + ATT_ENTREPRISE.ADRESSE;
-  ctx.fillText(siteTxt, (ATT.W - _mw(ctx, siteTxt)) / 2, FTR_Y + 210);
+  ctx.fillText(siteTxt, (ATT.W - _mw(ctx, siteTxt)) / 2, FTR_Y + 165);
 
   _rect(ctx, 0, ATT.H - 18, ATT.W, 18, ATT.OR);
 
