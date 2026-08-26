@@ -1,4 +1,12 @@
 "use strict";
+
+/* ============================================================
+   ATTESTATION DE FIN DE FORMATION — LES QUALITÉS DE DIEU SERVICE
+   Génération canvas 100% côté client — aucune dépendance serveur
+   autre que GAS (déjà utilisé pour retrouver le dossier apprenant).
+   Format : A4 Paysage — 3508 x 2480 px @ 300 DPI
+   ============================================================ */
+
 const ATT = {
   MARINE:   "#04342C",   // teal-900 (identité LQD)
   MARINE_2: "#0F6E56",   // teal-700
@@ -11,6 +19,12 @@ const ATT = {
   W: 3508,
   H: 2480,
 };
+
+// Signataires — l'attestation LQD Service porte toujours deux
+// signatures/cachets : le Formateur à gauche, le PDG à droite.
+// Si .nom reste vide, seul le titre est affiché (cas du Formateur,
+// dont le nom varie selon la session — à renseigner au cas par cas
+// si besoin).
 const ATT_SIGNATAIRE_FORMATEUR = { nom: "M. TOSSOU C. Philippe", titre: "Le Formateur" };
 const ATT_SIGNATAIRE_PDG       = { nom: "M. ATO Blaise", titre: "Président Directeur Général" };
 
@@ -40,6 +54,14 @@ function _attDescription(filiere) {
   if (cle) return ATT_DESCRIPTIONS[cle];
   return "Formation professionnelle qualifiante dispensée par le centre.";
 }
+
+// ─── Description de stage à partir des missions cochées en admin ───
+// Construit une phrase française correcte à partir d'une liste de
+// fragments (déjà rédigés pour s'enchaîner naturellement après
+// "notamment"), avec "et" avant le dernier élément plutôt qu'une
+// simple virgule. Retombe sur la phrase générique si la liste est
+// vide (dossier créé avant l'ajout de cette fonctionnalité, ou aucune
+// mission cochée).
 function _joindreListeFr(items) {
   if (!items || items.length === 0) return "";
   if (items.length === 1) return items[0];
@@ -152,10 +174,15 @@ async function _chargerPoliceScript() {
 }
 
 // ─── GÉNÉRATEUR PRINCIPAL ──────────────────────────────────────
-apprenant : { id, prenom, nom, sexe, dateNaissance, filiere, dateEntree, dateFin, photoUrl, email }
-token     : token carte HMAC déjà obtenu (sert au QR de vérification)
+// apprenant : { id, prenom, nom, sexe, dateNaissance, filiere, dateEntree, dateFin, photoUrl, email }
+// token     : token carte HMAC déjà obtenu (sert au QR de vérification)
 async function genererAttestationCanvas(apprenant, token) {
   await _chargerPoliceScript();
+
+  // Deux origines possibles pour cette attestation : un apprenant qui a
+  // suivi une formation (source par défaut, cartes.gs), ou un candidat
+  // qui a effectué un stage via la page Postuler (source explicite
+  // "candidature-stage", voir GAS/candidatures.gs). Le texte s'adapte.
   const estStage = apprenant.source === "candidature-stage";
 
   const canvas = document.createElement("canvas");
@@ -319,7 +346,7 @@ async function genererAttestationCanvas(apprenant, token) {
   const CX = 240, CW = ATT.W - 480;
   let posY = TITRE_Y + 410;
 
-  _font(ctx, 60, "normal");
+  _font(ctx, 46, "normal");
   const intro1 = "Nous soussignés, ";
   const intro2 = ATT_ENTREPRISE.NOM;
   const intro3 = estStage
@@ -328,11 +355,11 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro1, CX, posY);
   let ix = CX + _mw(ctx, intro1);
-  _font(ctx, 50, "bold");
+  _font(ctx, 40, "bold");
   ctx.fillStyle = ATT.MARINE;
   ctx.fillText(intro2, ix, posY);
   ix += _mw(ctx, intro2);
-  _font(ctx, 58, "normal");
+  _font(ctx, 46, "normal");
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro3, ix, posY);
   posY += 80;
@@ -341,12 +368,12 @@ async function genererAttestationCanvas(apprenant, token) {
   const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
   const BANNER_CX  = 1512.5;
   _roundRect(ctx, 210, posY - 52, 2605, 158, 24, ATT.MARINE);
-  _font(ctx, 100, "bold");
+  _font(ctx, 90, "bold");
   ctx.fillStyle = ATT.OR_LIGHT;
   ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
   posY += 190;
 
-  _font(ctx, 60, "normal");
+  _font(ctx, 46, "normal");
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(
     estStage
@@ -369,14 +396,14 @@ async function genererAttestationCanvas(apprenant, token) {
     posY += 65;
   }
 
-  _font(ctx, 45, "italic");
+  _font(ctx, 33, "italic");
   ctx.fillStyle = ATT.GRIS;
   const descriptionTexte = estStage
     ? _attDescriptionStage(apprenant.missionsStage)
     : _attDescription(apprenant.filiere);
   posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 42) + 14;
 
-  _font(ctx, 58, "normal");
+  _font(ctx, 46, "normal");
   const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
   let cx = CX;
   ctx.fillStyle = ATT.TEXTE; ctx.fillText(p1, cx, posY); cx += _mw(ctx, p1);
@@ -385,7 +412,7 @@ async function genererAttestationCanvas(apprenant, token) {
   _font(ctx, 46, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p4, cx, posY);
   posY += 64;
 
-  _font(ctx, 66, "normal");
+  _font(ctx, 42, "normal");
   ctx.fillStyle = ATT.TEXTE;
   posY = _wrap(ctx, estStage
     ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
@@ -394,31 +421,58 @@ async function genererAttestationCanvas(apprenant, token) {
   posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
 
   posY += 20;
-  _font(ctx, 56, "italic");
+
+  // ── RUBAN D'APPRÉCIATION — suit désormais le flux dynamique du texte
+  // (posY), juste après "Fait à Comé". FIX : l'ancienne version le
+  // plaçait à une position FIXE (1500px) calculée en supposant une
+  // description courte sur une seule ligne — dès que le corps du texte
+  // (description + 2 phrases de clôture) dépassait cette estimation,
+  // le ruban se dessinait PAR-DESSUS le texte au lieu d'en dessous
+  // (chevauchement visible sur l'attestation de stage de test). En le
+  // faisant suivre posY, il ne peut plus jamais chevaucher ce qui est
+  // au-dessus, quelle que soit la longueur réelle du texte.
+  _font(ctx, 32, "italic");
   ctx.fillStyle = ATT.OR;
   const ruban = estStage
     ? "✦  STAGE VALIDÉ — Assiduité et sérieux reconnus par le centre  ✦"
     : "✦  FORMATION VALIDÉE — Assiduité et sérieux reconnus par le centre  ✦";
   ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, posY);
   posY += 46;
-  const SIG_Y = Math.min(Math.max(1560, posY + 50), 1700);
+
+  // ── DEUX SIGNATURES — Formateur à gauche, PDG à droite ──
+  // SIG_Y suit lui aussi posY (avec un plancher à 1560 pour ne pas
+  // remonter inutilement sur un document court, et un plafond à 1700
+  // pour ne jamais empiéter sur le pied de page même dans le pire des
+  // cas) — même principe que le ruban ci-dessus.
+  const SIG_Y = Math.min(Math.max(1560, posY + 30), 1700);
+
+  // Bloc réutilisable, translaté horizontalement (ancrage = bord gauche
+  // de la ligne pointillée) pour dupliquer exactement la même
+  // composition (signature légèrement sous le cachet — chevauchement
+  // volontaire, mesure anti-fraude) des deux côtés.
   function _dessinerSignataire(ancrageX, signatureImg, titre, nom, avecDateFait, cachetIntegreDansSignature) {
     const centreTitre = ancrageX + 480;
+
+    // "Fait à Comé, le [date]" — affiché uniquement au-dessus de la
+    // signature du PDG (là où on signe traditionnellement ce genre de
+    // mention sur un document papier), plus au centre du corps du
+    // texte comme avant : évite la redondance avec la mention réelle
+    // déjà présente sur le tampon/signature scanné du PDG.
     if (avecDateFait) {
-      _font(ctx, 50, "normal", "DM Sans");
+      _font(ctx, 30, "normal", "DM Sans");
       ctx.fillStyle = ATT.GRIS;
       const ld1 = "Fait à Comé, le ";
       const ld2 = dateAujourdhui;
-      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 50, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 50, "normal", "DM Sans"); return w; })();
+      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 30, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 30, "normal", "DM Sans"); return w; })();
       let fx = centreTitre - largeurTotale / 2;
-      _font(ctx, 50, "normal", "DM Sans");
+      _font(ctx, 30, "normal", "DM Sans");
       ctx.fillText(ld1, fx, SIG_Y + 20);
       fx += _mw(ctx, ld1);
-      _font(ctx, 50, "bold", "DM Sans");
+      _font(ctx, 30, "bold", "DM Sans");
       ctx.fillText(ld2, fx, SIG_Y + 20);
     }
 
-    _font(ctx, 60, "normal");
+    _font(ctx, 40, "normal");
     ctx.fillStyle = ATT.TEXTE;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
@@ -426,18 +480,23 @@ async function genererAttestationCanvas(apprenant, token) {
     const CACHET_W = 340; // cachet seul (icons/cachet.png), redessiné sous une signature séparée
 
     if (cachetIntegreDansSignature) {
-
+      // Cas où le cachet officiel et la signature ne font qu'un seul
+      // fichier (tampon + paraphe scannés ensemble) : on dessine cette
+      // image unique, en conservant ses vraies proportions, et on NE
+      // redessine PAS le cachet séparé en-dessous (il y serait en
+      // double, l'un par-dessus l'autre). Agrandie (largeur 660, était
+      // 560) — le cachet paraissait trop petit sur le document complet.
       if (signatureImg) {
         const ratio = signatureImg.height / signatureImg.width;
-        const largeur = 670;
+        const largeur = 660;
         const hauteur = Math.round(largeur * ratio);
-        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 100, largeur, hauteur);
+        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 70, largeur, hauteur);
       }
     } else {
       if (signatureImg) {
         const ratio = signatureImg.height / signatureImg.width;
-        const SIG_H = Math.min(Math.round(SIG_W * ratio), 240);
-        ctx.drawImage(signatureImg, ancrageX + 240, SIG_Y + 280, SIG_W, SIG_H);
+        const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
+        ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
       }
       if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
     }
@@ -451,11 +510,11 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.restore();
 
     if (nom) {
-      _font(ctx, 54, "bold");
+      _font(ctx, 44, "bold");
       ctx.fillStyle = ATT.MARINE;
       ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 505);
     }
-    _font(ctx, 40, "normal", "DM Sans");
+    _font(ctx, 30, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
     const titreY = nom ? SIG_Y + 546 : SIG_Y + 515;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, titreY);
@@ -464,6 +523,13 @@ async function genererAttestationCanvas(apprenant, token) {
   const titreFormateur = estStage ? "Le Responsable du Stage" : ATT_SIGNATAIRE_FORMATEUR.titre;
   _dessinerSignataire(CX, sigFormateur, titreFormateur, ATT_SIGNATAIRE_FORMATEUR.nom, false, false);
   _dessinerSignataire(ATT.W - CX - 908, sigPdg, ATT_SIGNATAIRE_PDG.titre, ATT_SIGNATAIRE_PDG.nom, true, true);
+
+  // ── QR de vérification — centré dans l'espace vide entre les deux
+  // blocs de signature (1212px de large exactement, entre 1148 et 2360
+  // sur une largeur totale de 3508 — vérifié par calcul, pas occupé
+  // par les signatures contrairement à ce que suggérait l'ancien
+  // commentaire à cet endroit). Remplace l'ancienne version, plus
+  // petite, qui vivait dans le pied de page.
   const QR_CENTRE_S = 300;
   if (qr) {
     const qrX = (ATT.W - QR_CENTRE_S) / 2;
@@ -475,6 +541,11 @@ async function genererAttestationCanvas(apprenant, token) {
     const lblQr = "Scanner pour vérifier";
     ctx.fillText(lblQr, (ATT.W - _mw(ctx, lblQr)) / 2, qrY + QR_CENTRE_S + 38);
   }
+
+  // ── FOOTER — hauteur réduite (200 au lieu de 270) pour dégager de la
+  // marge au-dessus, quitte à ce que SIG_Y grandisse sur un document
+  // au texte long (voir plafond 1700 ci-dessus, qui garantit toujours
+  // au moins ~30px de marge avant ce bandeau) ──
   const FTR_Y = ATT.H - 210;
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
   _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, ATT.MARINE);
@@ -548,6 +619,14 @@ async function telechargerAttestation(canvas, id, format = "pdf") {
     if (window.showToast) showToast("Image téléchargée", "success");
     return;
   }
+
+  // FIX : l'ancienne version passait par html2pdf.js (rendu d'un <img>
+  // dans le DOM, puis capture html2canvas de cet élément) — le PDF sortait
+  // vide car html2canvas capturait souvent le DOM avant que l'image en
+  // base64 n'ait fini de se décoder (pas d'attente de son "load"). On
+  // insère directement le canvas déjà généré dans un PDF via jsPDF, sans
+  // repasser par un rendu DOM intermédiaire — même approche fiable que
+  // verifier.html.
   if (!window.jspdf) {
     await new Promise((res, rej) => {
       const s = document.createElement("script");
