@@ -346,7 +346,7 @@ async function genererAttestationCanvas(apprenant, token) {
   const CX = 240, CW = ATT.W - 480;
   let posY = TITRE_Y + 410;
 
-  _font(ctx, 46, "normal");
+  _font(ctx, 52, "normal");
   const intro1 = "Nous soussignés, ";
   const intro2 = ATT_ENTREPRISE.NOM;
   const intro3 = estStage
@@ -355,14 +355,14 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro1, CX, posY);
   let ix = CX + _mw(ctx, intro1);
-  _font(ctx, 40, "bold");
+  _font(ctx, 46, "bold");
   ctx.fillStyle = ATT.MARINE;
   ctx.fillText(intro2, ix, posY);
   ix += _mw(ctx, intro2);
-  _font(ctx, 46, "normal");
+  _font(ctx, 52, "normal");
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro3, ix, posY);
-  posY += 80;
+  posY += 90;
 
   const civilite   = apprenant.sexe === "F" ? "Mme. " : (apprenant.sexe === "M" ? "M. " : "");
   const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
@@ -373,7 +373,7 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
   posY += 190;
 
-  _font(ctx, 46, "normal");
+  _font(ctx, 52, "normal");
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(
     estStage
@@ -381,7 +381,7 @@ async function genererAttestationCanvas(apprenant, token) {
       : "a suivi avec assiduité et a validé la formation en :",
     CX, posY
   );
-  posY += 72;
+  posY += 80;
 
   const intitule = apprenant.filiere || (estStage ? "Stage professionnel" : "Formation professionnelle");
   ctx.font = document.fonts.check("120px 'Great Vibes'")
@@ -393,32 +393,32 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(intitule, (ATT.W - iW) / 2, posY + 20);
     posY += 40;
     _rect(ctx, (ATT.W - iW) / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
-    posY += 65;
+    posY += 70;
   }
 
-  _font(ctx, 33, "italic");
+  _font(ctx, 38, "italic");
   ctx.fillStyle = ATT.GRIS;
   const descriptionTexte = estStage
     ? _attDescriptionStage(apprenant.missionsStage)
     : _attDescription(apprenant.filiere);
-  posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 42) + 14;
+  posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 48) + 16;
 
-  _font(ctx, 46, "normal");
+  _font(ctx, 52, "normal");
   const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
   let cx = CX;
   ctx.fillStyle = ATT.TEXTE; ctx.fillText(p1, cx, posY); cx += _mw(ctx, p1);
-  _font(ctx, 46, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
-  _font(ctx, 46, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(p3, cx, posY); cx += _mw(ctx, p3);
-  _font(ctx, 46, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p4, cx, posY);
-  posY += 64;
+  _font(ctx, 52, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
+  _font(ctx, 52, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(p3, cx, posY); cx += _mw(ctx, p3);
+  _font(ctx, 52, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p4, cx, posY);
+  posY += 72;
 
-  _font(ctx, 42, "normal");
+  _font(ctx, 48, "normal");
   ctx.fillStyle = ATT.TEXTE;
   posY = _wrap(ctx, estStage
     ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
     : "Cette formation lui a permis d'acquérir des compétences pratiques et professionnelles dans le domaine concerné.",
-    CX, posY, CW, 52);
-  posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
+    CX, posY, CW, 58);
+  posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 58);
 
   posY += 20;
 
@@ -431,13 +431,13 @@ async function genererAttestationCanvas(apprenant, token) {
   // (chevauchement visible sur l'attestation de stage de test). En le
   // faisant suivre posY, il ne peut plus jamais chevaucher ce qui est
   // au-dessus, quelle que soit la longueur réelle du texte.
-  _font(ctx, 32, "italic");
+  _font(ctx, 36, "italic");
   ctx.fillStyle = ATT.OR;
   const ruban = estStage
     ? "✦  STAGE VALIDÉ — Assiduité et sérieux reconnus par le centre  ✦"
     : "✦  FORMATION VALIDÉE — Assiduité et sérieux reconnus par le centre  ✦";
   ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, posY);
-  posY += 46;
+  posY += 50;
 
   // ── DEUX SIGNATURES — Formateur à gauche, PDG à droite ──
   // SIG_Y suit lui aussi posY (avec un plancher à 1560 pour ne pas
@@ -459,20 +459,20 @@ async function genererAttestationCanvas(apprenant, token) {
     // texte comme avant : évite la redondance avec la mention réelle
     // déjà présente sur le tampon/signature scanné du PDG.
     if (avecDateFait) {
-      _font(ctx, 30, "normal", "DM Sans");
+      _font(ctx, 34, "normal", "DM Sans");
       ctx.fillStyle = ATT.GRIS;
       const ld1 = "Fait à Comé, le ";
       const ld2 = dateAujourdhui;
-      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 30, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 30, "normal", "DM Sans"); return w; })();
+      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 34, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 34, "normal", "DM Sans"); return w; })();
       let fx = centreTitre - largeurTotale / 2;
-      _font(ctx, 30, "normal", "DM Sans");
+      _font(ctx, 34, "normal", "DM Sans");
       ctx.fillText(ld1, fx, SIG_Y + 20);
       fx += _mw(ctx, ld1);
-      _font(ctx, 30, "bold", "DM Sans");
+      _font(ctx, 34, "bold", "DM Sans");
       ctx.fillText(ld2, fx, SIG_Y + 20);
     }
 
-    _font(ctx, 40, "normal");
+    _font(ctx, 46, "normal");
     ctx.fillStyle = ATT.TEXTE;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
@@ -482,15 +482,21 @@ async function genererAttestationCanvas(apprenant, token) {
     if (cachetIntegreDansSignature) {
       // Cas où le cachet officiel et la signature ne font qu'un seul
       // fichier (tampon + paraphe scannés ensemble) : on dessine cette
-      // image unique, en conservant ses vraies proportions, et on NE
-      // redessine PAS le cachet séparé en-dessous (il y serait en
-      // double, l'un par-dessus l'autre). Agrandie (largeur 660, était
-      // 560) — le cachet paraissait trop petit sur le document complet.
+      // image unique, et on NE redessine PAS le cachet séparé en-dessous
+      // (il y serait en double, l'un par-dessus l'autre).
+      // Le fichier source (icons/signature-pdg.png, 535x466) a une
+      // grosse marge transparente autour du cachet+signature réels
+      // (encre utile : environ 333x207, centrée avec ~90px de vide à
+      // gauche et ~155px en haut) — on recadre sur cette zone d'encre
+      // avant d'agrandir, sinon on agrandit surtout du vide. Résultat :
+      // un cachet visuellement ~1.6x plus grand qu'un simple
+      // agrandissement de l'image entière, sans dépasser l'espace
+      // disponible avant la ligne pointillée (SIG_Y + 450).
       if (signatureImg) {
-        const ratio = signatureImg.height / signatureImg.width;
-        const largeur = 660;
-        const hauteur = Math.round(largeur * ratio);
-        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 30, largeur, hauteur);
+        const SRC_X = 91, SRC_Y = 155, SRC_W = 333, SRC_H = 207; // zone d'encre (voir icons/signature-pdg.png)
+        const largeur = 575;
+        const hauteur = Math.round(largeur * (SRC_H / SRC_W));
+        ctx.drawImage(signatureImg, SRC_X, SRC_Y, SRC_W, SRC_H, ancrageX + 220, SIG_Y + 80, largeur, hauteur);
       }
     } else {
       if (signatureImg) {
@@ -510,13 +516,13 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.restore();
 
     if (nom) {
-      _font(ctx, 44, "bold");
+      _font(ctx, 50, "bold");
       ctx.fillStyle = ATT.MARINE;
       ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 505);
     }
-    _font(ctx, 30, "normal", "DM Sans");
+    _font(ctx, 34, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
-    const titreY = nom ? SIG_Y + 546 : SIG_Y + 515;
+    const titreY = nom ? SIG_Y + 552 : SIG_Y + 519;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, titreY);
   }
 
@@ -536,7 +542,7 @@ async function genererAttestationCanvas(apprenant, token) {
     const qrY = SIG_Y + 60;
     _roundRect(ctx, qrX - 10, qrY - 10, QR_CENTRE_S + 20, QR_CENTRE_S + 20, 12, ATT.BLANC);
     ctx.drawImage(qr, qrX, qrY, QR_CENTRE_S, QR_CENTRE_S);
-    _font(ctx, 24, "normal", "DM Sans");
+    _font(ctx, 26, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
     const lblQr = "Scanner pour vérifier";
     ctx.fillText(lblQr, (ATT.W - _mw(ctx, lblQr)) / 2, qrY + QR_CENTRE_S + 38);
@@ -550,17 +556,17 @@ async function genererAttestationCanvas(apprenant, token) {
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
   _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, ATT.MARINE);
 
-  _font(ctx, 28, "normal", "DM Sans");
+  _font(ctx, 30, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";
   const refTxt = `Réf : ${apprenant.id}   —   Document généré le ${dateAujourdhui}`;
   ctx.fillText(refTxt, (ATT.W - _mw(ctx, refTxt)) / 2, FTR_Y + 62);
 
-  _font(ctx, 36, "bold", "DM Sans");
+  _font(ctx, 40, "bold", "DM Sans");
   ctx.fillStyle = ATT.OR_LIGHT;
   const sloganTxt = "LA FORMATION AU SERVICE DE VOTRE AVENIR";
   ctx.fillText(sloganTxt, (ATT.W - _mw(ctx, sloganTxt)) / 2, FTR_Y + 118);
 
-  _font(ctx, 26, "normal", "DM Sans");
+  _font(ctx, 28, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   const siteTxt = "www." + ATT_ENTREPRISE.SITE + "  —  " + ATT_ENTREPRISE.ADRESSE;
   ctx.fillText(siteTxt, (ATT.W - _mw(ctx, siteTxt)) / 2, FTR_Y + 165);
