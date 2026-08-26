@@ -490,7 +490,7 @@ async function genererAttestationCanvas(apprenant, token) {
         const ratio = signatureImg.height / signatureImg.width;
         const largeur = 660;
         const hauteur = Math.round(largeur * ratio);
-        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 70, largeur, hauteur);
+        ctx.drawImage(signatureImg, ancrageX + 220, SIG_Y + 50, largeur, hauteur);
       }
     } else {
       if (signatureImg) {
