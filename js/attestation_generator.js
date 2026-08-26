@@ -218,6 +218,13 @@ async function genererAttestationCanvas(apprenant, token) {
   // "candidature-stage", voir GAS/candidatures.gs). Le texte s'adapte.
   const estStage = apprenant.source === "candidature-stage";
 
+  // Palette de couleur : les stages gardent l'identité actuelle
+  // (teal/marine). Les formations reprennent l'esprit de l'ancien
+  // modèle papier du centre (bleu marine plus sombre), à la demande
+  // explicite du centre — même structure (photo, QR, signatures)
+  // inchangée, seule cette couleur de fond change.
+  const COULEUR_PRINCIPALE = estStage ? ATT.MARINE : "#0B2447";
+
   const canvas = document.createElement("canvas");
   canvas.width  = ATT.W;
   canvas.height = ATT.H;
@@ -273,7 +280,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
   // ── HEADER ──
   const HDR_H = 402;
-  _rect(ctx, 0, 0, ATT.W, HDR_H, ATT.MARINE);
+  _rect(ctx, 0, 0, ATT.W, HDR_H, COULEUR_PRINCIPALE);
   _rect(ctx, 0, HDR_H, ATT.W, 14, ATT.OR);
 
   ctx.save();
@@ -368,7 +375,7 @@ async function genererAttestationCanvas(apprenant, token) {
   _rect(ctx, ATT.W - 850, TITRE_Y + 60, 150, 7, ATT.OR);
 
   _font(ctx, 220, "bold");
-  ctx.fillStyle = ATT.MARINE;
+  ctx.fillStyle = COULEUR_PRINCIPALE;
   const attW = _mw(ctx, "ATTESTATION");
   ctx.fillText("ATTESTATION", (ATT.W - attW) / 2, TITRE_Y + 240);
 
@@ -397,7 +404,7 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillText(intro1, CX, posY);
   let ix = CX + _mw(ctx, intro1);
   _font(ctx, 46, "bold");
-  ctx.fillStyle = ATT.MARINE;
+  ctx.fillStyle = COULEUR_PRINCIPALE;
   ctx.fillText(intro2, ix, posY);
   ix += _mw(ctx, intro2);
   _font(ctx, 52, "normal");
@@ -408,7 +415,7 @@ async function genererAttestationCanvas(apprenant, token) {
   const civilite   = apprenant.sexe === "F" ? "Mme. " : (apprenant.sexe === "M" ? "M. " : "");
   const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
   const BANNER_CX  = 1512.5;
-  _roundRect(ctx, 210, posY - 52, 2605, 158, 24, ATT.MARINE);
+  _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
   _font(ctx, 90, "bold");
   ctx.fillStyle = ATT.OR_LIGHT;
   ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
@@ -428,7 +435,7 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.font = document.fonts.check("120px 'Great Vibes'")
     ? "120px 'Great Vibes'"
     : "italic bold 90px 'Times New Roman', Times, serif";
-  ctx.fillStyle = ATT.MARINE;
+  ctx.fillStyle = COULEUR_PRINCIPALE;
   {
     const iW = _mw(ctx, intitule);
     ctx.fillText(intitule, (ATT.W - iW) / 2, posY + 20);
@@ -448,9 +455,9 @@ async function genererAttestationCanvas(apprenant, token) {
   const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
   let cx = CX;
   ctx.fillStyle = ATT.TEXTE; ctx.fillText(p1, cx, posY); cx += _mw(ctx, p1);
-  _font(ctx, 52, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
+  _font(ctx, 52, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
   _font(ctx, 52, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(p3, cx, posY); cx += _mw(ctx, p3);
-  _font(ctx, 52, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p4, cx, posY);
+  _font(ctx, 52, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(p4, cx, posY);
   posY += 72;
 
   _font(ctx, 48, "normal");
@@ -563,7 +570,7 @@ async function genererAttestationCanvas(apprenant, token) {
         const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
         ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
       }
-      if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
+      if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 30, CACHET_W, CACHET_W);
     }
 
     ctx.save();
@@ -576,7 +583,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
     if (nom) {
       _font(ctx, 50, "bold");
-      ctx.fillStyle = ATT.MARINE;
+      ctx.fillStyle = COULEUR_PRINCIPALE;
       ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 505);
     }
     _font(ctx, 34, "normal", "DM Sans");
@@ -613,7 +620,7 @@ async function genererAttestationCanvas(apprenant, token) {
   // au moins ~30px de marge avant ce bandeau) ──
   const FTR_Y = ATT.H - 210;
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
-  _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, ATT.MARINE);
+  _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, COULEUR_PRINCIPALE);
 
   _font(ctx, 30, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";
