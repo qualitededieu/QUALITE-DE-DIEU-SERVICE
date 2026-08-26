@@ -218,12 +218,30 @@ async function genererAttestationCanvas(apprenant, token) {
   // "candidature-stage", voir GAS/candidatures.gs). Le texte s'adapte.
   const estStage = apprenant.source === "candidature-stage";
 
-  // Palette de couleur : les stages gardent l'identité actuelle
-  // (teal/marine). Les formations reprennent l'esprit de l'ancien
-  // modèle papier du centre (bleu marine plus sombre), à la demande
-  // explicite du centre — même structure (photo, QR, signatures)
-  // inchangée, seule cette couleur de fond change.
-  const COULEUR_PRINCIPALE = estStage ? ATT.MARINE : "#0B2447";
+  // Durée réelle de la formation, calculée à partir des dates déjà
+  // enregistrées (aucun nouveau champ nécessaire) — sert à distinguer
+  // les formations courtes (initiation, 1 à 3 mois) des formations
+  // longues (1 an à 1 an et demi), qui ont chacune leur propre modèle
+  // papier au centre. Seuil à 6 mois : marge large entre les deux
+  // fourchettes annoncées, aucun risque de mauvaise classification.
+  function _dureeEnMois(debut, fin) {
+    if (!debut || !fin) return null;
+    const d1 = new Date(debut);
+    const d2 = new Date(fin);
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return null;
+    return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+  }
+  const dureeMois = _dureeEnMois(apprenant.dateEntree, apprenant.dateFin);
+  const estFormationLongue = !estStage && (dureeMois === null || dureeMois >= 6);
+
+  // Palette de couleur :
+  // - Stage                     → identité actuelle (teal/marine), inchangée
+  // - Formation longue (1 an+)  → identité actuelle (teal/marine) EN ATTENDANT
+  //   le visuel de référence du centre pour ce modèle spécifique — ne jamais
+  //   deviner une couleur pour un document officiel non encore vu.
+  // - Formation courte (1-3 mois) → bleu marine foncé, esprit de l'ancien
+  //   modèle papier du centre pour ce cas précis (confirmé par le centre).
+  const COULEUR_PRINCIPALE = (estStage || estFormationLongue) ? ATT.MARINE : "#0B2447";
 
   const canvas = document.createElement("canvas");
   canvas.width  = ATT.W;
@@ -570,7 +588,7 @@ async function genererAttestationCanvas(apprenant, token) {
         const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
         ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
       }
-      if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 30, CACHET_W, CACHET_W);
+      if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
     }
 
     ctx.save();
