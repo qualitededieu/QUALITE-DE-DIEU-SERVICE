@@ -152,8 +152,8 @@ async function _chargerPoliceScript() {
 }
 
 // ─── GÉNÉRATEUR PRINCIPAL ──────────────────────────────────────
-// apprenant : { id, prenom, nom, sexe, dateNaissance, filiere, dateEntree, dateFin, photoUrl, email }
-// token     : token carte HMAC déjà obtenu (sert au QR de vérification)
+apprenant : { id, prenom, nom, sexe, dateNaissance, filiere, dateEntree, dateFin, photoUrl, email }
+token     : token carte HMAC déjà obtenu (sert au QR de vérification)
 async function genererAttestationCanvas(apprenant, token) {
   await _chargerPoliceScript();
   const estStage = apprenant.source === "candidature-stage";
@@ -319,7 +319,7 @@ async function genererAttestationCanvas(apprenant, token) {
   const CX = 240, CW = ATT.W - 480;
   let posY = TITRE_Y + 410;
 
-  _font(ctx, 58, "normal");
+  _font(ctx, 60, "normal");
   const intro1 = "Nous soussignés, ";
   const intro2 = ATT_ENTREPRISE.NOM;
   const intro3 = estStage
@@ -328,11 +328,11 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro1, CX, posY);
   let ix = CX + _mw(ctx, intro1);
-  _font(ctx, 40, "bold");
+  _font(ctx, 50, "bold");
   ctx.fillStyle = ATT.MARINE;
   ctx.fillText(intro2, ix, posY);
   ix += _mw(ctx, intro2);
-  _font(ctx, 46, "normal");
+  _font(ctx, 58, "normal");
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(intro3, ix, posY);
   posY += 80;
@@ -341,12 +341,12 @@ async function genererAttestationCanvas(apprenant, token) {
   const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
   const BANNER_CX  = 1512.5;
   _roundRect(ctx, 210, posY - 52, 2605, 158, 24, ATT.MARINE);
-  _font(ctx, 90, "bold");
+  _font(ctx, 100, "bold");
   ctx.fillStyle = ATT.OR_LIGHT;
   ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
   posY += 190;
 
-  _font(ctx, 58, "normal");
+  _font(ctx, 60, "normal");
   ctx.fillStyle = ATT.TEXTE;
   ctx.fillText(
     estStage
@@ -369,14 +369,14 @@ async function genererAttestationCanvas(apprenant, token) {
     posY += 65;
   }
 
-  _font(ctx, 33, "italic");
+  _font(ctx, 45, "italic");
   ctx.fillStyle = ATT.GRIS;
   const descriptionTexte = estStage
     ? _attDescriptionStage(apprenant.missionsStage)
     : _attDescription(apprenant.filiere);
   posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 42) + 14;
 
-  _font(ctx, 46, "normal");
+  _font(ctx, 58, "normal");
   const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
   let cx = CX;
   ctx.fillStyle = ATT.TEXTE; ctx.fillText(p1, cx, posY); cx += _mw(ctx, p1);
@@ -385,7 +385,7 @@ async function genererAttestationCanvas(apprenant, token) {
   _font(ctx, 46, "bold"); ctx.fillStyle = ATT.MARINE; ctx.fillText(p4, cx, posY);
   posY += 64;
 
-  _font(ctx, 54, "normal");
+  _font(ctx, 66, "normal");
   ctx.fillStyle = ATT.TEXTE;
   posY = _wrap(ctx, estStage
     ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
@@ -394,31 +394,31 @@ async function genererAttestationCanvas(apprenant, token) {
   posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
 
   posY += 20;
-  _font(ctx, 44, "italic");
+  _font(ctx, 56, "italic");
   ctx.fillStyle = ATT.OR;
   const ruban = estStage
     ? "✦  STAGE VALIDÉ — Assiduité et sérieux reconnus par le centre  ✦"
     : "✦  FORMATION VALIDÉE — Assiduité et sérieux reconnus par le centre  ✦";
   ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, posY);
   posY += 46;
-  const SIG_Y = Math.min(Math.max(1560, posY + 30), 1700);
+  const SIG_Y = Math.min(Math.max(1560, posY + 50), 1700);
   function _dessinerSignataire(ancrageX, signatureImg, titre, nom, avecDateFait, cachetIntegreDansSignature) {
     const centreTitre = ancrageX + 480;
     if (avecDateFait) {
-      _font(ctx, 40, "normal", "DM Sans");
+      _font(ctx, 50, "normal", "DM Sans");
       ctx.fillStyle = ATT.GRIS;
       const ld1 = "Fait à Comé, le ";
       const ld2 = dateAujourdhui;
-      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 40, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 40, "normal", "DM Sans"); return w; })();
+      const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 50, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 50, "normal", "DM Sans"); return w; })();
       let fx = centreTitre - largeurTotale / 2;
-      _font(ctx, 40, "normal", "DM Sans");
+      _font(ctx, 50, "normal", "DM Sans");
       ctx.fillText(ld1, fx, SIG_Y + 20);
       fx += _mw(ctx, ld1);
-      _font(ctx, 40, "bold", "DM Sans");
+      _font(ctx, 50, "bold", "DM Sans");
       ctx.fillText(ld2, fx, SIG_Y + 20);
     }
 
-    _font(ctx, 50, "normal");
+    _font(ctx, 60, "normal");
     ctx.fillStyle = ATT.TEXTE;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
@@ -451,11 +451,11 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.restore();
 
     if (nom) {
-      _font(ctx, 44, "bold");
+      _font(ctx, 54, "bold");
       ctx.fillStyle = ATT.MARINE;
       ctx.fillText(nom, centreTitre - _mw(ctx, nom) / 2, SIG_Y + 505);
     }
-    _font(ctx, 30, "normal", "DM Sans");
+    _font(ctx, 40, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
     const titreY = nom ? SIG_Y + 546 : SIG_Y + 515;
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, titreY);
