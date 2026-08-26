@@ -1,54 +1,67 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : cachet recadré + police du corps agrandie (impression)
+Mise à jour : cache du service worker forcé à se renouveler
 =====================================================================
 
-Ce zip contient l'INTÉGRALITÉ du projet, basé sur ta dernière version
-en ligne, avec deux changements en plus.
+Ce zip contient l'INTÉGRALITÉ du projet, avec un correctif important
+en plus des deux précédents (cachet recadré + police agrandie).
 
 ---------------------------------------------------------------------
-1. NOUVEAU DEPUIS TA DERNIÈRE VERSION EN LIGNE
+1. IMPORTANT — POURQUOI TON DERNIER TEST NE MONTRAIT PAS LE BON RÉSULTAT
 ---------------------------------------------------------------------
-  ✅ Cachet du PDG bien plus grand et net : le fichier
-     icons/signature-pdg.png a une grosse marge transparente autour
-     du cachet réel. Au lieu de juste agrandir toute l'image (ce qui
-     agrandit surtout du vide), le code recadre maintenant sur la
-     zone utile avant d'agrandir — le cachet est visuellement ~1.6x
-     plus grand qu'avec un simple agrandissement, sans toucher le
-     titre ni la ligne pointillée.
+  Le site a un "service worker" (sw.js) qui met les images du dossier
+  icons/ en cache de façon très agressive ("cache-first" : une fois
+  chargée une fois par ton navigateur, une image n'est plus jamais
+  re-vérifiée auprès du serveur). Son numéro de version était censé
+  être incrémenté à chaque déploiement (c'est écrit en commentaire
+  dans le fichier lui-même) — mais ça n'avait jamais été fait depuis
+  le début du projet. Résultat : ton navigateur pouvait continuer à
+  afficher d'anciennes versions mises en cache, même après un nouveau
+  déploiement — ce qui explique très probablement le cachet mal
+  positionné que tu as vu sur ton dernier test.
 
-  ✅ Police du texte augmentée dans toute l'attestation (intro,
-     description, dates, phrases de clôture, ruban, bloc signatures,
-     pied de page) pour une meilleure lisibilité à l'impression.
-     Testé avec un texte volontairement très long (15 missions de
-     stage sur 3 lignes) : toujours aucun chevauchement.
+  ✅ Corrigé : le numéro de version du service worker a été
+     incrémenté. Ça force l'effacement de TOUT l'ancien cache au
+     prochain chargement de la page, pour tout le monde.
 
-  Un seul fichier a changé : js/attestation_generator.js
-  → Aucun fichier GAS n'a changé, pas besoin de retoucher l'éditeur
-    Apps Script pour ce lot-ci.
+  Après avoir déployé ce zip, si jamais tu vois encore l'ancien
+  rendu : fais un rechargement forcé de la page (Ctrl+Maj+R sur
+  Windows/Linux, Cmd+Maj+R sur Mac) une seule fois.
 
 ---------------------------------------------------------------------
-2. DÉPLOIEMENT GITHUB / VERCEL (le site)
+2. RAPPEL — CE QUI ÉTAIT DÉJÀ DANS LE ZIP PRÉCÉDENT
 ---------------------------------------------------------------------
-  1. Remplace js/attestation_generator.js (ou tout le dépôt) par le
-     contenu de ce zip.
+  - Cachet du PDG recadré et agrandi (visuellement ~1.6x plus grand
+    qu'un simple agrandissement).
+  - Police du texte de l'attestation augmentée pour l'impression.
+
+  Fichiers changés dans ce lot : sw.js (nouveau correctif) +
+  js/attestation_generator.js (lot précédent). Aucun fichier GAS,
+  pas besoin de retoucher l'éditeur Apps Script.
+
+---------------------------------------------------------------------
+3. DÉPLOIEMENT GITHUB / VERCEL (le site)
+---------------------------------------------------------------------
+  1. Remplace tout le contenu de la branche main par celui de ce zip
+     (au minimum sw.js et js/attestation_generator.js).
   2. Vercel redéploie automatiquement après le push.
+  3. Recharge la page une fois avec Ctrl+Maj+R avant de retester.
 
 ---------------------------------------------------------------------
-3. À VÉRIFIER APRÈS DÉPLOIEMENT
+4. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
-  - Régénère l'attestation de JOANICE ALOTCHO (ou une autre) : le
-    cachet rouge de M. ATO Blaise doit être nettement plus grand et
-    net, et tout le texte doit être plus facile à lire.
+  - Régénère l'attestation de JOANICE ALOTCHO : le cachet de M. ATO
+    Blaise doit apparaître grand, net, et bien positionné à côté de
+    son nom (pas près du QR code).
 
 ---------------------------------------------------------------------
-4. RAPPEL — CE QUI EST DÉJÀ EN PLACE
+5. RAPPEL — CE QUI EST DÉJÀ EN PLACE
 ---------------------------------------------------------------------
   Panel "Régularisations" admin, matching téléphone souple (+229,
   00229, préfixe 01) avec message "dossier reconnu mais téléphone
-  incorrect" harmonisé partout (carte ET attestation de stage),
-  numéros de téléphone en texte dans les Sheets, PDF non vides,
-  attestation de fin de stage pour les candidats Postuler, attestation
-  à deux signatures (Formateur à gauche, PDG à droite avec cachet
-  officiel), missions de stage sélectionnables côté admin : tout est
-  déjà inclus dans ce zip complet.
+  incorrect" harmonisé partout, numéros de téléphone en texte dans
+  les Sheets, PDF non vides, attestation de fin de stage pour les
+  candidats Postuler, attestation à deux signatures (Formateur à
+  gauche, PDG à droite avec cachet officiel), missions de stage
+  sélectionnables côté admin : tout est déjà inclus dans ce zip
+  complet.
