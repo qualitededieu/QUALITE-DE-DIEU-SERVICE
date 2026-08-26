@@ -96,8 +96,11 @@ function _fLigne(ctx, icone, x, y, label, valeur, tailleLabel = 22, tailleValeur
 // token     : token carte HMAC (QR de vérification)
 async function genererFicheApprenant(apprenant, token) {
   const LOGO_URL = FICHE_ENTREPRISE.LOGO_URL;
-  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png"; // même fichier que sur l'attestation
-  const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png";
+  // "?v=2" : cache navigateur "immutable" sur icons/ (voir vercel.json) —
+  // sans ça, une ancienne version déjà chargée par un visiteur resterait
+  // affichée indéfiniment malgré un nouveau déploiement.
+  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=2"; // même fichier que sur l'attestation
+  const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png?v=2";
   const lienVerif = token
     ? `https://${FICHE_ENTREPRISE.SITE}/verifier.html?t=${encodeURIComponent(token)}`
     : `https://${FICHE_ENTREPRISE.SITE}/verifier.html`;

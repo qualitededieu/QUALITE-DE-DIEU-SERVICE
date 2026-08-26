@@ -130,6 +130,39 @@ function _loadImg(src) {
     img.src = src;
   });
 }
+
+// Zone d'encre réelle d'une image (rectangle englobant des pixels non
+// transparents), calculée à la volée sur l'image effectivement chargée
+// — jamais des coordonnées codées en dur pour un fichier précis, qui
+// deviendraient fausses (recadrage au mauvais endroit) si ce fichier
+// est un jour remplacé par une image de dimensions différentes, ou si
+// une ancienne version reste sercvie depuis un cache navigateur/CDN.
+// Retombe sur l'image entière si le calcul échoue (canvas "tainted"
+// par exemple) ou si l'image est entièrement transparente.
+function _bboxEncre(img, seuilAlpha = 10) {
+  try {
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const cx = c.getContext("2d");
+    cx.drawImage(img, 0, 0);
+    const data = cx.getImageData(0, 0, img.width, img.height).data;
+    let minX = img.width, minY = img.height, maxX = -1, maxY = -1;
+    for (let y = 0; y < img.height; y++) {
+      for (let x = 0; x < img.width; x++) {
+        if (data[(y * img.width + x) * 4 + 3] > seuilAlpha) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < minX || maxY < minY) throw new Error("image transparente");
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  } catch (e) {
+    return { x: 0, y: 0, w: img.width, h: img.height };
+  }
+}
 function _wrapCentre(ctx, txt, cy, maxW, lh) {
   const words = String(txt).split(" ");
   let line = "", lignes = [];
@@ -204,13 +237,21 @@ async function genererAttestationCanvas(apprenant, token) {
     : `https://${ATT_ENTREPRISE.SITE}/verifier.html`;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=2&data=" + encodeURIComponent(lienVerif);
 
+  // "?v=2" sur les icônes : vercel.json met icons/ en cache navigateur
+  // "immutable" (jamais revérifié pendant 1 an) — sans ce paramètre,
+  // un visiteur ayant déjà chargé une ancienne version d'un de ces
+  // fichiers continuerait à la voir indéfiniment, même après un
+  // nouveau déploiement. À incrémenter si ces fichiers sont remplacés
+  // à l'avenir (icons/signature-formateur.png, signature-pdg.png,
+  // cachet.png uniquement — ne pas mettre .png?v= sur d'autres icônes
+  // qui n'ont pas cette contrainte).
   const [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
     _loadImg(ATT_ENTREPRISE.LOGO_URL),
     _loadImg(QR_URL),
     _loadImg(apprenant.photoUrl),
-    _loadImg(typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png"),
-    _loadImg(typeof SIGNATURE_PDG_DATA       !== "undefined" ? SIGNATURE_PDG_DATA       : "icons/signature-pdg.png"),
-    _loadImg(typeof CACHET_DATA              !== "undefined" ? CACHET_DATA              : "icons/cachet.png"), // cachet officiel, partagé par les deux signatures
+    _loadImg(typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png?v=2"),
+    _loadImg(typeof SIGNATURE_PDG_DATA       !== "undefined" ? SIGNATURE_PDG_DATA       : "icons/signature-pdg.png?v=2"),
+    _loadImg(typeof CACHET_DATA              !== "undefined" ? CACHET_DATA              : "icons/cachet.png?v=2"), // cachet officiel, partagé par les deux signatures
   ]);
 
   // ── FOND ──
@@ -484,19 +525,37 @@ async function genererAttestationCanvas(apprenant, token) {
       // fichier (tampon + paraphe scannés ensemble) : on dessine cette
       // image unique, et on NE redessine PAS le cachet séparé en-dessous
       // (il y serait en double, l'un par-dessus l'autre).
-      // Le fichier source (icons/signature-pdg.png, 535x466) a une
-      // grosse marge transparente autour du cachet+signature réels
-      // (encre utile : environ 333x207, centrée avec ~90px de vide à
-      // gauche et ~155px en haut) — on recadre sur cette zone d'encre
-      // avant d'agrandir, sinon on agrandit surtout du vide. Résultat :
-      // un cachet visuellement ~1.6x plus grand qu'un simple
-      // agrandissement de l'image entière, sans dépasser l'espace
-      // disponible avant la ligne pointillée (SIG_Y + 450).
+      // Le fichier source a en général une marge transparente autour du
+      // cachet+signature réels — on recadre sur la zone d'encre (calculée
+      // dynamiquement par _bboxEncre sur l'image effectivement chargée,
+      // jamais des coordonnées fixes) avant d'agrandir, sinon on agrandit
+      // surtout du vide.
+      //
+      // La boîte cible (575×335 max) est ajustée pour respecter DEUX
+      // contraintes simultanément, quelle que soit la forme réelle de
+      // l'image chargée :
+      //   - ne jamais chevaucher le titre au-dessus (baseline à SIG_Y+80,
+      //     empattement visuel jusqu'à environ SIG_Y+90) → l'image démarre
+      //     à SIG_Y+105, marge de 15px ;
+      //   - ne jamais dépasser la ligne pointillée en dessous (SIG_Y+450)
+      //     → hauteur plafonnée à 335px, donc fin d'image à SIG_Y+440 au
+      //     pire des cas, marge de 10px.
+      // PIÈGE DÉJÀ RENCONTRÉ : une version précédente démarrait à
+      // SIG_Y+80, exactement la même position que le titre — collision
+      // directe, rendu illisible. Ne jamais faire coïncider ces deux Y.
       if (signatureImg) {
-        const SRC_X = 91, SRC_Y = 155, SRC_W = 333, SRC_H = 207; // zone d'encre (voir icons/signature-pdg.png)
-        const largeur = 575;
-        const hauteur = Math.round(largeur * (SRC_H / SRC_W));
-        ctx.drawImage(signatureImg, SRC_X, SRC_Y, SRC_W, SRC_H, ancrageX + 220, SIG_Y + 80, largeur, hauteur);
+        const b = _bboxEncre(signatureImg);
+        const ratio = b.h / b.w;
+        const CACHET_SIG_START_Y = SIG_Y + 105;
+        const CACHET_SIG_MAX_W = 575;
+        const CACHET_SIG_MAX_H = 335;
+        let largeur = CACHET_SIG_MAX_W;
+        let hauteur = Math.round(largeur * ratio);
+        if (hauteur > CACHET_SIG_MAX_H) {
+          hauteur = CACHET_SIG_MAX_H;
+          largeur = Math.round(hauteur / ratio);
+        }
+        ctx.drawImage(signatureImg, b.x, b.y, b.w, b.h, ancrageX + 220, CACHET_SIG_START_Y, largeur, hauteur);
       }
     } else {
       if (signatureImg) {

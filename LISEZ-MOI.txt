@@ -1,67 +1,63 @@
 =====================================================================
 LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
-Mise à jour : cache du service worker forcé à se renouveler
+Mise à jour : vraie cause du cachet mal placé, corrigée à la racine
 =====================================================================
 
-Ce zip contient l'INTÉGRALITÉ du projet, avec un correctif important
-en plus des deux précédents (cachet recadré + police agrandie).
+Ce zip contient l'INTÉGRALITÉ du projet.
 
 ---------------------------------------------------------------------
-1. IMPORTANT — POURQUOI TON DERNIER TEST NE MONTRAIT PAS LE BON RÉSULTAT
+1. LA VRAIE CAUSE DU PROBLÈME (enfin identifiée avec certitude)
 ---------------------------------------------------------------------
-  Le site a un "service worker" (sw.js) qui met les images du dossier
-  icons/ en cache de façon très agressive ("cache-first" : une fois
-  chargée une fois par ton navigateur, une image n'est plus jamais
-  re-vérifiée auprès du serveur). Son numéro de version était censé
-  être incrémenté à chaque déploiement (c'est écrit en commentaire
-  dans le fichier lui-même) — mais ça n'avait jamais été fait depuis
-  le début du projet. Résultat : ton navigateur pouvait continuer à
-  afficher d'anciennes versions mises en cache, même après un nouveau
-  déploiement — ce qui explique très probablement le cachet mal
-  positionné que tu as vu sur ton dernier test.
+  vercel.json met le dossier icons/ en cache navigateur "immutable" :
+  une fois qu'un visiteur a chargé une image de ce dossier, son
+  navigateur ne revérifie plus JAMAIS le serveur pendant 1 an, même
+  après un nouveau déploiement. Le bump du service worker (zip
+  précédent) ne pouvait rien y faire : c'est un cache différent, géré
+  directement par le navigateur.
 
-  ✅ Corrigé : le numéro de version du service worker a été
-     incrémenté. Ça force l'effacement de TOUT l'ancien cache au
-     prochain chargement de la page, pour tout le monde.
+  Si ton navigateur avait déjà mis en cache une ANCIENNE version de
+  icons/signature-pdg.png (dimensions différentes de la version
+  actuelle), le recadrage du zip précédent — qui utilisait des
+  coordonnées pixel fixes calculées pour LA version actuelle — allait
+  forcément recadrer n'importe où sur cette autre image en cache. D'où
+  le cachet mal placé, près du QR code.
 
-  Après avoir déployé ce zip, si jamais tu vois encore l'ancien
-  rendu : fais un rechargement forcé de la page (Ctrl+Maj+R sur
-  Windows/Linux, Cmd+Maj+R sur Mac) une seule fois.
-
----------------------------------------------------------------------
-2. RAPPEL — CE QUI ÉTAIT DÉJÀ DANS LE ZIP PRÉCÉDENT
----------------------------------------------------------------------
-  - Cachet du PDG recadré et agrandi (visuellement ~1.6x plus grand
-    qu'un simple agrandissement).
-  - Police du texte de l'attestation augmentée pour l'impression.
-
-  Fichiers changés dans ce lot : sw.js (nouveau correctif) +
-  js/attestation_generator.js (lot précédent). Aucun fichier GAS,
-  pas besoin de retoucher l'éditeur Apps Script.
+  ✅ Corrigé à la racine, deux choses :
+     1. Le recadrage du cachet ne dépend plus de coordonnées fixes :
+        il est maintenant calculé automatiquement sur l'image
+        réellement chargée dans le navigateur, quelle qu'elle soit.
+     2. "?v=2" ajouté aux 3 icônes concernées (signature-formateur,
+        signature-pdg, cachet) : ça force un téléchargement frais
+        même avec le cache "immutable" en place. Si un jour tu
+        remplaces une de ces images, il faudra juste passer ce numéro
+        à "?v=3" dans le code pour que tout le monde voie la nouvelle
+        version immédiatement (sinon, même règle qu'avant : ça reste
+        bloqué en cache jusqu'à 1 an).
 
 ---------------------------------------------------------------------
-3. DÉPLOIEMENT GITHUB / VERCEL (le site)
+2. DÉPLOIEMENT GITHUB / VERCEL (le site)
 ---------------------------------------------------------------------
-  1. Remplace tout le contenu de la branche main par celui de ce zip
-     (au minimum sw.js et js/attestation_generator.js).
+  1. Remplace tout le contenu de la branche main par celui de ce zip.
   2. Vercel redéploie automatiquement après le push.
-  3. Recharge la page une fois avec Ctrl+Maj+R avant de retester.
+  3. Recharge la page une fois avec Ctrl+Maj+R avant de retester (par
+     précaution, même si ça ne devrait plus être nécessaire avec le
+     "?v=2").
 
 ---------------------------------------------------------------------
-4. À VÉRIFIER APRÈS DÉPLOIEMENT
+3. À VÉRIFIER APRÈS DÉPLOIEMENT
 ---------------------------------------------------------------------
   - Régénère l'attestation de JOANICE ALOTCHO : le cachet de M. ATO
-    Blaise doit apparaître grand, net, et bien positionné à côté de
-    son nom (pas près du QR code).
+    Blaise doit apparaître grand, net, bien positionné à côté de son
+    nom (à droite, jamais près du QR code au centre).
 
 ---------------------------------------------------------------------
-5. RAPPEL — CE QUI EST DÉJÀ EN PLACE
+4. RAPPEL — CE QUI EST DÉJÀ EN PLACE
 ---------------------------------------------------------------------
   Panel "Régularisations" admin, matching téléphone souple (+229,
   00229, préfixe 01) avec message "dossier reconnu mais téléphone
   incorrect" harmonisé partout, numéros de téléphone en texte dans
   les Sheets, PDF non vides, attestation de fin de stage pour les
   candidats Postuler, attestation à deux signatures (Formateur à
-  gauche, PDG à droite avec cachet officiel), missions de stage
-  sélectionnables côté admin : tout est déjà inclus dans ce zip
-  complet.
+  gauche, PDG à droite avec cachet officiel), police du texte agrandie
+  pour l'impression, missions de stage sélectionnables côté admin :
+  tout est déjà inclus dans ce zip complet.
