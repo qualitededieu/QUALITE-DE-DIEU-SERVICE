@@ -690,6 +690,14 @@
               </div>
             </div>
             <div class="form-group">
+              <label for="sexe">Sexe <span class="req">*</span></label>
+              <select id="sexe" class="form-control" required>
+                <option value="" disabled selected>Sélectionnez...</option>
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label for="telephone">Téléphone <span class="req">*</span></label>
               <input type="tel" id="telephone" class="form-control" placeholder="+229 01 XX XX XX XX" required autocomplete="tel" />
             </div>
@@ -1289,9 +1297,11 @@
     ['prenom','nom','telephone'].forEach(id => {
       document.getElementById(id).addEventListener('input', checkStep1);
     });
+    document.getElementById('sexe').addEventListener('change', checkStep1);
     function checkStep1() {
       const ok = document.getElementById('prenom').value.trim() &&
                  document.getElementById('nom').value.trim() &&
+                 document.getElementById('sexe').value &&
                  document.getElementById('telephone').value.trim();
       updateStep(1, ok ? 'done' : 'active');
       if (ok) updateStep(2, 'active');
@@ -1389,7 +1399,7 @@
     function validateInscription() {
       let valid = true;
 
-      ['prenom','nom','telephone','typePiece'].forEach(id => {
+      ['prenom','nom','sexe','telephone','typePiece'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.remove('error');
@@ -1446,6 +1456,7 @@
         action:         'inscription',
         prenom:         document.getElementById('prenom').value.trim(),
         nom:            document.getElementById('nom').value.trim(),
+        sexe:           document.getElementById('sexe').value,
         telephone:      document.getElementById('telephone').value.trim(),
         email:          document.getElementById('email').value.trim(),
         formations,
