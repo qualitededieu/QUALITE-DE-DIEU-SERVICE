@@ -310,7 +310,7 @@ function _mapperApprenantInscription(row) {
     id:           String(row[0]  || ''),
     prenom:       String(row[2]  || ''),
     nom:          String(row[3]  || ''),
-    sexe:         '',
+    sexe:         String(row[22] || ''),
     dateNaissance:'',
     telephone:    String(row[4]  || ''),
     email:        String(row[5]  || ''),

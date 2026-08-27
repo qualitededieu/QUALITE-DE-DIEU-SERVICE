@@ -96,7 +96,8 @@ const ENTETES_INSCRIPTION = [
   'Tranche 3 — 25% (F)',
   '1er versement attendu (F)',
   'Statut paiement',               // En attente | Reçu | Vérifié
-  'Rappel J+1 envoyé'
+  'Rappel J+1 envoyé',
+  'Sexe'                           // ajouté EN FIN : préserve les index des colonnes existantes
 ];
 
 const ENTETES_RENSEIGNEMENT = [
@@ -247,6 +248,7 @@ function traiterInscription(data) {
     date:            new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }),
     prenom:          nettoyer(data.prenom),
     nom:             nettoyer(data.nom),
+    sexe:            nettoyer(data.sexe || ''),
     telephone:       nettoyer(data.telephone),
     email:           nettoyer(data.email || ''),
     formations,
@@ -499,7 +501,8 @@ function enregistrerInscription(inscription, montants, formations) {
     montants.tranche3,
     montants.premierVirement,
     inscription.statutPaiement,
-    inscription.rappelEnvoye
+    inscription.rappelEnvoye,
+    inscription.sexe
   ];
 
   // Feuille maître (toutes les inscriptions) — colonne 5 = Téléphone
