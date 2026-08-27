@@ -430,7 +430,12 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillText(intro3, ix, posY);
   posY += 90;
 
-  const civilite   = apprenant.sexe === "F" ? "Mme. " : (apprenant.sexe === "M" ? "M. " : "");
+  // .trim().toUpperCase() : tolère un espace superflu ou une casse
+  // différente dans la cellule "Sexe" du tableur (ex. "f" au lieu de
+  // "F"), qui ferait sinon échouer silencieusement la comparaison
+  // stricte et laisserait la civilité vide sans aucune erreur visible.
+  const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
+  const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
   const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
   const BANNER_CX  = 1512.5;
   _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
