@@ -161,7 +161,8 @@ async function genererFicheApprenant(apprenant, token) {
   else { ctx.fillStyle = "#E5E0D5"; ctx.fillRect(PH_X, PH_Y, PH_W, PH_H); }
   ctx.restore();
 
-  const civ = apprenant.sexe === "F" ? "Mme" : (apprenant.sexe === "M" ? "M." : "");
+  const sexeNorm = String(apprenant.sexe || "").trim().toUpperCase();
+  const civ = sexeNorm === "F" ? "Mme" : (sexeNorm === "M" ? "M." : "");
   const nomComplet = (civ ? civ + " " : "") + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
   _fFont(ctx, 38, "700"); ctx.fillStyle = FICHE.MARINE;
   _fWrap(ctx, nomComplet, M, HEADER_H + 90, PH_X - M - 30, 46);
@@ -188,7 +189,7 @@ async function genererFicheApprenant(apprenant, token) {
   _fLigne(ctx, icones.fin, colGX, yG, "FIN PRÉVUE", fmtDate(apprenant.dateFin)); yG += pas;
 
   _fLigne(ctx, icones.naissance, colDX, yD, "DATE DE NAISSANCE", apprenant.dateNaissance ? fmtDate(apprenant.dateNaissance) : "—"); yD += pas;
-  _fLigne(ctx, icones.sexe, colDX, yD, "SEXE", apprenant.sexe === "F" ? "Féminin" : (apprenant.sexe === "M" ? "Masculin" : "—")); yD += pas;
+  _fLigne(ctx, icones.sexe, colDX, yD, "SEXE", sexeNorm === "F" ? "Féminin" : (sexeNorm === "M" ? "Masculin" : "—")); yD += pas;
   _fLigne(ctx, icones.centre, colDX, yD, "CENTRE DE FORMATION", "Comé, Bénin"); yD += pas;
   _fLigne(ctx, null, colDX, yD, "VALIDITÉ DE LA CARTE", "Jusqu'au " + (apprenant.dateFin ? fmtDate(apprenant.dateFin) : "fin de formation")); yD += pas;
 
