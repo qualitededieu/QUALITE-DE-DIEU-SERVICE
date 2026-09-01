@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LQD Admin — Espace de gestion</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <!-- Panneau d'administration interne : ne doit jamais apparaître dans les résultats de recherche. -->
   <link rel="icon" href="/icons/logoqds.jpg" type="image/jpeg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -140,6 +142,8 @@
     .auth-divider::after  { right: 0; }
     .auth-back { background: none; border: none; color: var(--text-3); font-size: 13px; margin-top: 16px; width: 100%; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; transition: color .2s; }
     .auth-back:hover { color: var(--text-2); }
+    .auth-forgot-link { background: none; border: none; color: var(--teal-l); font-size: 13px; margin-top: 14px; width: 100%; text-align: center; cursor: pointer; transition: color .2s; }
+    .auth-forgot-link:hover { color: var(--text-1); text-decoration: underline; }
     .auth-error { background: var(--red-dim); border: 1px solid rgba(240,82,82,0.25); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; display: none; }
     .auth-error.show { display: block; }
     .auth-info { background: var(--teal-dim); border: 1px solid rgba(13,122,138,0.25); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--teal-l); margin-bottom: 16px; display: none; }
@@ -366,6 +370,9 @@
         <button class="auth-btn" id="btn-login" onclick="doLogin()">
           <span class="iconify" data-icon="tabler:arrow-right"></span> Continuer
         </button>
+        <button class="auth-forgot-link" onclick="showForgotEmailStep()">
+          Mot de passe oublié ?
+        </button>
       </div>
       <!-- Étape 2 : OTP -->
       <div class="auth-step" id="step-otp">
@@ -388,6 +395,40 @@
           <span class="iconify" data-icon="tabler:shield-check"></span> Vérifier le code
         </button>
         <button class="auth-back" onclick="goBackToLogin()">
+          <span class="iconify" data-icon="tabler:arrow-left"></span> Modifier l'email
+        </button>
+      </div>
+      <!-- Mot de passe oublié — étape 1 : saisie de l'email -->
+      <div class="auth-step" id="step-forgot-email" style="display:none;">
+        <div class="auth-error" id="err-forgot-email"></div>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;text-align:center;line-height:1.7;">
+          Saisissez votre email admin. Si ce compte est autorisé, un code de confirmation vous sera envoyé.
+        </p>
+        <label class="auth-label" for="forgot-email">Adresse email</label>
+        <input type="email" id="forgot-email" class="auth-input" placeholder="admin@lqdservice.bj" autocomplete="email" />
+        <button class="auth-btn" id="btn-forgot-request" onclick="doForgotPasswordRequest()">
+          <span class="iconify" data-icon="tabler:mail"></span> Envoyer le code
+        </button>
+        <button class="auth-back" onclick="goBackToLogin()">
+          <span class="iconify" data-icon="tabler:arrow-left"></span> Retour à la connexion
+        </button>
+      </div>
+      <!-- Mot de passe oublié — étape 2 : code + nouveau mot de passe -->
+      <div class="auth-step" id="step-forgot-reset" style="display:none;">
+        <div class="auth-info show" id="forgot-reset-info">
+          Code envoyé à <strong id="forgot-email-label"></strong>. Vérifiez vos emails.
+        </div>
+        <div class="auth-error" id="err-forgot-reset"></div>
+        <label class="auth-label" for="forgot-otp">Code reçu par email</label>
+        <input type="text" id="forgot-otp" class="auth-input" placeholder="123456" inputmode="numeric" maxlength="6" />
+        <label class="auth-label" for="forgot-new-password">Nouveau mot de passe</label>
+        <input type="password" id="forgot-new-password" class="auth-input" placeholder="8 caractères minimum" autocomplete="new-password" />
+        <label class="auth-label" for="forgot-new-password-confirm">Confirmer le nouveau mot de passe</label>
+        <input type="password" id="forgot-new-password-confirm" class="auth-input" placeholder="8 caractères minimum" autocomplete="new-password" />
+        <button class="auth-btn" id="btn-forgot-reset" onclick="doForgotPasswordReset()">
+          <span class="iconify" data-icon="tabler:shield-check"></span> Réinitialiser le mot de passe
+        </button>
+        <button class="auth-back" onclick="showForgotEmailStep()">
           <span class="iconify" data-icon="tabler:arrow-left"></span> Modifier l'email
         </button>
       </div>
@@ -489,6 +530,11 @@
       </button>
       <button class="nav-item" onclick="naviguer('candidatures', 'stage')">
         <span class="iconify" data-icon="tabler:school"></span> Stage
+      </button>
+
+      <div class="nav-section-label">Contenu du site</div>
+      <button class="nav-item" onclick="naviguer('actualites')">
+        <span class="iconify" data-icon="tabler:speakerphone"></span> Actualités &amp; Bandeau
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -671,6 +717,47 @@
       </div>
     </div>
 
+    <div class="page" id="page-actualites">
+      <!-- BANDEAU D'INFORMATION -->
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title">Bandeau d'information (haut de page)</span>
+        </div>
+        <div style="padding:20px;">
+          <label class="auth-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:16px;">
+            <input type="checkbox" id="bandeau-actif" style="width:18px;height:18px;cursor:pointer;" />
+            Bandeau actif (visible sur le site)
+          </label>
+          <label class="auth-label" for="bandeau-texte-input">Texte du bandeau</label>
+          <input type="text" id="bandeau-texte-input" class="auth-input" placeholder="Ex. Inscriptions ouvertes pour la session de septembre !" maxlength="200" />
+          <button class="btn btn-ghost btn-sm" style="margin-top:14px;" onclick="enregistrerBandeau()" id="btn-bandeau-save">
+            <span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer
+          </button>
+          <span id="bandeau-save-status" style="font-size:12px;color:var(--text-3);margin-left:10px;"></span>
+        </div>
+      </div>
+
+      <!-- ANNONCES / ACTUALITÉS -->
+      <div class="filters-bar">
+        <span style="font-size:13px;color:var(--text-3);flex:1;">Articles affichés dans la section « Actualités » du site public.</span>
+        <button class="btn btn-primary btn-sm" onclick="ouvrirModalAnnonce()">
+          <span class="iconify" data-icon="tabler:plus"></span> Nouvelle annonce
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="chargerActualitesAdmin()">
+          <span class="iconify" data-icon="tabler:refresh"></span>
+        </button>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Annonces</span>
+          <span id="annonces-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <div id="annonces-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -726,6 +813,48 @@
     </div>
     <div class="modal-body" id="cand-modal-body"><div class="loading-overlay"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="cand-modal-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL ANNONCE -->
+<div class="modal-overlay" id="modal-annonce">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="annonce-modal-title">Nouvelle annonce</h3>
+      <button class="modal-close" onclick="fermerModal('modal-annonce')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="annonce-id" value="" />
+      <label class="auth-label" for="annonce-titre">Titre</label>
+      <input type="text" id="annonce-titre" class="auth-input" placeholder="Ex. Inscriptions ouvertes pour la session de septembre" maxlength="150" />
+
+      <label class="auth-label" for="annonce-categorie" style="margin-top:14px;display:block;">Catégorie</label>
+      <select id="annonce-categorie" class="filter-select" style="width:100%;">
+        <option value="Général">Général</option>
+        <option value="Informatique & Bureautique">Informatique & Bureautique</option>
+        <option value="Graphisme & PAO">Graphisme & PAO</option>
+        <option value="Sérigraphie">Sérigraphie</option>
+        <option value="Création de sites web">Création de sites web</option>
+      </select>
+
+      <label class="auth-label" for="annonce-contenu" style="margin-top:14px;display:block;">Contenu</label>
+      <textarea id="annonce-contenu" class="auth-input" rows="6" style="resize:vertical;font-family:inherit;" placeholder="Texte complet de l'annonce..."></textarea>
+
+      <label class="auth-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px;">
+        <input type="checkbox" id="annonce-publier" style="width:18px;height:18px;cursor:pointer;" />
+        Publier immédiatement (visible sur le site dès l'enregistrement)
+      </label>
+
+      <div class="auth-error" id="err-annonce"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-annonce')">Annuler</button>
+      <button class="btn btn-primary btn-sm" onclick="enregistrerAnnonce()" id="btn-annonce-save">
+        <span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer
+      </button>
+    </div>
   </div>
 </div>
 
@@ -856,12 +985,80 @@ async function doVerifyOtp() {
 }
 
 function goBackToLogin() {
-  document.getElementById('step-otp').classList.remove('active');
-  document.getElementById('step-otp').style.display = 'none';
+  document.querySelectorAll('.auth-step').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
   const cred = document.getElementById('step-credentials');
   cred.style.display = 'block'; cred.classList.add('active');
   document.getElementById('auth-password').value = '';
   state.pendingLogin = null;
+}
+
+// ── Mot de passe oublié — navigation entre les deux étapes dédiées,
+// indépendante de switchAuthTab() (qui ne gère que les deux onglets
+// du haut, Identifiant/Google — "tab-forgot-email" n'existe pas) ──
+function showForgotEmailStep() {
+  document.querySelectorAll('.auth-step').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+  const el = document.getElementById('step-forgot-email');
+  el.style.display = 'block'; el.classList.add('active');
+  document.getElementById('err-forgot-email').classList.remove('show');
+  setTimeout(() => document.getElementById('forgot-email').focus(), 100);
+}
+
+async function doForgotPasswordRequest() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const errEl = document.getElementById('err-forgot-email');
+  const btn   = document.getElementById('btn-forgot-request');
+  errEl.classList.remove('show');
+  if (!email) { errEl.textContent = 'Adresse email requise.'; errEl.classList.add('show'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Envoi...';
+  try {
+    const result = await apiCall('admin_forgot_password_request', { email });
+    // "otp_sent" est renvoyé même si l'email n'est pas autorisé (voir
+    // commentaire dans adminForgotPasswordRequest côté GAS) : ne jamais
+    // révéler côté client quels emails font partie des admins.
+    if (result.status === 'otp_sent') {
+      state.pendingForgotEmail = email;
+      document.getElementById('forgot-email-label').textContent = email;
+      document.querySelectorAll('.auth-step').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+      const el = document.getElementById('step-forgot-reset');
+      el.style.display = 'block'; el.classList.add('active');
+      setTimeout(() => document.getElementById('forgot-otp').focus(), 100);
+    } else {
+      errEl.textContent = result.message || 'Erreur. Réessayez.'; errEl.classList.add('show');
+    }
+  } catch (e) { errEl.textContent = 'Erreur réseau. Réessayez.'; errEl.classList.add('show'); }
+  finally { btn.disabled = false; btn.innerHTML = '<span class="iconify" data-icon="tabler:mail"></span> Envoyer le code'; }
+}
+
+async function doForgotPasswordReset() {
+  const otp             = document.getElementById('forgot-otp').value.trim();
+  const nouveauMdp       = document.getElementById('forgot-new-password').value;
+  const nouveauMdpConfirm = document.getElementById('forgot-new-password-confirm').value;
+  const errEl            = document.getElementById('err-forgot-reset');
+  const btn              = document.getElementById('btn-forgot-reset');
+  errEl.classList.remove('show');
+
+  if (otp.length !== 6) { errEl.textContent = 'Saisissez le code à 6 chiffres.'; errEl.classList.add('show'); return; }
+  if (nouveauMdp.length < 8) { errEl.textContent = 'Le mot de passe doit contenir au moins 8 caractères.'; errEl.classList.add('show'); return; }
+  if (nouveauMdp !== nouveauMdpConfirm) { errEl.textContent = 'Les deux mots de passe ne correspondent pas.'; errEl.classList.add('show'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Validation...';
+  try {
+    const result = await apiCall('admin_forgot_password_reset', {
+      email: state.pendingForgotEmail, otp, nouveauMotDePasse: nouveauMdp
+    });
+    if (result.status === 'success') {
+      if (window.showToast) showToast('Mot de passe mis à jour. Connectez-vous.', 'success');
+      goBackToLogin();
+      document.getElementById('forgot-otp').value = '';
+      document.getElementById('forgot-new-password').value = '';
+      document.getElementById('forgot-new-password-confirm').value = '';
+    } else {
+      errEl.textContent = result.message || 'Erreur. Réessayez.'; errEl.classList.add('show');
+    }
+  } catch (e) { errEl.textContent = 'Erreur réseau. Réessayez.'; errEl.classList.add('show'); }
+  finally { btn.disabled = false; btn.innerHTML = '<span class="iconify" data-icon="tabler:shield-check"></span> Réinitialiser le mot de passe'; }
 }
 
 async function handleGoogleCredential(response) {
@@ -911,13 +1108,14 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', regularisations: 'Régularisations', candidatures: 'Candidatures' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', regularisations: 'Régularisations', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
   if (page === 'renseignements')  chargerRenseignements();
   if (page === 'regularisations') chargerRegularisations();
   if (page === 'candidatures')    chargerCandidatures();
+  if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); }
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -1827,6 +2025,183 @@ function abrevierFormation(f) {
 /* ================================================================
    MODAL
 ================================================================ */
+/* ================================================================
+   ACTUALITÉS (annonces publiées sur le site public)
+================================================================ */
+let annoncesCache = [];
+
+async function chargerActualitesAdmin() {
+  const container = document.getElementById('annonces-table-container');
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_annonces_list');
+    annoncesCache = result.annonces || [];
+    document.getElementById('annonces-count').textContent = annoncesCache.length + ' annonce(s)';
+    renderTableauAnnonces(annoncesCache);
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+  }
+}
+
+function badgeAnnonceStatut(statut) {
+  return statut === 'Publié'
+    ? '<span class="badge badge-green">Publié</span>'
+    : '<span class="badge badge-teal">Brouillon</span>';
+}
+
+function renderTableauAnnonces(annonces) {
+  if (!annonces.length) {
+    document.getElementById('annonces-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:speakerphone-off"></span><p>Aucune annonce pour le moment</p></div>';
+    return;
+  }
+  document.getElementById('annonces-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date publication</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${annonces.map(a => `<tr>
+        <td><strong>${a.titre}</strong></td>
+        <td style="font-size:12px;color:var(--text-3);">${a.categorie}</td>
+        <td>${badgeAnnonceStatut(a.statut)}</td>
+        <td style="font-size:12px;color:var(--text-3);">${a.datePublication ? new Date(a.datePublication).toLocaleDateString('fr-FR') : '—'}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" title="Modifier" onclick="ouvrirModalAnnonce('${a.id}')">
+            <span class="iconify" data-icon="tabler:pencil"></span>
+          </button>
+          <button class="btn btn-ghost btn-sm" title="Supprimer" onclick="supprimerAnnonce('${a.id}')">
+            <span class="iconify" data-icon="tabler:trash" style="color:var(--red);"></span>
+          </button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function ouvrirModalAnnonce(id) {
+  document.getElementById('err-annonce').classList.remove('show');
+  if (id) {
+    const a = annoncesCache.find(x => x.id === id);
+    if (!a) return;
+    document.getElementById('annonce-modal-title').textContent = 'Modifier l\'annonce';
+    document.getElementById('annonce-id').value = a.id;
+    document.getElementById('annonce-titre').value = a.titre;
+    document.getElementById('annonce-categorie').value = a.categorie;
+    document.getElementById('annonce-contenu').value = a.contenu;
+    document.getElementById('annonce-publier').checked = a.statut === 'Publié';
+  } else {
+    document.getElementById('annonce-modal-title').textContent = 'Nouvelle annonce';
+    document.getElementById('annonce-id').value = '';
+    document.getElementById('annonce-titre').value = '';
+    document.getElementById('annonce-categorie').value = 'Général';
+    document.getElementById('annonce-contenu').value = '';
+    document.getElementById('annonce-publier').checked = false;
+  }
+  ouvrirModal('modal-annonce');
+}
+
+async function enregistrerAnnonce() {
+  const id       = document.getElementById('annonce-id').value.trim();
+  const titre    = document.getElementById('annonce-titre').value.trim();
+  const categorie= document.getElementById('annonce-categorie').value;
+  const contenu  = document.getElementById('annonce-contenu').value.trim();
+  const publier  = document.getElementById('annonce-publier').checked;
+  const errEl    = document.getElementById('err-annonce');
+  const btn      = document.getElementById('btn-annonce-save');
+
+  errEl.classList.remove('show');
+  if (!titre)   { errEl.textContent = 'Le titre est obligatoire.'; errEl.classList.add('show'); return; }
+  if (!contenu) { errEl.textContent = 'Le contenu est obligatoire.'; errEl.classList.add('show'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Enregistrement...';
+
+  try {
+    const statut = publier ? 'Publié' : 'Brouillon';
+    const action = id ? 'admin_annonce_modifier' : 'admin_annonce_creer';
+    const payload = id ? { id, titre, categorie, contenu, statut } : { titre, categorie, contenu, statut };
+    const result = await apiCall(action, payload);
+
+    if (result.status === 'success') {
+      toast(id ? 'Annonce mise à jour.' : 'Annonce créée.', 'success');
+      fermerModal('modal-annonce');
+      chargerActualitesAdmin();
+    } else {
+      errEl.textContent = result.message || 'Erreur.'; errEl.classList.add('show');
+    }
+  } catch (e) {
+    errEl.textContent = 'Erreur réseau.'; errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer';
+  }
+}
+
+function supprimerAnnonce(id) {
+  const a = annoncesCache.find(x => x.id === id);
+  if (!a) return;
+  confirmer('Supprimer cette annonce ?', `« ${a.titre} » sera définitivement supprimée.`, async () => {
+    try {
+      const result = await apiCall('admin_annonce_supprimer', { id });
+      if (result.status === 'success') {
+        toast('Annonce supprimée.', 'success');
+        chargerActualitesAdmin();
+      } else {
+        toast(result.message || 'Erreur.', 'error');
+      }
+    } catch (e) {
+      toast('Erreur réseau.', 'error');
+    }
+  });
+}
+
+/* ================================================================
+   BANDEAU D'INFORMATION
+================================================================ */
+async function chargerBandeauAdmin() {
+  try {
+    const result = await apiCall('admin_bandeau_get');
+    const bandeau = result.bandeau || { actif: false, texte: '' };
+    document.getElementById('bandeau-actif').checked = !!bandeau.actif;
+    document.getElementById('bandeau-texte-input').value = bandeau.texte || '';
+  } catch (e) {
+    console.warn('Chargement bandeau impossible :', e.message);
+  }
+}
+
+async function enregistrerBandeau() {
+  const actif  = document.getElementById('bandeau-actif').checked;
+  const texte  = document.getElementById('bandeau-texte-input').value.trim();
+  const statusEl = document.getElementById('bandeau-save-status');
+  const btn      = document.getElementById('btn-bandeau-save');
+
+  if (actif && !texte) {
+    statusEl.textContent = 'Un bandeau actif doit avoir un texte.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = '';
+  try {
+    const result = await apiCall('admin_bandeau_set', { actif, texte });
+    if (result.status === 'success') {
+      statusEl.textContent = 'Enregistré.';
+      statusEl.style.color = 'var(--teal-l)';
+      toast('Bandeau mis à jour.', 'success');
+    } else {
+      statusEl.textContent = result.message || 'Erreur.';
+      statusEl.style.color = 'var(--red)';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Erreur réseau.';
+    statusEl.style.color = 'var(--red)';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  }
+}
+
 function ouvrirModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
 function fermerModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
