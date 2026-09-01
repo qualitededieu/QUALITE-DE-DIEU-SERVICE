@@ -1310,7 +1310,7 @@
           const style = ANNONCE_CATEGORIES_STYLE[a.categorie] || ANNONCE_CATEGORIES_STYLE['Général'];
           const extrait = a.contenu.length > 140 ? a.contenu.slice(0, 140).trim() + '…' : a.contenu;
           return `
-            <article class="blog-card reveal">
+            <article class="blog-card">
               <div class="blog-card-img" style="background:${style.fond}">
                 <span class="iconify" data-icon="${style.icone}" style="color:${style.couleur};"></span>
                 <span class="blog-cat" style="background:${style.couleur};">${_escapeHtml(a.categorie)}</span>
