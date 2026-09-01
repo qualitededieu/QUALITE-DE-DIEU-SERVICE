@@ -21,7 +21,7 @@ FICHE.MARGE = _fMmToPx(10);
 const FICHE_ENTREPRISE = {
   NOM: "LES QUALITÉS DE DIEU SERVICE",
   ADRESSE: "Comé, Hongodé — Bénin",
-  SITE: "qualitededieu.vercel.app",
+  SITE: "www.qualitededieuservice.com",
   LOGO_URL: "icons/logoqds.jpg",
 };
 

@@ -34,7 +34,7 @@ const ATT_ENTREPRISE = {
   ADRESSE:  "Comé, Hongodé — en face Hôpital de Zone de Comé, Bénin",
   TEL:      "+229 01 97 95 12 30",
   EMAIL:    "contact@lqdservice.bj",
-  SITE:     "qualitededieu.vercel.app",
+  SITE:     "www.qualitededieuservice.com",
   LOGO_URL: "icons/logoqds.jpg",
 };
 

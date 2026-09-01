@@ -22,8 +22,8 @@ const CONFIG = {
   EXPEDITEUR_NOM:    'Les Qualités de Dieu Service',
   SPREADSHEET_NAME:  'Inscriptions — LQD Service',
   DRIVE_DOSSIER_NOM: 'Inscriptions LQD Service',
-  LOGO_URL:          'https://qualitededieu.vercel.app/icons/logoqds.jpg',
-  SITE_URL:          'https://qualitededieu.vercel.app',
+  LOGO_URL:          'https://www.qualitededieuservice.com/icons/logoqds.jpg',
+  SITE_URL:          'https://www.qualitededieuservice.com',
 
   COULEUR_TEAL:   '#0D7A8A',
   COULEUR_ORANGE: '#F5A623',
@@ -137,13 +137,14 @@ function doPost(e) {
     const data   = JSON.parse(raw);
     const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
 // Routing admin — doit être en premier
-  if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
+  if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier' || action === 'bandeau_get_public') return routerAdmin(data, action);
   if (action === 'renseignement') return traiterRenseignement(data);
   if (action === 'regularisation') return traiterRegularisation(data);
   if (action === 'chat_rdv') return enregistrerRdvChat(data);
   if (action === 'chat_lead') return enregistrerLeadChat(data);
   if (action === 'candidature') return enregistrerCandidature(data);
   if (action === 'candidature_attestation_get_data') return candidatureAttestationGetData(data);
+  if (action === 'annonces_list_publiees') return annoncesListPubliees(data);
     return traiterInscription(data);
 
   } catch (err) {

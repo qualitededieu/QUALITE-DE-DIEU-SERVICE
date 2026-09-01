@@ -15,7 +15,7 @@ const BADGE_C = {
 const BADGE_ENTREPRISE = {
   NOM: "LES QUALITÉS DE DIEU SERVICE",
   LOGO_URL: "icons/logoqds.jpg",
-  SITE: "qualitededieu.vercel.app",
+  SITE: "www.qualitededieuservice.com",
 };
 
 function _bFont(ctx, size, style = "normal", family = "DM Sans, Arial") {

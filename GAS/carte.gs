@@ -22,7 +22,7 @@
 const CARTE_CONFIG = {
   // Clé HMAC dédiée aux cartes (différente du token admin)
   SECRET:      'lqd-carte-secret-2026-Xm7kP9nQ2rW4vZ6j',
-  VERIF_URL:   'https://qualitededieu.vercel.app/verifier.html',
+  VERIF_URL:   'https://www.qualitededieuservice.com/verifier.html',
   VERSION:     '1.0'
 };
 

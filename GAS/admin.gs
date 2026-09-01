@@ -47,6 +47,8 @@ function routerAdmin(data, action) {
       case 'admin_verify_otp':          return adminVerifyOtp(data);
       case 'admin_verify_google':       return adminVerifyGoogle(data);
       case 'admin_logout':              return adminLogout(data);
+      case 'admin_forgot_password_request': return adminForgotPasswordRequest(data);
+      case 'admin_forgot_password_reset':   return adminForgotPasswordReset(data);
 
       // LECTURE
       case 'admin_get_stats':           return requireAuth(data, adminGetStats);
@@ -76,6 +78,17 @@ function routerAdmin(data, action) {
       case 'admin_obtenir_doc_candidature':   return requireAuth(data, adminObtenirDocumentCandidature);
       case 'admin_delete_candidature':        return requireAuth(data, adminDeleteCandidature);
       case 'admin_set_periode_stage':         return requireAuth(data, adminSetPeriodeStage);
+
+      // ANNONCES / ACTUALITÉS (lecture publique via action 'annonces_list_publiees', voir annonces.gs)
+      case 'admin_annonces_list':       return requireAuth(data, adminAnnoncesList);
+      case 'admin_annonce_creer':       return requireAuth(data, adminAnnonceCreer);
+      case 'admin_annonce_modifier':    return requireAuth(data, adminAnnonceModifier);
+      case 'admin_annonce_supprimer':   return requireAuth(data, adminAnnonceSupprimer);
+
+      // BANDEAU D'INFORMATION (haut de page, même principe que Le Compagnon Yaovi)
+      case 'admin_bandeau_get':         return requireAuth(data, adminBandeauGet);
+      case 'admin_bandeau_set':         return requireAuth(data, adminBandeauSet);
+      case 'bandeau_get_public':        return bandeauGetPublic(data);
 
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
@@ -109,7 +122,7 @@ function adminLogin(data) {
   if (!ADMIN_CONFIG.EMAILS_AUTORISES.map(e => e.toLowerCase()).includes(email)) {
     return reponseJSON({ status: 'error', message: 'Accès refusé.' });
   }
-  if (mdp !== ADMIN_CONFIG.MOT_DE_PASSE) {
+  if (mdp !== _getMotDePasseActuel()) {
     return reponseJSON({ status: 'error', message: 'Identifiants incorrects.' });
   }
 
@@ -155,6 +168,87 @@ function adminVerifyOtp(data) {
   const token = genererToken(email);
   return reponseJSON({ status: 'success', token, email });
 }
+
+
+// =====================================================================
+// MOT DE PASSE ADMIN — stocké dans les Propriétés du script (modifiable
+// à l'exécution), PAS dans ADMIN_CONFIG.MOT_DE_PASSE (constante figée
+// dans le code source, qu'un script ne peut jamais réécrire lui-même).
+// Tant qu'aucune réinitialisation n'a eu lieu, on retombe sur la valeur
+// d'origine du code — migration silencieuse, aucune interruption pour
+// les admins existants au moment de ce déploiement.
+// =====================================================================
+function _getMotDePasseActuel() {
+  const stocke = PropertiesService.getScriptProperties().getProperty('ADMIN_MOT_DE_PASSE');
+  return stocke || ADMIN_CONFIG.MOT_DE_PASSE;
+}
+
+
+// =====================================================================
+// MOT DE PASSE OUBLIÉ — étape 1 : demande de réinitialisation
+// N'exige PAS l'ancien mot de passe (c'est tout le principe) : seule
+// l'appartenance à la liste des emails autorisés est vérifiée, puis un
+// code à usage unique est envoyé par email pour confirmer l'identité
+// avant d'accepter un nouveau mot de passe.
+// =====================================================================
+function adminForgotPasswordRequest(data) {
+  const email = (data.email || '').trim().toLowerCase();
+
+  if (!ADMIN_CONFIG.EMAILS_AUTORISES.map(e => e.toLowerCase()).includes(email)) {
+    // Message volontairement identique à un succès : ne jamais révéler
+    // si un email fait partie ou non de la liste des admins autorisés.
+    return reponseJSON({ status: 'otp_sent', message: `Si cet email est autorisé, un code a été envoyé.` });
+  }
+
+  const otp      = genererOTP();
+  const expireAt = Date.now() + ADMIN_CONFIG.OTP_EXPIRY_SEC * 1000;
+
+  PropertiesService.getScriptProperties().setProperty(
+    'RESET_OTP_' + email,
+    JSON.stringify({ otp, expireAt, used: false })
+  );
+  envoyerEmailResetOTP(email, otp);
+
+  return reponseJSON({ status: 'otp_sent', message: `Code envoyé à ${email}. Valide 10 minutes.` });
+}
+
+
+// =====================================================================
+// MOT DE PASSE OUBLIÉ — étape 2 : vérification du code + nouveau
+// mot de passe
+// =====================================================================
+function adminForgotPasswordReset(data) {
+  const email        = (data.email || '').trim().toLowerCase();
+  const otpSaisi      = String(data.otp || '').trim();
+  const nouveauMdp    = data.nouveauMotDePasse || '';
+  const cle           = 'RESET_OTP_' + email;
+  const stockeRaw     = PropertiesService.getScriptProperties().getProperty(cle);
+
+  if (nouveauMdp.length < 8) {
+    return reponseJSON({ status: 'error', message: 'Le mot de passe doit contenir au moins 8 caractères.' });
+  }
+  if (!stockeRaw) return reponseJSON({ status: 'error', message: 'Code expiré ou inexistant. Recommencez.' });
+
+  let stocke;
+  try { stocke = JSON.parse(stockeRaw); } catch (e) {
+    return reponseJSON({ status: 'error', message: 'Erreur de code. Recommencez.' });
+  }
+
+  if (stocke.used) return reponseJSON({ status: 'error', message: 'Ce code a déjà été utilisé.' });
+  if (Date.now() > stocke.expireAt) {
+    PropertiesService.getScriptProperties().deleteProperty(cle);
+    return reponseJSON({ status: 'error', message: 'Code expiré. Recommencez.' });
+  }
+  if (otpSaisi !== stocke.otp) return reponseJSON({ status: 'error', message: 'Code incorrect.' });
+
+  PropertiesService.getScriptProperties().setProperty('ADMIN_MOT_DE_PASSE', nouveauMdp);
+
+  stocke.used = true;
+  PropertiesService.getScriptProperties().setProperty(cle, JSON.stringify(stocke));
+
+  return reponseJSON({ status: 'success', message: 'Mot de passe mis à jour. Vous pouvez vous connecter.' });
+}
+
 
 
 // =====================================================================
@@ -739,6 +833,50 @@ function envoyerEmailOTP(email, otp) {
 </body></html>`;
 
   GmailApp.sendEmail(email, 'Code de connexion — LQD Admin', `Votre code OTP : ${otp}`, {
+    htmlBody, name: CONFIG.EXPEDITEUR_NOM
+  });
+}
+
+
+// =====================================================================
+// Email dédié à la réinitialisation de mot de passe — texte différent
+// de envoyerEmailOTP() ci-dessus, pour que l'admin comprenne bien
+// pourquoi il reçoit ce code (éviter la confusion avec une simple
+// tentative de connexion qu'il n'aurait pas initiée).
+// =====================================================================
+function envoyerEmailResetOTP(email, otp) {
+  const htmlBody = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+<tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0"
+  style="max-width:480px;width:100%;background:#FFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <tr><td style="background:#A6402F;padding:28px 36px;text-align:center;">
+    <img src="${CONFIG.LOGO_URL}" width="60" style="border-radius:8px;margin:0 auto 10px;display:block;"/>
+    <h1 style="margin:0;font-size:18px;color:#FFF;font-weight:700;">LQD Service — Admin</h1>
+  </td></tr>
+  <tr><td style="padding:36px;">
+    <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.7;">
+      Une demande de <strong>réinitialisation de mot de passe</strong> a été effectuée pour ce compte.
+      Voici votre code de confirmation :
+    </p>
+    <div style="text-align:center;margin:28px 0;">
+      <span style="font-size:42px;font-weight:800;letter-spacing:12px;color:#A6402F;font-family:monospace;">${otp}</span>
+    </div>
+    <p style="margin:0;font-size:13px;color:#888;text-align:center;line-height:1.6;">
+      Code valide <strong>10 minutes</strong>. Usage unique.<br/>
+      Si vous n'êtes pas à l'origine de cette demande, ignorez cet email —
+      votre mot de passe actuel reste inchangé.
+    </p>
+  </td></tr>
+  <tr><td style="background:#F3F4F6;padding:18px 36px;text-align:center;">
+    <p style="margin:0;font-size:12px;color:#9CA3AF;">© ${new Date().getFullYear()} Les Qualités de Dieu Service SARL</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+  GmailApp.sendEmail(email, 'Réinitialisation du mot de passe — LQD Admin', `Votre code de réinitialisation : ${otp}`, {
     htmlBody, name: CONFIG.EXPEDITEUR_NOM
   });
 }
