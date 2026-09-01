@@ -51,6 +51,82 @@ const ENTETES_CANDIDATURE = [
 const STATUTS_CANDIDATURE_VALIDES = ['Nouveau', 'Vu', 'Contacté', 'Retenu', 'Terminé', 'Rejeté'];
 
 // =====================================================================
+// RÉPARATION — Remet en cohérence l'en-tête (titres + mise en forme +
+// validations) de l'onglet "Candidatures", qui n'a JAMAIS eu de mise
+// en forme codée : il se crée à la volée au tout premier dépôt de
+// candidature (voir plus bas), avec seulement les titres bruts, sans
+// couleur ni largeur ni liste déroulante. À exécuter UNE SEULE FOIS
+// depuis l'éditeur GAS. Ne touche jamais aux lignes de données.
+// =====================================================================
+function repararEnTeteCandidatures() {
+  Logger.log('=== RÉPARATION EN-TÊTE CANDIDATURES — Démarrage ===');
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) {
+    Logger.log('[ERREUR] Spreadsheet introuvable : ' + CONFIG.SPREADSHEET_NAME);
+    return;
+  }
+
+  let feuille = ss.getSheetByName('Candidatures');
+  if (!feuille) {
+    Logger.log('[INFO] Onglet "Candidatures" inexistant pour l\'instant (aucune candidature reçue) — rien à réparer.');
+    return;
+  }
+
+  const largeurActuelle = feuille.getLastColumn();
+  const enteteActuel = largeurActuelle > 0
+    ? feuille.getRange(1, 1, 1, largeurActuelle).getValues()[0]
+    : [];
+
+  const correspond = enteteActuel.length === ENTETES_CANDIDATURE.length &&
+    ENTETES_CANDIDATURE.every(function(titre, i) { return enteteActuel[i] === titre; });
+
+  if (correspond) {
+    Logger.log('[OK] En-tête déjà correct sur "Candidatures", seule la mise en forme est réappliquée.');
+  } else {
+    Logger.log('[CORRECTION] En-tête réécrit sur "Candidatures" (' +
+      enteteActuel.length + ' colonne(s) trouvée(s) -> ' + ENTETES_CANDIDATURE.length + ' attendues)');
+    feuille.getRange(1, 1, 1, ENTETES_CANDIDATURE.length).setValues([ENTETES_CANDIDATURE]);
+  }
+
+  const rangeEntete = feuille.getRange(1, 1, 1, ENTETES_CANDIDATURE.length);
+  rangeEntete.setBackground(CONFIG.COULEUR_TEAL);
+  rangeEntete.setFontColor('#FFFFFF');
+  rangeEntete.setFontWeight('bold');
+  rangeEntete.setFontSize(11);
+  rangeEntete.setVerticalAlignment('middle');
+  feuille.setFrozenRows(1);
+  feuille.setRowHeight(1, 36);
+
+  const largeurs = [
+    120, 110, 150, 130, 130, 150, 180, 200,
+    150, 110, 180, 150, 150, 120, 250,
+    160, 160, 160, 160,
+    120, 130, 150,
+    90, 140, 140, 260
+  ];
+  largeurs.forEach(function(l, i) {
+    if (i < ENTETES_CANDIDATURE.length) feuille.setColumnWidth(i + 1, l);
+  });
+
+  // Statut = colonne T (20e colonne)
+  const regleStatut = SpreadsheetApp.newDataValidation()
+    .requireValueInList(STATUTS_CANDIDATURE_VALIDES, true)
+    .setAllowInvalid(false).build();
+  feuille.getRange('T2:T1000').setDataValidation(regleStatut);
+
+  // Sexe = colonne W (23e colonne) — même convention M/F que sur les
+  // onglets d'inscription (voir _ecrireEnTeteInscription dans init.gs)
+  const regleSexe = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['M', 'F'], true)
+    .setAllowInvalid(false).build();
+  feuille.getRange('W2:W1000').setDataValidation(regleSexe);
+
+  Logger.log('');
+  Logger.log('=== RÉPARATION EN-TÊTE CANDIDATURES — Terminé ===');
+}
+
+// =====================================================================
 // MISSIONS DE STAGE — liste fixe proposée en cases à cocher côté admin.
 // Chaque libellé est déjà rédigé pour s'insérer directement dans la
 // phrase de description de l'attestation (voir _phraseMissionsStage
@@ -194,7 +270,7 @@ function adminGetCandidatures(data, email) {
       dureeStage: r[12], disponibilite: r[13], motivation: r[14],
       aCV: !!r[15], aLettre: !!r[16], aPiece: !!r[17], aRecommandation: !!r[18],
       statut: r[19] || 'Nouveau', traitePar: r[20] || '', dateTraitement: r[21] || '',
-      sexe: r[22] || '', dateDebutStage: r[23] || '', dateFinStage: r[24] || '',
+      sexe: String(r[22] || '').trim(), dateDebutStage: r[23] || '', dateFinStage: r[24] || '',
       missionsStage: _parseMissionsStageJSON(r[25])
     });
   }
@@ -316,7 +392,7 @@ function candidatureAttestationGetData(data) {
       id:            String(r[0]),
       prenom:        String(r[3]),
       nom:           String(r[4]),
-      sexe:          String(r[22] || ''),
+      sexe:          String(r[22] || '').trim(),
       dateNaissance: '',
       telephone:     String(r[5]),
       email:         String(r[6]),

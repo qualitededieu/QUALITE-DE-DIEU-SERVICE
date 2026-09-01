@@ -133,24 +133,81 @@ function initSheets() {
 
 
 // =====================================================================
-// HELPER — Créer un onglet Inscription avec en-têtes et style
+// RÉPARATION — Remet en cohérence l'en-tête (titres + mise en forme +
+// validations) de TOUS les onglets d'inscription déjà existants.
+//
+// À exécuter UNE SEULE FOIS depuis l'éditeur GAS, après avoir mis à
+// jour ENTETES_INSCRIPTION (colonne "Sexe" ajoutée). Contrairement à
+// initSheets(), cette fonction ne crée aucun onglet — elle corrige
+// uniquement la LIGNE 1 (titres) des onglets déjà en place, sans
+// jamais toucher aux données déjà enregistrées en dessous.
+//
+// Cas traités :
+//   - Onglet sans aucun en-tête (ligne 1 vide)
+//   - Onglet avec un en-tête incomplet (Sexe manquant en fin de ligne)
+//   - Onglet avec un en-tête présent mais sans la mise en forme
+//     attendue (couleur, gras, largeur de colonnes, listes déroulantes)
 // =====================================================================
-function creerOngletInscription(ss, nomFeuille, estMaitre) {
+function repararEnTetesInscription() {
+  Logger.log('=== RÉPARATION EN-TÊTES INSCRIPTION — Démarrage ===');
 
-  let feuille = ss.getSheetByName(nomFeuille);
-
-  if (feuille) {
-    Logger.log('[SHEETS] Onglet déjà existant : ' + nomFeuille);
-    return feuille;
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) {
+    Logger.log('[ERREUR] Spreadsheet introuvable : ' + CONFIG.SPREADSHEET_NAME);
+    return;
   }
 
-  feuille = ss.insertSheet(nomFeuille);
-  Logger.log('[SHEETS] Onglet créé : ' + nomFeuille);
+  const feuillesACorriger = ['Toutes les inscriptions']
+    .concat(CONFIG.FORMATIONS_VALIDES)
+    .concat(['Multi-formations']);
 
-  feuille.appendRow(ENTETES_INSCRIPTION);
+  feuillesACorriger.forEach(function(nomFeuille) {
+    const feuille = ss.getSheetByName(nomFeuille);
+    if (!feuille) {
+      Logger.log('[IGNORÉ] Onglet introuvable (jamais créé) : ' + nomFeuille);
+      return;
+    }
+
+    const estMaitre = (nomFeuille === 'Toutes les inscriptions');
+
+    // Lit l'en-tête actuel tel qu'il est réellement sur la feuille,
+    // même s'il est plus court, plus long, ou totalement vide.
+    const largeurActuelle = feuille.getLastColumn();
+    const enteteActuel = largeurActuelle > 0
+      ? feuille.getRange(1, 1, 1, largeurActuelle).getValues()[0]
+      : [];
+
+    const correspond = enteteActuel.length === ENTETES_INSCRIPTION.length &&
+      ENTETES_INSCRIPTION.every(function(titre, i) { return enteteActuel[i] === titre; });
+
+    if (correspond) {
+      Logger.log('[OK] En-tête déjà correct : ' + nomFeuille);
+      return;
+    }
+
+    Logger.log('[CORRECTION] En-tête réécrit : ' + nomFeuille +
+      ' (' + enteteActuel.length + ' colonne(s) trouvée(s) -> ' + ENTETES_INSCRIPTION.length + ' attendues)');
+
+    _ecrireEnTeteInscription(feuille, estMaitre);
+  });
+
+  Logger.log('');
+  Logger.log('=== RÉPARATION EN-TÊTES INSCRIPTION — Terminé ===');
+}
+
+
+// =====================================================================
+// HELPER — Écrit et met en forme la ligne d'en-tête d'un onglet
+// Inscription (titres, couleur, gras, largeurs, listes déroulantes).
+// Réutilisé par creerOngletInscription() (nouvel onglet) ET par
+// repararEnTetesInscription() (onglet déjà existant à corriger).
+// N'écrit JAMAIS au-delà de la ligne 1 : aucune donnée n'est touchée.
+// =====================================================================
+function _ecrireEnTeteInscription(feuille, estMaitre) {
+  feuille.getRange(1, 1, 1, ENTETES_INSCRIPTION.length).setValues([ENTETES_INSCRIPTION]);
 
   const couleurEntete = estMaitre ? '#04342C' : CONFIG.COULEUR_TEAL;
-  const rangeEntete   = feuille.getRange(1, 1, 1, ENTETES_INSCRIPTION.length);
+  const rangeEntete    = feuille.getRange(1, 1, 1, ENTETES_INSCRIPTION.length);
   rangeEntete.setBackground(couleurEntete);
   rangeEntete.setFontColor('#FFFFFF');
   rangeEntete.setFontWeight('bold');
@@ -161,7 +218,8 @@ function creerOngletInscription(ss, nomFeuille, estMaitre) {
 
   const largeurs = [
     120, 160, 110, 110, 150, 180, 260, 80, 200,
-    120, 160, 200, 200, 200, 200, 120, 120, 120, 120, 120, 140, 120, 140
+    120, 160, 200, 200, 200, 200, 120, 120, 120, 120, 120, 140, 120, 140,
+    90 // Sexe (colonne X)
   ];
   largeurs.forEach(function(l, i) {
     if (i < ENTETES_INSCRIPTION.length) feuille.setColumnWidth(i + 1, l);
@@ -177,7 +235,31 @@ function creerOngletInscription(ss, nomFeuille, estMaitre) {
     .setAllowInvalid(false).build();
   feuille.getRange('V2:V1000').setDataValidation(reglePaiement);
 
+  const regleSexe = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['M', 'F'], true)
+    .setAllowInvalid(false).build();
+  feuille.getRange('X2:X1000').setDataValidation(regleSexe);
+
   feuille.getRange('P2:U1000').setNumberFormat('#,##0 "F CFA"');
+}
+
+
+// =====================================================================
+// HELPER — Créer un onglet Inscription avec en-têtes et style
+// =====================================================================
+function creerOngletInscription(ss, nomFeuille, estMaitre) {
+
+  let feuille = ss.getSheetByName(nomFeuille);
+
+  if (feuille) {
+    Logger.log('[SHEETS] Onglet déjà existant : ' + nomFeuille);
+    return feuille;
+  }
+
+  feuille = ss.insertSheet(nomFeuille);
+  Logger.log('[SHEETS] Onglet créé : ' + nomFeuille);
+
+  _ecrireEnTeteInscription(feuille, estMaitre);
 
   if (estMaitre) {
     const ligneEx = [
@@ -185,7 +267,7 @@ function creerOngletInscription(ss, nomFeuille, estMaitre) {
       '+229 01 XX XX XX XX', 'email@exemple.com',
       'Informatique & Bureautique', '1', 'Message exemple',
       'En attente', 'CIP', '(lien Drive)', '(lien Drive)', '—', '(lien Drive)',
-      10000, 50000, 25000, 12500, 12500, 35000, 'En attente', 'Non'
+      10000, 50000, 25000, 12500, 12500, 35000, 'En attente', 'Non', 'M'
     ];
     feuille.appendRow(ligneEx);
     feuille.getRange(2, 1, 1, ENTETES_INSCRIPTION.length)

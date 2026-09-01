@@ -55,6 +55,50 @@ function _attDescription(filiere) {
   return "Formation professionnelle qualifiante dispensée par le centre.";
 }
 
+// ─── Compétences groupées par catégorie — modèle "formation longue" ───
+// Contrairement au stage/formation courte (une seule phrase), le modèle
+// papier des formations longues (1 an et plus) présente les compétences
+// validées regroupées par catégorie, chacune avec son propre intitulé
+// en gras. Plusieurs filières peuvent partager la même catégorie (ex.
+// Graphisme & PAO et Sérigraphie relèvent toutes deux de "Design &
+// Impression") : leurs descriptions sont alors fusionnées sous un seul
+// intitulé plutôt que répétées.
+const ATT_CATEGORIES_LONGUE = {
+  "Informatique & Bureautique": { categorie: "Bureautique & Digital", texte: ATT_DESCRIPTIONS["Informatique & Bureautique"] },
+  "Graphisme & PAO":            { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Graphisme & PAO"] },
+  "Sérigraphie":                { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Sérigraphie"] },
+  "Création de sites web":      { categorie: "Développement Web",     texte: ATT_DESCRIPTIONS["Création de sites web"] },
+};
+
+// Module systématique pour toute formation longue, quelle que soit la
+// filière suivie — confirmé explicitement par le centre.
+const ATT_MODULE_MANAGEMENT = {
+  categorie: "Management",
+  texte: "Initiation à la gestion d'entreprise et à l'entrepreneuriat.",
+};
+
+function _competencesLongue(filiereStr) {
+  const filieres = String(filiereStr || "").split(",").map(s => s.trim()).filter(Boolean);
+  const parCategorie = new Map();
+
+  filieres.forEach(f => {
+    const entree = ATT_CATEGORIES_LONGUE[f];
+    if (!entree) return;
+    if (!parCategorie.has(entree.categorie)) parCategorie.set(entree.categorie, []);
+    parCategorie.get(entree.categorie).push(entree.texte);
+  });
+
+  const resultat = Array.from(parCategorie.entries()).map(([categorie, textes]) => ({
+    categorie,
+    texte: textes.join(" "),
+  }));
+
+  // Si aucune filière connue n'a été trouvée (libellé inattendu), on
+  // affiche au moins le module Management plutôt qu'une liste vide.
+  resultat.push(ATT_MODULE_MANAGEMENT);
+  return resultat;
+}
+
 // ─── Description de stage à partir des missions cochées en admin ───
 // Construit une phrase française correcte à partir d'une liste de
 // fragments (déjà rédigés pour s'enchaîner naturellement après
@@ -188,6 +232,22 @@ function _wrap(ctx, txt, x, y, maxW, lh) {
   return curY;
 }
 
+// ─── Ruban diagonal décoratif de coin — modèle "formation longue" ───
+// Bande à deux couleurs (marine + or), tournée autour d'un point
+// d'ancrage, débordant volontairement des bords du canevas : le
+// débordement est automatiquement rogné par le canevas lui-même,
+// aucun découpage manuel nécessaire.
+function _dessinerRubanCoin(ctx, ancrageX, ancrageY, angleDeg, longueur, largeurPrincipale, couleurPrincipale, couleurSecondaire) {
+  ctx.save();
+  ctx.translate(ancrageX, ancrageY);
+  ctx.rotate(angleDeg * Math.PI / 180);
+  ctx.fillStyle = couleurPrincipale;
+  ctx.fillRect(-longueur / 2, 0, longueur, largeurPrincipale);
+  ctx.fillStyle = couleurSecondaire;
+  ctx.fillRect(-longueur / 2, largeurPrincipale, longueur, largeurPrincipale * 0.32);
+  ctx.restore();
+}
+
 // ─── Police calligraphique pour l'intitulé de formation ──────
 let _policeScriptChargee = false;
 async function _chargerPoliceScript() {
@@ -297,51 +357,109 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.restore();
 
   // ── HEADER ──
-  const HDR_H = 402;
-  _rect(ctx, 0, 0, ATT.W, HDR_H, COULEUR_PRINCIPALE);
-  _rect(ctx, 0, HDR_H, ATT.W, 14, ATT.OR);
+  // Deux mises en page radicalement différentes : bandeau plein
+  // (stage / formation courte, existant) contre lettre à en-tête avec
+  // rubans de coin (formation longue, nouveau modèle papier du centre).
+  let HDR_H;
 
-  ctx.save();
-  ctx.beginPath(); ctx.arc(213, 191, 155, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fill();
-  ctx.restore();
-  if (logo) {
+  if (estFormationLongue) {
+    HDR_H = 560;
+
+    // Rubans diagonaux de coin (haut-gauche et bas-gauche), esprit du
+    // modèle papier fourni par le centre — reproduction non pixel-
+    // perfect, jamais vérifiée visuellement (pas de moteur de rendu
+    // disponible côté génération de ce code).
+    _dessinerRubanCoin(ctx, 0, 0, -35, 900, 70, "#1B3A6B", ATT.OR);
+    _dessinerRubanCoin(ctx, 0, ATT.H, -35, 900, 70, "#1B3A6B", ATT.OR);
+
+    if (logo) {
+      const LOGO_D = 210;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(ATT.W / 2, 150, LOGO_D / 2, 0, Math.PI * 2); ctx.clip();
+      _drawImageCover(ctx, logo, ATT.W / 2 - LOGO_D / 2, 150 - LOGO_D / 2, LOGO_D, LOGO_D);
+      ctx.restore();
+      ctx.save();
+      ctx.beginPath(); ctx.arc(ATT.W / 2, 150, LOGO_D / 2 + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = ATT.OR; ctx.lineWidth = 5; ctx.stroke();
+      ctx.restore();
+    }
+
+    _font(ctx, 62, "bold");
+    ctx.fillStyle = "#C97A1A";
+    const nomLg = "STÉ " + ATT_ENTREPRISE.NOM + " SARL";
+    ctx.fillText(nomLg, (ATT.W - _mw(ctx, nomLg)) / 2, 300);
+
+    _font(ctx, 40, "bold", "DM Sans");
+    ctx.fillStyle = "#1B3A6B";
+    const sousTitreLg = "Centre de Formation Professionnelle en Informatique";
+    ctx.fillText(sousTitreLg, (ATT.W - _mw(ctx, sousTitreLg)) / 2, 350);
+
+    _font(ctx, 30, "normal", "DM Sans");
+    ctx.fillStyle = ATT.TEXTE;
+    const detailLg = "Imprimerie, Graphisme et Sérigraphie Numérique";
+    ctx.fillText(detailLg, (ATT.W - _mw(ctx, detailLg)) / 2, 392);
+
+    _font(ctx, 26, "normal", "DM Sans");
+    ctx.fillStyle = ATT.GRIS;
+    const ligneLegale = `RCCM RB/ABC/23 B 7078  —  IFU 3202357917037  —  Tél : ${ATT_ENTREPRISE.TEL}  —  ${ATT_ENTREPRISE.EMAIL}`;
+    ctx.fillText(ligneLegale, (ATT.W - _mw(ctx, ligneLegale)) / 2, 428);
+
+    _font(ctx, 32, "normal");
+    ctx.fillStyle = ATT.OR;
+    const etoiles = "★  ★  ★  ★  ★  ★";
+    ctx.fillText(etoiles, (ATT.W - _mw(ctx, etoiles)) / 2, 470);
+
+    _font(ctx, 30, "bold", "DM Sans");
+    ctx.fillStyle = ATT.TEXTE;
+    ctx.fillText(`Réf. : ${apprenant.id}`, 240, 520);
+
+  } else {
+    HDR_H = 402;
+    _rect(ctx, 0, 0, ATT.W, HDR_H, COULEUR_PRINCIPALE);
+    _rect(ctx, 0, HDR_H, ATT.W, 14, ATT.OR);
+
     ctx.save();
-    ctx.beginPath(); ctx.arc(213, 191, 140, 0, Math.PI * 2); ctx.clip();
-    _drawImageCover(ctx, logo, 73, 51, 280, 280);
+    ctx.beginPath(); ctx.arc(213, 191, 155, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fill();
     ctx.restore();
-    ctx.save();
-    ctx.beginPath(); ctx.arc(213, 191, 142, 0, Math.PI * 2);
-    ctx.strokeStyle = ATT.OR; ctx.lineWidth = 6; ctx.stroke();
-    ctx.restore();
+    if (logo) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(213, 191, 140, 0, Math.PI * 2); ctx.clip();
+      _drawImageCover(ctx, logo, 73, 51, 280, 280);
+      ctx.restore();
+      ctx.save();
+      ctx.beginPath(); ctx.arc(213, 191, 142, 0, Math.PI * 2);
+      ctx.strokeStyle = ATT.OR; ctx.lineWidth = 6; ctx.stroke();
+      ctx.restore();
+    }
+
+    _font(ctx, 94, "bold");
+    ctx.fillStyle = ATT.BLANC;
+    ctx.fillText(ATT_ENTREPRISE.NOM, 406, 158);
+
+    _font(ctx, 40, "normal", "DM Sans");
+    ctx.fillStyle = ATT.OR_LIGHT;
+    ctx.fillText(ATT_ENTREPRISE.SUFFIXE, 406, 224);
+
+    _font(ctx, 32, "normal", "DM Sans");
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillText(ATT_ENTREPRISE.ADRESSE, 406, 270);
+
+    _rect(ctx, 2510, 42, 3, 318, "rgba(245,166,35,0.4)");
+
+    const LG_X = 2540;
+    const infos = [
+      { txt: ATT_ENTREPRISE.TEL,   bold: true,  color: ATT.BLANC },
+      { txt: ATT_ENTREPRISE.EMAIL, bold: false, color: "rgba(255,255,255,0.75)" },
+      { txt: "www." + ATT_ENTREPRISE.SITE, bold: false, color: "rgba(255,255,255,0.55)" },
+      { txt: "République du Bénin", bold: false, color: ATT.OR },
+    ];
+    infos.forEach((info, i) => {
+      _font(ctx, 36, info.bold ? "bold" : "normal", "DM Sans");
+      ctx.fillStyle = info.color;
+      ctx.fillText(info.txt, LG_X, 130 + i * 56);
+    });
   }
-
-  _font(ctx, 94, "bold");
-  ctx.fillStyle = ATT.BLANC;
-  ctx.fillText(ATT_ENTREPRISE.NOM, 406, 158);
-
-  _font(ctx, 40, "normal", "DM Sans");
-  ctx.fillStyle = ATT.OR_LIGHT;
-  ctx.fillText(ATT_ENTREPRISE.SUFFIXE, 406, 224);
-
-  _font(ctx, 32, "normal", "DM Sans");
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText(ATT_ENTREPRISE.ADRESSE, 406, 270);
-
-  _rect(ctx, 2510, 42, 3, 318, "rgba(245,166,35,0.4)");
-
-  const LG_X = 2540;
-  const infos = [
-    { txt: ATT_ENTREPRISE.TEL,   bold: true,  color: ATT.BLANC },
-    { txt: ATT_ENTREPRISE.EMAIL, bold: false, color: "rgba(255,255,255,0.75)" },
-    { txt: "www." + ATT_ENTREPRISE.SITE, bold: false, color: "rgba(255,255,255,0.55)" },
-    { txt: "République du Bénin", bold: false, color: ATT.OR },
-  ];
-  infos.forEach((info, i) => {
-    _font(ctx, 36, info.bold ? "bold" : "normal", "DM Sans");
-    ctx.fillStyle = info.color;
-    ctx.fillText(info.txt, LG_X, 130 + i * 56);
-  });
 
   // ── PHOTO IDENTITÉ ──
   const PHOTO_W = 413, PHOTO_H = 531;
@@ -387,111 +505,220 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.restore();
   }
 
-  // ── TITRE ──
-  const TITRE_Y = HDR_H + 14;
-  _rect(ctx, 240, TITRE_Y + 60, 610, 7, ATT.OR);
-  _rect(ctx, ATT.W - 850, TITRE_Y + 60, 150, 7, ATT.OR);
-
-  _font(ctx, 220, "bold");
-  ctx.fillStyle = COULEUR_PRINCIPALE;
-  const attW = _mw(ctx, "ATTESTATION");
-  ctx.fillText("ATTESTATION", (ATT.W - attW) / 2, TITRE_Y + 240);
-
-  _font(ctx, 72, "normal");
-  ctx.fillStyle = ATT.OR;
-  const stW = _mw(ctx, "DE FIN DE STAGE / FORMATION");
-  ctx.fillText("DE FIN DE STAGE / FORMATION", (ATT.W - stW) / 2, TITRE_Y + 328);
-
-  _rect(ctx, 240, TITRE_Y + 358, 1376, 7, ATT.OR);
-  _font(ctx, 64, "normal");
-  ctx.fillStyle = ATT.OR;
-  ctx.fillText("✦", (ATT.W - _mw(ctx, "✦")) / 2, TITRE_Y + 376);
-  _rect(ctx, 1892, TITRE_Y + 358, 920, 7, ATT.OR);
-
-  // ── CORPS ──
+  // ── TITRE + CORPS ──
   const CX = 240, CW = ATT.W - 480;
-  let posY = TITRE_Y + 410;
+  let posY;
 
-  _font(ctx, 52, "normal");
-  const intro1 = "Nous soussignés, ";
-  const intro2 = ATT_ENTREPRISE.NOM;
-  const intro3 = estStage
-    ? ", attestons que :"
-    : ", centre de formation professionnelle, attestons que :";
-  ctx.fillStyle = ATT.TEXTE;
-  ctx.fillText(intro1, CX, posY);
-  let ix = CX + _mw(ctx, intro1);
-  _font(ctx, 46, "bold");
-  ctx.fillStyle = COULEUR_PRINCIPALE;
-  ctx.fillText(intro2, ix, posY);
-  ix += _mw(ctx, intro2);
-  _font(ctx, 52, "normal");
-  ctx.fillStyle = ATT.TEXTE;
-  ctx.fillText(intro3, ix, posY);
-  posY += 90;
+  if (estFormationLongue) {
 
-  // .trim().toUpperCase() : tolère un espace superflu ou une casse
-  // différente dans la cellule "Sexe" du tableur (ex. "f" au lieu de
-  // "F"), qui ferait sinon échouer silencieusement la comparaison
-  // stricte et laisserait la civilité vide sans aucune erreur visible.
-  const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
-  const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
-  const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
-  const BANNER_CX  = 1512.5;
-  _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
-  _font(ctx, 90, "bold");
-  ctx.fillStyle = ATT.OR_LIGHT;
-  ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
-  posY += 190;
+    // ===== TITRE (formation longue) =====
+    const TITRE_Y = HDR_H + 60;
+    _font(ctx, 108, "bold");
+    ctx.fillStyle = "#1B3A6B";
+    const t1 = "ATTESTATION DE FIN DE FORMATION";
+    ctx.fillText(t1, (ATT.W - _mw(ctx, t1)) / 2, TITRE_Y);
 
-  _font(ctx, 52, "normal");
-  ctx.fillStyle = ATT.TEXTE;
-  ctx.fillText(
-    estStage
-      ? "a effectué avec assiduité un stage professionnel dans le domaine de :"
-      : "a suivi avec assiduité et a validé la formation en :",
-    CX, posY
-  );
-  posY += 80;
+    _font(ctx, 60, "bold");
+    const t2 = "PROFESSIONNELLE";
+    ctx.fillText(t2, (ATT.W - _mw(ctx, t2)) / 2, TITRE_Y + 76);
 
-  const intitule = apprenant.filiere || (estStage ? "Stage professionnel" : "Formation professionnelle");
-  ctx.font = document.fonts.check("120px 'Great Vibes'")
-    ? "120px 'Great Vibes'"
-    : "italic bold 90px 'Times New Roman', Times, serif";
-  ctx.fillStyle = COULEUR_PRINCIPALE;
-  {
-    const iW = _mw(ctx, intitule);
-    ctx.fillText(intitule, (ATT.W - iW) / 2, posY + 20);
-    posY += 40;
-    _rect(ctx, (ATT.W - iW) / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
-    posY += 70;
+    posY = TITRE_Y + 160;
+
+    // ===== PRÉAMBULE LÉGAL (nomme les deux signataires) =====
+    _font(ctx, 40, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    const preambule =
+      `Nous soussignés, Monsieur ${ATT_SIGNATAIRE_PDG.nom.replace(/^M\.\s*/, "")}, Président Directeur Général de la Société ` +
+      `${ATT_ENTREPRISE.NOM} SARL, entreprise spécialisée dans l'Informatique & Bureautique, Design & Impression, sise à Comé, ` +
+      `Hongodé, et Monsieur ${ATT_SIGNATAIRE_FORMATEUR.nom.replace(/^M\.\s*/, "")}, Formateur Principal,`;
+    posY = _wrap(ctx, preambule, CX, posY, CW, 52) + 16;
+
+    _font(ctx, 44, "bold");
+    ctx.fillStyle = "#A6402F";
+    const attestePar = "ATTESTE PAR LA PRÉSENTE QUE :";
+    ctx.fillText(attestePar, (ATT.W - _mw(ctx, attestePar)) / 2, posY);
+    posY += 76;
+
+    // ===== NOM DE L'APPRENANT (même bannière que le reste du système) =====
+    const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
+    const civiliteLg = sexeNorm === "F" ? "Madame " : (sexeNorm === "M" ? "Monsieur " : "");
+    const nomComplet = `${civiliteLg}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
+    const BANNER_CX  = 1512.5;
+    _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
+    _font(ctx, 82, "bold");
+    ctx.fillStyle = ATT.OR_LIGHT;
+    ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
+    posY += 190;
+
+    // Naissance : uniquement si connue (dossiers "Toutes les inscriptions"
+    // n'ont pas ce champ, seuls les dossiers "Régularisations" l'ont —
+    // ne jamais afficher "né le  à " avec des trous visibles).
+    if (apprenant.dateNaissance) {
+      _font(ctx, 40, "normal");
+      ctx.fillStyle = ATT.TEXTE;
+      const lieuTxt = apprenant.lieuNaissance ? ` à ${apprenant.lieuNaissance}` : "";
+      const naissanceTxt = `né(e) le ${fmt(apprenant.dateNaissance)}${lieuTxt}.`;
+      ctx.fillText(naissanceTxt, (ATT.W - _mw(ctx, naissanceTxt)) / 2, posY);
+      posY += 64;
+    }
+
+    // ===== DURÉE (avec nombre de mois explicite) =====
+    _font(ctx, 44, "normal");
+    const dureeTxt = dureeMois !== null ? ` (${dureeMois} mois)` : "";
+    const d1 = "A suivi avec assiduité et succès, du ", d2 = dateDebut, d3 = " au ", d4 = dateFin + dureeTxt + ",";
+    let dx = CX;
+    ctx.fillStyle = ATT.TEXTE; ctx.fillText(d1, dx, posY); dx += _mw(ctx, d1);
+    _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d2, dx, posY); dx += _mw(ctx, d2);
+    _font(ctx, 44, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(d3, dx, posY); dx += _mw(ctx, d3);
+    _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d4, dx, posY);
+    posY += 64;
+
+    _font(ctx, 44, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    posY = _wrap(ctx, "une formation professionnelle complète. À l'issue de ce parcours, l'intéressé(e) a validé les compétences suivantes :", CX, posY, CW, 54) + 10;
+
+    // ===== COMPÉTENCES GROUPÉES PAR CATÉGORIE =====
+    const competences = _competencesLongue(apprenant.filiere);
+    competences.forEach(bloc => {
+      _font(ctx, 42, "bold");
+      ctx.fillStyle = COULEUR_PRINCIPALE;
+      const label = bloc.categorie + " : ";
+      ctx.fillText(label, CX, posY);
+      const labelW = _mw(ctx, label);
+
+      _font(ctx, 42, "normal");
+      ctx.fillStyle = ATT.TEXTE;
+      // Première ligne partage la ligne avec le label (comme sur le
+      // modèle papier), les lignes suivantes reprennent en marge gauche.
+      const words = String(bloc.texte).split(" ");
+      let ligne = "", x = CX + labelW, premierMot = true;
+      const finLigneX = CX + CW;
+      for (const mot of words) {
+        const test = ligne ? ligne + " " + mot : mot;
+        const largeurTest = _mw(ctx, test) + (premierMot ? labelW : 0);
+        if (CX + largeurTest > finLigneX && ligne) {
+          ctx.fillText(ligne, premierMot ? x : CX, posY);
+          posY += 54;
+          ligne = mot; premierMot = false; x = CX;
+        } else {
+          ligne = test;
+        }
+      }
+      if (ligne) { ctx.fillText(ligne, premierMot ? x : CX, posY); posY += 54; }
+      posY += 12;
+    });
+
+    posY += 10;
+    _font(ctx, 40, "italic");
+    ctx.fillStyle = ATT.TEXTE;
+    posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
+    posY += 20;
+
+  } else {
+
+    const TITRE_Y = HDR_H + 14;
+    _rect(ctx, 240, TITRE_Y + 60, 610, 7, ATT.OR);
+    _rect(ctx, ATT.W - 850, TITRE_Y + 60, 150, 7, ATT.OR);
+
+    _font(ctx, 220, "bold");
+    ctx.fillStyle = COULEUR_PRINCIPALE;
+    const attW = _mw(ctx, "ATTESTATION");
+    ctx.fillText("ATTESTATION", (ATT.W - attW) / 2, TITRE_Y + 240);
+
+    _font(ctx, 72, "normal");
+    ctx.fillStyle = ATT.OR;
+    const stW = _mw(ctx, "DE FIN DE STAGE / FORMATION");
+    ctx.fillText("DE FIN DE STAGE / FORMATION", (ATT.W - stW) / 2, TITRE_Y + 328);
+
+    _rect(ctx, 240, TITRE_Y + 358, 1376, 7, ATT.OR);
+    _font(ctx, 64, "normal");
+    ctx.fillStyle = ATT.OR;
+    ctx.fillText("✦", (ATT.W - _mw(ctx, "✦")) / 2, TITRE_Y + 376);
+    _rect(ctx, 1892, TITRE_Y + 358, 920, 7, ATT.OR);
+
+    posY = TITRE_Y + 410;
+
+    _font(ctx, 52, "normal");
+    const intro1 = "Nous soussignés, ";
+    const intro2 = ATT_ENTREPRISE.NOM;
+    const intro3 = estStage
+      ? ", attestons que :"
+      : ", centre de formation professionnelle, attestons que :";
+    ctx.fillStyle = ATT.TEXTE;
+    ctx.fillText(intro1, CX, posY);
+    let ix = CX + _mw(ctx, intro1);
+    _font(ctx, 46, "bold");
+    ctx.fillStyle = COULEUR_PRINCIPALE;
+    ctx.fillText(intro2, ix, posY);
+    ix += _mw(ctx, intro2);
+    _font(ctx, 52, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    ctx.fillText(intro3, ix, posY);
+    posY += 90;
+
+    // .trim().toUpperCase() : tolère un espace superflu ou une casse
+    // différente dans la cellule "Sexe" du tableur (ex. "f" au lieu de
+    // "F"), qui ferait sinon échouer silencieusement la comparaison
+    // stricte et laisserait la civilité vide sans aucune erreur visible.
+    const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
+    const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
+    const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
+    const BANNER_CX  = 1512.5;
+    _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
+    _font(ctx, 90, "bold");
+    ctx.fillStyle = ATT.OR_LIGHT;
+    ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
+    posY += 190;
+
+    _font(ctx, 52, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    ctx.fillText(
+      estStage
+        ? "a effectué avec assiduité un stage professionnel dans le domaine de :"
+        : "a suivi avec assiduité et a validé la formation en :",
+      CX, posY
+    );
+    posY += 80;
+
+    const intitule = apprenant.filiere || (estStage ? "Stage professionnel" : "Formation professionnelle");
+    ctx.font = document.fonts.check("120px 'Great Vibes'")
+      ? "120px 'Great Vibes'"
+      : "italic bold 90px 'Times New Roman', Times, serif";
+    ctx.fillStyle = COULEUR_PRINCIPALE;
+    {
+      const iW = _mw(ctx, intitule);
+      ctx.fillText(intitule, (ATT.W - iW) / 2, posY + 20);
+      posY += 40;
+      _rect(ctx, (ATT.W - iW) / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
+      posY += 70;
+    }
+
+    _font(ctx, 38, "italic");
+    ctx.fillStyle = ATT.GRIS;
+    const descriptionTexte = estStage
+      ? _attDescriptionStage(apprenant.missionsStage)
+      : _attDescription(apprenant.filiere);
+    posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 48) + 16;
+
+    _font(ctx, 52, "normal");
+    const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
+    let cx = CX;
+    ctx.fillStyle = ATT.TEXTE; ctx.fillText(p1, cx, posY); cx += _mw(ctx, p1);
+    _font(ctx, 52, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
+    _font(ctx, 52, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(p3, cx, posY); cx += _mw(ctx, p3);
+    _font(ctx, 52, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(p4, cx, posY);
+    posY += 72;
+
+    _font(ctx, 48, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    posY = _wrap(ctx, estStage
+      ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
+      : "Cette formation lui a permis d'acquérir des compétences pratiques et professionnelles dans le domaine concerné.",
+      CX, posY, CW, 58);
+    posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 58);
+
+    posY += 20;
   }
-
-  _font(ctx, 38, "italic");
-  ctx.fillStyle = ATT.GRIS;
-  const descriptionTexte = estStage
-    ? _attDescriptionStage(apprenant.missionsStage)
-    : _attDescription(apprenant.filiere);
-  posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 48) + 16;
-
-  _font(ctx, 52, "normal");
-  const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
-  let cx = CX;
-  ctx.fillStyle = ATT.TEXTE; ctx.fillText(p1, cx, posY); cx += _mw(ctx, p1);
-  _font(ctx, 52, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(p2, cx, posY); cx += _mw(ctx, p2);
-  _font(ctx, 52, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(p3, cx, posY); cx += _mw(ctx, p3);
-  _font(ctx, 52, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(p4, cx, posY);
-  posY += 72;
-
-  _font(ctx, 48, "normal");
-  ctx.fillStyle = ATT.TEXTE;
-  posY = _wrap(ctx, estStage
-    ? "Ce stage lui a permis d'acquérir une expérience pratique et professionnelle au sein de notre structure."
-    : "Cette formation lui a permis d'acquérir des compétences pratiques et professionnelles dans le domaine concerné.",
-    CX, posY, CW, 58);
-  posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 58);
-
-  posY += 20;
 
   // ── RUBAN D'APPRÉCIATION — suit désormais le flux dynamique du texte
   // (posY), juste après "Fait à Comé". FIX : l'ancienne version le
