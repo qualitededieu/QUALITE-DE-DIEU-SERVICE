@@ -3,12 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Les Qualités de Dieu Service — Centre de Formation Professionnelle</title>
+  <meta name="description" content="Centre de formation professionnelle en Informatique, Graphisme, Sérigraphie à Comé, Bénin. Inscrivez-vous dès maintenant." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://www.qualitededieuservice.com/" />
+
+  <!-- Open Graph (partage Facebook, WhatsApp, LinkedIn...) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Les Qualités de Dieu Service" />
+  <meta property="og:title" content="Les Qualités de Dieu Service — Centre de Formation Professionnelle" />
+  <meta property="og:description" content="Centre de formation professionnelle en Informatique, Graphisme, Sérigraphie à Comé, Bénin. Inscrivez-vous dès maintenant." />
+  <meta property="og:url" content="https://www.qualitededieuservice.com/" />
+  <meta property="og:image" content="https://www.qualitededieuservice.com/icons/logoqds.jpg" />
+  <meta property="og:locale" content="fr_FR" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Les Qualités de Dieu Service — Centre de Formation Professionnelle" />
+  <meta name="twitter:description" content="Centre de formation professionnelle en Informatique, Graphisme, Sérigraphie à Comé, Bénin." />
+  <meta name="twitter:image" content="https://www.qualitededieuservice.com/icons/logoqds.jpg" />
+
+  <!-- Données structurées — aide Google à comprendre qu'il s'agit d'un
+       centre de formation réel, avec adresse et contact, pas juste une
+       page web générique (peut faire apparaître ces infos directement
+       dans les résultats de recherche, panneau Google, etc.) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "Les Qualités de Dieu Service",
+    "alternateName": "LQD Service",
+    "url": "https://www.qualitededieuservice.com/",
+    "logo": "https://www.qualitededieuservice.com/icons/logoqds.jpg",
+    "image": "https://www.qualitededieuservice.com/icons/logoqds.jpg",
+    "description": "Centre de formation professionnelle en Informatique & Bureautique, Graphisme & PAO, Sérigraphie et Création de sites web.",
+    "telephone": "+229 01 97 95 12 30",
+    "email": "contact@lqdservice.bj",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Route à Akodéha, à côté de la Pharmacie Sainte-Croix, Hongodé",
+      "addressLocality": "Comé",
+      "addressRegion": "Mono",
+      "addressCountry": "BJ"
+    },
+    "areaServed": "BJ",
+    "priceRange": "$$"
+  }
+  </script>
+
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Les Qualités de Dieu Service" />
   <link rel="apple-touch-icon" href="/icons/logoqds.jpg" />
-  <title>Les Qualités de Dieu Service — Centre de Formation Professionnelle</title>
-  <meta name="description" content="Centre de formation professionnelle en Informatique, Graphisme, Sérigraphie à Comé, Bénin. Inscrivez-vous dès maintenant." />
   <link rel="icon" href="icons/logoqds.jpg" type="image/jpeg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -335,6 +381,24 @@
 </head>
 <body>
 
+  <!-- BANDE D'INFORMATION — même principe que Le Compagnon Yaovi :
+       masquée par défaut, affichée seulement si l'admin l'active avec
+       un texte (voir bandeauGetPublic dans GAS/annonces.gs). -->
+  <div id="bandeau-info" style="display:none;background:#04342C;border-bottom:2px solid #F5A623;overflow:hidden;position:relative;white-space:nowrap;">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#A6402F;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 14px;position:relative;z-index:2;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;animation:bandeau-pulse 1.4s infinite;"></span>
+      EN DIRECT
+    </div>
+    <div style="display:inline-block;overflow:hidden;vertical-align:middle;width:calc(100% - 100px);">
+      <div id="bandeau-texte" style="display:inline-block;padding:6px 0;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 22s linear infinite;">
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes bandeau-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    @keyframes bandeau-scroll { from{transform:translateX(0);} to{transform:translateX(-100%);} }
+  </style>
+
   <!-- NAV -->
   <nav id="navbar">
     <div class="container">
@@ -348,9 +412,8 @@
           <li><a href="#services"       class="nav-link">Services</a></li>
           <li><a href="#renseignement"  class="nav-link">Renseignements</a></li>
           <li><a href="#galerie"        class="nav-link">Galerie</a></li>
-          <li><a href="#blog"           class="nav-link">Blog</a></li>
+          <li><a href="#blog"           class="nav-link">Actualités</a></li>
           <li><a href="#contact"        class="nav-link">Contact</a></li>
-          <li><a href="https://academyphanos.vercel.app/" class="nav-link">Phanos Kosmos</a></li>
            <li><a href="/regularisation"        class="nav-link">Régularisation</a></li>
            <li><a href="/postuler"               class="nav-link">Postuler</a></li>
           <li><a href="#inscription"    class="btn-nav-cta">S'inscrire</a></li>
@@ -364,9 +427,8 @@
         <li><a href="#services"      onclick="closeMobileNav()">Services</a></li>
         <li><a href="#renseignement" onclick="closeMobileNav()">Renseignements</a></li>
         <li><a href="#galerie"       onclick="closeMobileNav()">Galerie</a></li>
-        <li><a href="#blog"          onclick="closeMobileNav()">Blog</a></li>
+        <li><a href="#blog"          onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="#contact"       onclick="closeMobileNav()">Contact</a></li>
-        <li><a href="https://academyphanos.vercel.app/" onclick="closeMobileNav()">Phanos Kosmos</a></li>
          <li><a href="/regularisation"       onclick="closeMobileNav()">Régualisation</a></li>
          <li><a href="/postuler"              onclick="closeMobileNav()">Postuler</a></li>
         <li><a href="#inscription"   onclick="closeMobileNav()" style="color:var(--teal-600);font-weight:700;">S'inscrire maintenant</a></li>
@@ -901,42 +963,19 @@
     </div>
   </section>
 
-  <!-- BLOG -->
+  <!-- BLOG / ACTUALITÉS -->
   <section id="blog" class="section">
     <div class="container">
       <div class="section-header reveal">
         <span class="section-tag">Actualités</span>
-        <h2 class="section-title">Le blog du centre</h2>
+        <h2 class="section-title">Actualités du centre</h2>
         <p class="section-subtitle">Conseils numériques, actualités du centre, témoignages d'apprenants.</p>
       </div>
-      <div class="blog-grid">
-        <article class="blog-card reveal">
-          <div class="blog-card-img"><span class="iconify" data-icon="tabler:device-laptop"></span><span class="blog-cat">Informatique</span></div>
-          <div class="blog-card-body">
-            <div class="blog-meta"><span class="iconify" data-icon="tabler:calendar"></span>15 mai 2026</div>
-            <h4>5 raisons d'apprendre Excel en 2026</h4>
-            <p>Excel reste l'un des outils les plus demandés par les employeurs au Bénin et dans la sous-région.</p>
-            <a class="blog-lire" href="#">Lire l'article<span class="iconify" data-icon="tabler:arrow-right"></span></a>
-          </div>
-        </article>
-        <article class="blog-card reveal">
-          <div class="blog-card-img" style="background:linear-gradient(135deg,#F0E8FF,#E2D0FF)"><span class="iconify" data-icon="tabler:vector-bezier" style="color:#7B2EFF;"></span><span class="blog-cat" style="background:#7B2EFF;">Graphisme</span></div>
-          <div class="blog-card-body">
-            <div class="blog-meta"><span class="iconify" data-icon="tabler:calendar"></span>3 avril 2026</div>
-            <h4>Comment créer un logo professionnel avec CorelDRAW</h4>
-            <p>Guide pas à pas pour concevoir une identité visuelle percutante, même pour débutants.</p>
-            <a class="blog-lire" href="#">Lire l'article<span class="iconify" data-icon="tabler:arrow-right"></span></a>
-          </div>
-        </article>
-        <article class="blog-card reveal">
-          <div class="blog-card-img" style="background:linear-gradient(135deg,var(--orange-50),var(--orange-100))"><span class="iconify" data-icon="tabler:shirt" style="color:var(--orange-600);"></span><span class="blog-cat" style="background:var(--orange-600);">Sérigraphie</span></div>
-          <div class="blog-card-body">
-            <div class="blog-meta"><span class="iconify" data-icon="tabler:calendar"></span>18 mars 2025</div>
-            <h4>Sérigraphie : lancer sa micro-entreprise depuis Comé</h4>
-            <p>Témoignage d'un ancien apprenant qui a monté son atelier après 3 mois de formation.</p>
-            <a class="blog-lire" href="#">Lire l'article<span class="iconify" data-icon="tabler:arrow-right"></span></a>
-          </div>
-        </article>
+      <div class="blog-grid" id="blog-grid">
+        <p style="grid-column:1/-1;text-align:center;color:var(--gray-500);padding:40px 0;">
+          <span class="iconify" data-icon="tabler:loader-2" style="animation:spin 1s linear infinite;font-size:20px;"></span>
+          Chargement des actualités...
+        </p>
       </div>
     </div>
   </section>
@@ -1171,7 +1210,6 @@
           <ul>
             <li><a href="tel:+22901979512 30">+229 01 97 95 12 30</a></li>
             <li><a href="mailto:contact@lqdservice.bj">contact@lqdservice.bj</a></li>
-            <li><a href="https://academyphanos.vercel.app/">Phanos Kosmos</a></li>
             <li><a href="#inscription">S'inscrire</a></li>
           </ul>
         </div>
@@ -1200,6 +1238,98 @@
     const MAX_FILE_SIZE     = 2 * 1024 * 1024; // 2 Mo
 
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+
+    /* ================================================================
+       BANDEAU D'INFORMATION — chargé au démarrage, masqué si l'admin
+       ne l'a pas activé (voir bandeauGetPublic dans GAS/annonces.gs)
+    ================================================================ */
+    async function chargerBandeau() {
+      try {
+        const resp = await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'bandeau_get_public' })
+        });
+        const result = await resp.json();
+        if (result.status === 'success' && result.actif && result.texte) {
+          document.getElementById('bandeau-texte').textContent = result.texte;
+          document.getElementById('bandeau-info').style.display = 'block';
+        }
+      } catch (e) {
+        // Silencieux : l'absence de bandeau n'est jamais bloquante pour le reste du site
+        console.warn('[bandeau] chargement impossible :', e.message);
+      }
+    }
+    chargerBandeau();
+
+    /* ================================================================
+       ACTUALITÉS — remplace les 3 cartes statiques par les vraies
+       annonces publiées, gérées depuis l'admin (voir GAS/annonces.gs)
+    ================================================================ */
+    const ANNONCE_CATEGORIES_STYLE = {
+      'Informatique & Bureautique': { icone: 'tabler:device-laptop', couleur: '#0F6E56', fond: 'linear-gradient(135deg,#E6F5F1,#CDEBE3)' },
+      'Graphisme & PAO':            { icone: 'tabler:vector-bezier', couleur: '#7B2EFF', fond: 'linear-gradient(135deg,#F0E8FF,#E2D0FF)' },
+      'Sérigraphie':                { icone: 'tabler:shirt',         couleur: '#C97A1A', fond: 'linear-gradient(135deg,#FDF0E0,#FBE1C2)' },
+      'Création de sites web':      { icone: 'tabler:code',          couleur: '#0D7A8A', fond: 'linear-gradient(135deg,#E0F4F7,#C2E9EF)' },
+      'Général':                    { icone: 'tabler:speakerphone',  couleur: '#04342C', fond: 'linear-gradient(135deg,#E7EEEC,#CFDFDA)' },
+    };
+
+    function _formatDateAnnonce(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function _escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function chargerActualites() {
+      const grid = document.getElementById('blog-grid');
+      if (!grid) return;
+      try {
+        const resp = await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'annonces_list_publiees' })
+        });
+        const result = await resp.json();
+        const annonces = (result.status === 'success' && Array.isArray(result.annonces)) ? result.annonces : [];
+
+        if (annonces.length === 0) {
+          grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:var(--gray-500);padding:40px 0;">
+            Aucune actualité publiée pour le moment. Revenez bientôt !
+          </p>`;
+          return;
+        }
+
+        grid.innerHTML = annonces.map(a => {
+          const style = ANNONCE_CATEGORIES_STYLE[a.categorie] || ANNONCE_CATEGORIES_STYLE['Général'];
+          const extrait = a.contenu.length > 140 ? a.contenu.slice(0, 140).trim() + '…' : a.contenu;
+          return `
+            <article class="blog-card reveal">
+              <div class="blog-card-img" style="background:${style.fond}">
+                <span class="iconify" data-icon="${style.icone}" style="color:${style.couleur};"></span>
+                <span class="blog-cat" style="background:${style.couleur};">${_escapeHtml(a.categorie)}</span>
+              </div>
+              <div class="blog-card-body">
+                <div class="blog-meta"><span class="iconify" data-icon="tabler:calendar"></span>${_formatDateAnnonce(a.datePublication)}</div>
+                <h4>${_escapeHtml(a.titre)}</h4>
+                <p>${_escapeHtml(extrait)}</p>
+              </div>
+            </article>`;
+        }).join('');
+      } catch (e) {
+        grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:var(--gray-500);padding:40px 0;">
+          Impossible de charger les actualités pour le moment.
+        </p>`;
+        console.warn('[actualites] chargement impossible :', e.message);
+      }
+    }
+    chargerActualites();
 
     /* ---- Stockage fichiers base64 ---- */
     const fichiers = { piece1: null, photo: null, preuve: null };
