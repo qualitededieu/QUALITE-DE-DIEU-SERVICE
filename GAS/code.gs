@@ -91,7 +91,8 @@ function doPost(e) {
 
     const data   = JSON.parse(raw);
     const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
-  if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier' || action === 'bandeau_get_public') return routerAdmin(data, action);
+  if (action === 'bandeau_get_public') return bandeauGetPublic(data);
+  if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
   if (action === 'renseignement') return traiterRenseignement(data);
   if (action === 'regularisation') return traiterRegularisation(data);
   if (action === 'chat_rdv') return enregistrerRdvChat(data);
