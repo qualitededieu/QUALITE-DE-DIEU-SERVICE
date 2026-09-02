@@ -1,24 +1,3 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL — Initialisation GAS
-   Fichier  : init.gs
-   Version  : 1.1.0
-   Auteur   : LQD Web Studio / PHANOS KOSMOS
-
-   USAGE :
-     Exécuter une seule fois depuis l'éditeur GAS AVANT le déploiement.
-     Sélectionner la fonction dans le menu déroulant → Exécuter.
-
-     Ordre recommandé :
-       1. initDrive()    → Crée la structure de dossiers Google Drive
-       2. initSheets()   → Crée le Spreadsheet avec tous les onglets
-       3. verifierInit() → Vérifie que tout est en place (optionnel)
-   ===================================================================== */
-
-
-// =====================================================================
-// EN-TÊTES RÉGULARISATION — Déclaré ICI en premier (avant toute fonction)
-// Copie locale pour éviter les problèmes d'ordre de chargement GAS
-// =====================================================================
 const ENTETES_REG_INIT = [
   'ID Apprenant', 'Date soumission',
   'Prénom(s)', 'Nom', 'Sexe', 'Date de naissance', 'Lieu de naissance',
@@ -35,14 +14,9 @@ const ENTETES_REG_INIT = [
   'Statut dossier', 'Traité par', 'Date traitement'
 ];
 
-
-// =====================================================================
-// INIT DRIVE — Crée la structure complète de dossiers
-// =====================================================================
 function initDrive() {
   Logger.log('=== INIT DRIVE — Démarrage ===');
 
-  // ---- Dossier racine ----
   let racine = trouverDossierDrive(CONFIG.DRIVE_DOSSIER_NOM);
   if (racine) {
     Logger.log('[DRIVE] Dossier racine déjà existant : ' + CONFIG.DRIVE_DOSSIER_NOM);
@@ -51,7 +25,6 @@ function initDrive() {
     Logger.log('[DRIVE] Dossier racine créé : ' + CONFIG.DRIVE_DOSSIER_NOM);
   }
 
-  // ---- Sous-dossiers par formation + régularisations ----
   const categories = CONFIG.FORMATIONS_VALIDES.concat(['Multi-formations', 'Régularisations']);
 
   categories.forEach(function(nom) {
@@ -69,14 +42,9 @@ function initDrive() {
   Logger.log('URL Drive racine : ' + racine.getUrl());
 }
 
-
-// =====================================================================
-// INIT SHEETS — Crée le Spreadsheet avec tous les onglets
-// =====================================================================
 function initSheets() {
   Logger.log('=== INIT SHEETS — Démarrage ===');
 
-  // ---- Récupérer ou créer le Spreadsheet ----
   let ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
 
   if (ss) {
@@ -92,7 +60,6 @@ function initSheets() {
     }
   }
 
-  // ---- Créer les onglets (un seul appel chacun, avec ss) ----
   creerOngletInscription(ss, 'Toutes les inscriptions', true);
 
   CONFIG.FORMATIONS_VALIDES.forEach(function(formation) {
@@ -104,7 +71,6 @@ function initSheets() {
   creerOngletRegularisation(ss);
   creerOngletDashboard(ss);
 
-  // ---- Réordonner les feuilles ----
   const ordreOnglets = [
     'Tableau de bord',
     'Toutes les inscriptions',
@@ -131,23 +97,6 @@ function initSheets() {
   Logger.log('URL Spreadsheet : ' + ss.getUrl());
 }
 
-
-// =====================================================================
-// RÉPARATION — Remet en cohérence l'en-tête (titres + mise en forme +
-// validations) de TOUS les onglets d'inscription déjà existants.
-//
-// À exécuter UNE SEULE FOIS depuis l'éditeur GAS, après avoir mis à
-// jour ENTETES_INSCRIPTION (colonne "Sexe" ajoutée). Contrairement à
-// initSheets(), cette fonction ne crée aucun onglet — elle corrige
-// uniquement la LIGNE 1 (titres) des onglets déjà en place, sans
-// jamais toucher aux données déjà enregistrées en dessous.
-//
-// Cas traités :
-//   - Onglet sans aucun en-tête (ligne 1 vide)
-//   - Onglet avec un en-tête incomplet (Sexe manquant en fin de ligne)
-//   - Onglet avec un en-tête présent mais sans la mise en forme
-//     attendue (couleur, gras, largeur de colonnes, listes déroulantes)
-// =====================================================================
 function repararEnTetesInscription() {
   Logger.log('=== RÉPARATION EN-TÊTES INSCRIPTION — Démarrage ===');
 
@@ -170,8 +119,6 @@ function repararEnTetesInscription() {
 
     const estMaitre = (nomFeuille === 'Toutes les inscriptions');
 
-    // Lit l'en-tête actuel tel qu'il est réellement sur la feuille,
-    // même s'il est plus court, plus long, ou totalement vide.
     const largeurActuelle = feuille.getLastColumn();
     const enteteActuel = largeurActuelle > 0
       ? feuille.getRange(1, 1, 1, largeurActuelle).getValues()[0]
@@ -195,14 +142,6 @@ function repararEnTetesInscription() {
   Logger.log('=== RÉPARATION EN-TÊTES INSCRIPTION — Terminé ===');
 }
 
-
-// =====================================================================
-// HELPER — Écrit et met en forme la ligne d'en-tête d'un onglet
-// Inscription (titres, couleur, gras, largeurs, listes déroulantes).
-// Réutilisé par creerOngletInscription() (nouvel onglet) ET par
-// repararEnTetesInscription() (onglet déjà existant à corriger).
-// N'écrit JAMAIS au-delà de la ligne 1 : aucune donnée n'est touchée.
-// =====================================================================
 function _ecrireEnTeteInscription(feuille, estMaitre) {
   feuille.getRange(1, 1, 1, ENTETES_INSCRIPTION.length).setValues([ENTETES_INSCRIPTION]);
 
@@ -219,7 +158,7 @@ function _ecrireEnTeteInscription(feuille, estMaitre) {
   const largeurs = [
     120, 160, 110, 110, 150, 180, 260, 80, 200,
     120, 160, 200, 200, 200, 200, 120, 120, 120, 120, 120, 140, 120, 140,
-    90 // Sexe (colonne X)
+    90
   ];
   largeurs.forEach(function(l, i) {
     if (i < ENTETES_INSCRIPTION.length) feuille.setColumnWidth(i + 1, l);
@@ -243,10 +182,6 @@ function _ecrireEnTeteInscription(feuille, estMaitre) {
   feuille.getRange('P2:U1000').setNumberFormat('#,##0 "F CFA"');
 }
 
-
-// =====================================================================
-// HELPER — Créer un onglet Inscription avec en-têtes et style
-// =====================================================================
 function creerOngletInscription(ss, nomFeuille, estMaitre) {
 
   let feuille = ss.getSheetByName(nomFeuille);
@@ -280,10 +215,6 @@ function creerOngletInscription(ss, nomFeuille, estMaitre) {
   return feuille;
 }
 
-
-// =====================================================================
-// HELPER — Créer l'onglet Renseignements
-// =====================================================================
 function creerOngletRenseignement(ss) {
 
   let feuille = ss.getSheetByName('Renseignements');
@@ -317,10 +248,6 @@ function creerOngletRenseignement(ss) {
   return feuille;
 }
 
-
-// =====================================================================
-// HELPER — Créer l'onglet Régularisations
-// =====================================================================
 function creerOngletRegularisation(ss) {
 
   let feuille = ss.getSheetByName('Régularisations');
@@ -356,7 +283,6 @@ function creerOngletRegularisation(ss) {
     if (i < ENTETES_REG_INIT.length) feuille.setColumnWidth(i + 1, l);
   });
 
-  // Colonne "Statut dossier" = colonne 38 (index 37) = colonne AL
   const regle = SpreadsheetApp.newDataValidation()
     .requireValueInList(['En attente', 'Validé', 'Rejeté'], true)
     .setAllowInvalid(false).build();
@@ -365,10 +291,6 @@ function creerOngletRegularisation(ss) {
   return feuille;
 }
 
-
-// =====================================================================
-// HELPER — Créer l'onglet Tableau de bord
-// =====================================================================
 function creerOngletDashboard(ss) {
 
   let feuille = ss.getSheetByName('Tableau de bord');
@@ -432,10 +354,6 @@ function creerOngletDashboard(ss) {
   return feuille;
 }
 
-
-// =====================================================================
-// VÉRIFICATION — Vérifie que tout est en place après init
-// =====================================================================
 function verifierInit() {
   Logger.log('=== VÉRIFICATION INIT ===');
   Logger.log('');
@@ -481,23 +399,3 @@ function verifierInit() {
   Logger.log('');
   Logger.log('=== FIN VÉRIFICATION ===');
 }
-
-
-// =====================================================================
-// RESET — Supprime tout et recrée (ATTENTION : irréversible)
-// =====================================================================
-/*
-function resetComplet() {
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (ss) {
-    DriveApp.getFileById(ss.getId()).setTrashed(true);
-    Logger.log('[RESET] Spreadsheet supprimé.');
-  }
-  const racine = trouverDossierDrive(CONFIG.DRIVE_DOSSIER_NOM);
-  if (racine) {
-    racine.setTrashed(true);
-    Logger.log('[RESET] Dossier Drive supprimé.');
-  }
-  Logger.log('[RESET] Terminé. Relancer initDrive() puis initSheets().');
-}
-*/

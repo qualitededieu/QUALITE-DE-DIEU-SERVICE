@@ -1,24 +1,9 @@
 "use strict";
 
-/* ============================================================
-   WIDGET DE CHAT PUBLIC — LES QUALITÉS DE DIEU SERVICE
-   Autonome (aucune dépendance de build), 100% GAS pur.
-   FAQ locale par mots-clés + quiz d'orientation + prise de RDV
-   + capture de contact. Aucun contenu variable n'est jamais
-   inséré via innerHTML — uniquement textContent (anti-XSS).
-   ============================================================ */
-
 (function () {
 
-  // ─── CONFIG ───────────────────────────────────────────────
-  // Backend GAS — même URL que sur le reste du site (à garder
-  // synchronisée avec GAS_WEBAPP_URL dans index.html si le
-  // déploiement GAS change).
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
 
-  // Catalogue formations — à garder synchronisé avec CONFIG.COUTS_FORMATIONS
-  // et CONFIG.FRAIS_INSCRIPTION dans GAS/code.gs, et avec la section
-  // #formations d'index.html.
   const FORMATIONS = {
     informatique:   { label: 'Informatique & Bureautique', duree: '3 mois', prix: '45 000 F' },
     graphisme:      { label: 'Graphisme & PAO',             duree: '4 mois', prix: '65 000 F' },
@@ -32,10 +17,8 @@
   const CRENEAUX = ['Matin (8h-12h)', 'Après-midi (13h-17h)', 'À définir par téléphone'];
   const TYPES_RDV = ['Visite du centre', 'Renseignements formation', 'Inscription', 'Autre'];
 
-  // ─── ÉTAT ─────────────────────────────────────────────────
   const Etat = { mode: 'idle', quiz: { index: 0, scores: {} }, rdv: {}, lead: {} };
 
-  // ─── STYLE ────────────────────────────────────────────────
   const STYLE = `
   #pkc-launcher{position:fixed;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;
     background:var(--teal-600,#0D7A8A);color:#fff;border:none;cursor:pointer;z-index:9998;
@@ -83,7 +66,6 @@
   @media (max-width:420px){#pkc-panel{right:16px;left:16px;width:auto;bottom:82px;}}
   `;
 
-  // ─── DOM ──────────────────────────────────────────────────
   let elLauncher, elPanel, elBody, elQuick, elInput, elSend;
 
   function injecterDOM() {
@@ -189,7 +171,6 @@
     elBody.scrollTop = elBody.scrollHeight;
   }
 
-  // ─── FAQ LOCALE PAR MOTS-CLÉS ─────────────────────────────
   function detecterFormation(t) {
     if (/bureau|word|excel|powerpoint|informatique/.test(t)) return 'informatique';
     if (/graph|photoshop|illustrator|corel|pao|design/.test(t)) return 'graphisme';
@@ -271,7 +252,6 @@
     });
   }
 
-  // ─── QUIZ D'ORIENTATION ────────────────────────────────────
   const QUIZ_QUESTIONS = [
     {
       texte: "Qu'est-ce qui vous attire le plus ?",
@@ -329,7 +309,6 @@
     proposerActionsPrincipales();
   }
 
-  // ─── PRISE DE RDV ──────────────────────────────────────────
   function demarrerRdv() {
     Etat.mode = 'rdv';
     ajouterMessage('Parfait, prenons rendez-vous. Quelques informations :', 'bot');
@@ -369,7 +348,6 @@
     proposerActionsPrincipales();
   }
 
-  // ─── CAPTURE DE LEAD ("être rappelé") ──────────────────────
   function demarrerLead() {
     Etat.mode = 'lead';
     ajouterMessage("Laissez-nous vos coordonnées, un conseiller vous rappelle rapidement.", 'bot');
@@ -398,7 +376,6 @@
     }, 'Envoyer');
   }
 
-  // ─── SAISIE LIBRE ──────────────────────────────────────────
   function traiterSaisie(texte) {
     if (!texte.trim()) return;
     ajouterMessage(texte, 'user');
@@ -408,7 +385,6 @@
     }
   }
 
-  // ─── OUVERTURE / FERMETURE ─────────────────────────────────
   function ouvrirPanel() {
     elPanel.classList.add('open');
     if (!elBody.children.length) demarrerConversation();
@@ -420,7 +396,6 @@
     proposerActionsPrincipales();
   }
 
-  // ─── INIT ───────────────────────────────────────────────────
   function init() {
     injecterDOM();
     elLauncher = document.getElementById('pkc-launcher');

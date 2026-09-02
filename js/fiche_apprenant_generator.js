@@ -1,11 +1,5 @@
 "use strict";
 
-/* ============================================================
-   FICHE APPRENANT DÉTAILLÉE — LES QUALITÉS DE DIEU SERVICE
-   Format A5 (148 x 210mm) @ 300 DPI — génération canvas 100%
-   côté client, complément lisible à la carte de poche.
-   ============================================================ */
-
 const DPI_FICHE = 300;
 function _fMmToPx(mm) { return Math.round(mm * DPI_FICHE / 25.4); }
 
@@ -92,14 +86,9 @@ function _fLigne(ctx, icone, x, y, label, valeur, tailleLabel = 22, tailleValeur
   ctx.fillText(valeur, x + decal, y + 26);
 }
 
-// apprenant : { id, prenom, nom, sexe, dateNaissance, filiere, dateEntree, dateFin, photoUrl }
-// token     : token carte HMAC (QR de vérification)
 async function genererFicheApprenant(apprenant, token) {
   const LOGO_URL = FICHE_ENTREPRISE.LOGO_URL;
-  // "?v=2" : cache navigateur "immutable" sur icons/ (voir vercel.json) —
-  // sans ça, une ancienne version déjà chargée par un visiteur resterait
-  // affichée indéfiniment malgré un nouveau déploiement.
-  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=2"; // même fichier que sur l'attestation
+  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=2";
   const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png?v=2";
   const lienVerif = token
     ? `https://${FICHE_ENTREPRISE.SITE}/verifier.html?t=${encodeURIComponent(token)}`
@@ -130,7 +119,6 @@ async function genererFicheApprenant(apprenant, token) {
 
   _fRectFill(ctx, 0, 0, W, H, FICHE.CREME);
 
-  // ── Header ──
   const HEADER_H = 260;
   const grad = ctx.createLinearGradient(0, 0, W, 0);
   grad.addColorStop(0, FICHE.MARINE); grad.addColorStop(1, FICHE.MARINE_2);
@@ -150,7 +138,6 @@ async function genererFicheApprenant(apprenant, token) {
   _fFont(ctx, 20, "400"); ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.fillText("Complément d'information à la carte d'apprenant", 250, 194);
 
-  // ── Photo + Nom + Filière ──
   const PH_W = 230, PH_H = 285, PH_X = W - M - PH_W, PH_Y = HEADER_H + 40;
   ctx.save();
   ctx.shadowColor = "rgba(13,43,94,0.25)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 5;
@@ -171,7 +158,6 @@ async function genererFicheApprenant(apprenant, token) {
   _fFont(ctx, 26, "500"); ctx.fillStyle = FICHE.GRIS;
   ctx.fillText(apprenant.filiere || "—", M, HEADER_H + 156);
 
-  // ── Grille d'informations (2 colonnes) ──
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
   let duree = "—";
   if (apprenant.dateEntree && apprenant.dateFin) {
@@ -193,7 +179,6 @@ async function genererFicheApprenant(apprenant, token) {
   _fLigne(ctx, icones.centre, colDX, yD, "CENTRE DE FORMATION", "Comé, Bénin"); yD += pas;
   _fLigne(ctx, null, colDX, yD, "VALIDITÉ DE LA CARTE", "Jusqu'au " + (apprenant.dateFin ? fmtDate(apprenant.dateFin) : "fin de formation")); yD += pas;
 
-  // ── Bande règlement / avantages / contacts (3 colonnes) ──
   const BAND_Y = Math.max(yG, yD) + 40;
   const BAND_H = 780;
   const gradBand = ctx.createLinearGradient(0, BAND_Y, 0, BAND_Y + BAND_H);
@@ -276,7 +261,6 @@ async function genererFicheApprenant(apprenant, token) {
   _fFont(ctx, 16, "500"); ctx.fillStyle = "rgba(255,255,255,0.7)";
   _fWrap(ctx, "Scanner pour vérifier l'authenticité de ce document.", QR_X2, QR_Y2 - 20, COL_W - padCol - 20, 20);
 
-  // ── Signature / cachet ──
   const SIG_Y = BAND_Y + BAND_H + 60;
   ctx.save();
   ctx.strokeStyle = "rgba(245,166,35,0.35)"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
@@ -296,7 +280,6 @@ async function genererFicheApprenant(apprenant, token) {
   const titreTxt = "Président Directeur Général";
   ctx.fillText(titreTxt, blocSigCentreX - _fMw(ctx, titreTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, titreTxt) / 2, SIG_Y + 220);
 
-  // ── Footer ──
   const FOOTER_Y = H - 70;
   _fRectFill(ctx, 0, FOOTER_Y, W, 70, FICHE.MARINE);
   _fFont(ctx, 18, "500"); ctx.fillStyle = "rgba(255,255,255,0.8)";
@@ -333,10 +316,6 @@ async function afficherFicheApprenant(apprenant, token) {
   }
 }
 
-// FIX : ancienne version via html2pdf.js (capture DOM d'un <img>) — le
-// PDF sortait vide, l'image base64 n'ayant pas fini de se décoder avant
-// la capture html2canvas. On insère directement l'image déjà rendue
-// dans un PDF via jsPDF, sans repasser par le DOM.
 async function telechargerFichePDF(dataURL, idApprenant) {
   if (!window.jspdf) {
     await new Promise((res, rej) => {

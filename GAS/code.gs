@@ -1,21 +1,3 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL — Google Apps Script Backend
-   Version : 3.1.0
-   Auteur  : LQD Web Studio / PHANOS KOSMOS
-   Changelog v3.1 :
-     - Correction guard e / e.postData dans doPost
-     - Ajout fonction testerDoPost() pour tests depuis l'éditeur GAS
-     - Suppression complète de l'API FedaPay
-     - Paiement uniquement par virement bancaire
-     - Upload preuve de paiement (optionnel, base64 → Drive)
-     - Multi-formations : une personne peut s'inscrire à N formations
-     - Section renseignement : formulaire de contact léger
-   ===================================================================== */
-
-
-// =====================================================================
-// CONFIGURATION CENTRALE
-// =====================================================================
 const CONFIG = {
 
   ADMIN_EMAIL:       'lqddssarl@gmail.com',
@@ -30,37 +12,23 @@ const CONFIG = {
   COULEUR_DARK:   '#04342C',
   WHATSAPP:       '22997951230'.replace(/\s/g, ''),
 
-  // -------------------------------------------------------
-  // FRAIS D'INSCRIPTION FIXES (FCFA)
-  // -------------------------------------------------------
   FRAIS_INSCRIPTION: 10000,
 
-  // -------------------------------------------------------
-  // COÛTS TOTAUX PAR FORMATION (FCFA)
-  // TODO : renseigner les montants réels avant déploiement
-  // -------------------------------------------------------
   COUTS_FORMATIONS: {
-    'Informatique & Bureautique': 45000,   // TODO : ex. 50000
-    'Graphisme & PAO':            65000,   // TODO : ex. 75000
-    'Sérigraphie':                35000,   // TODO : ex. 50000
-    'Création de sites web':      200000    // TODO : ex. 75000
+    'Informatique & Bureautique': 45000,
+    'Graphisme & PAO':            65000,
+    'Sérigraphie':                35000,
+    'Création de sites web':      200000
   },
 
-  // -------------------------------------------------------
-  // COORDONNÉES BANCAIRES POUR VIREMENTS
-  // TODO : renseigner avant déploiement
-  // -------------------------------------------------------
   BANQUE: {
     TITULAIRE:     'LES QUALITÉS DE DIEU SERVICE SARL',
-    NOM_BANQUE:    'UBA Bénin',   // TODO : ex. 'BOA Bénin'
-    NUMERO_COMPTE: 'BJ66 XXXX XXX XXX XX',   // TODO : ex. 'BJ66 BJ011 2345 6789 0123 456'
-    CODE_BANQUE:   'IBAN',   // TODO : si requis par la banque
-    CODE_AGENCE:   'BJ0COBJ'    // TODO : si requis par la banque
+    NOM_BANQUE:    'UBA Bénin',
+    NUMERO_COMPTE: 'BJ66 XXXX XXX XXX XX',
+    CODE_BANQUE:   'IBAN',
+    CODE_AGENCE:   'BJ0COBJ'
   },
 
-  // -------------------------------------------------------
-  // LISTE BLANCHE DES FORMATIONS (anti-injection)
-  // -------------------------------------------------------
   FORMATIONS_VALIDES: [
     'Informatique & Bureautique',
     'Graphisme & PAO',
@@ -69,10 +37,6 @@ const CONFIG = {
   ]
 };
 
-
-// =====================================================================
-// EN-TÊTES COLONNES GOOGLE SHEETS
-// =====================================================================
 const ENTETES_INSCRIPTION = [
   'ID',
   'Date',
@@ -80,14 +44,14 @@ const ENTETES_INSCRIPTION = [
   'Nom',
   'Téléphone',
   'Email',
-  'Formations',                    // séparées par " | "
+  'Formations',
   'Nombre de formations',
   'Message',
-  'Statut dossier',                // En attente | Confirmé | Annulé
+  'Statut dossier',
   'Type pièce identité',
   'Pièce identité (Drive URL)',
   'Photo identité (Drive URL)',
-  'Preuve paiement (Drive URL)',   // Optionnel
+  'Preuve paiement (Drive URL)',
   'Dossier Drive (URL)',
   'Frais inscription (F)',
   'Coût formations total (F)',
@@ -95,9 +59,9 @@ const ENTETES_INSCRIPTION = [
   'Tranche 2 — 25% (F)',
   'Tranche 3 — 25% (F)',
   '1er versement attendu (F)',
-  'Statut paiement',               // En attente | Reçu | Vérifié
+  'Statut paiement',
   'Rappel J+1 envoyé',
-  'Sexe'                           // ajouté EN FIN : préserve les index des colonnes existantes
+  'Sexe'
 ];
 
 const ENTETES_RENSEIGNEMENT = [
@@ -109,20 +73,11 @@ const ENTETES_RENSEIGNEMENT = [
   'Email',
   'Formations intéressées',
   'Question / Message',
-  'Statut'                         // Nouveau | Traité
+  'Statut'
 ];
 
-
-// =====================================================================
-// ROUTAGE PRINCIPAL — doPost
-// =====================================================================
 function doPost(e) {
 
-  // -------------------------------------------------------
-  // GUARD v3.1 — Protection si e est undefined
-  // Cause : fonction lancée manuellement depuis l'éditeur GAS
-  // sans requête HTTP réelle. Utiliser testerDoPost() à la place.
-  // -------------------------------------------------------
   if (!e || !e.postData) {
     return reponseJSON({
       status:  'error',
@@ -136,7 +91,6 @@ function doPost(e) {
 
     const data   = JSON.parse(raw);
     const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
-// Routing admin — doit être en premier
   if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier' || action === 'bandeau_get_public') return routerAdmin(data, action);
   if (action === 'renseignement') return traiterRenseignement(data);
   if (action === 'regularisation') return traiterRegularisation(data);
@@ -153,18 +107,10 @@ function doPost(e) {
   }
 }
 
-
-// doGet — santé API
 function doGet(e) {
   return reponseJSON({ status: 'ok', message: 'LQD Service API v3.1 opérationnelle.' });
 }
 
-
-// =====================================================================
-// FONCTION DE TEST — À utiliser depuis l'éditeur GAS
-// Ne jamais "Exécuter" doPost directement depuis l'éditeur.
-// Sélectionner testerDoPost dans le menu puis cliquer Exécuter.
-// =====================================================================
 function testerDoPost() {
   const fakeEvent = {
     postData: {
@@ -177,7 +123,6 @@ function testerDoPost() {
         formations:     ['Informatique & Bureautique'],
         typePiece:      'CIP (Carte d\'Identité Personnelle)',
         message:        'Test depuis éditeur GAS v3.1',
-        // Fichiers minimalistes en base64 (chaîne valide)
         piece1Base64:   'dGVzdA==',
         piece1MimeType: 'image/jpeg',
         photoBase64:    'dGVzdA==',
@@ -213,25 +158,18 @@ function testerRenseignement() {
   Logger.log('[testerRenseignement] Réponse : ' + resultat.getContent());
 }
 
-
-// =====================================================================
-// INSCRIPTION — Traitement complet
-// =====================================================================
 function traiterInscription(data) {
 
-  // 1. Validation champs textuels
   const erreursChamps = validerDonneesInscription(data);
   if (erreursChamps.length > 0) {
     return reponseJSON({ status: 'error', message: 'Champs invalides : ' + erreursChamps.join(', ') });
   }
 
-  // 2. Validation fichiers (pièce + photo obligatoires, preuve optionnelle)
   const erreursFichiers = validerFichiersInscription(data);
   if (erreursFichiers.length > 0) {
     return reponseJSON({ status: 'error', message: erreursFichiers.join(' ') });
   }
 
-  // 3. Formations validées
   const formations = Array.isArray(data.formations)
     ? data.formations.filter(f => CONFIG.FORMATIONS_VALIDES.includes(f))
     : [data.formations].filter(f => CONFIG.FORMATIONS_VALIDES.includes(f));
@@ -240,10 +178,8 @@ function traiterInscription(data) {
     return reponseJSON({ status: 'error', message: 'Aucune formation valide sélectionnée.' });
   }
 
-  // 4. Calcul montants (somme de toutes les formations choisies)
   const montants = calculerMontantsTotal(formations);
 
-  // 5. Construction objet inscription
   const inscription = {
     id:              genererID(),
     date:            new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }),
@@ -266,7 +202,6 @@ function traiterInscription(data) {
     rappelEnvoye:    'Non'
   };
 
-  // 6. Création dossier Drive + upload pièces
   try {
     const driveResult    = creerStructureDrive(inscription, data);
     inscription.pieceUrl  = driveResult.pieceUrl;
@@ -275,15 +210,12 @@ function traiterInscription(data) {
     inscription.dossierUrl= driveResult.dossierUrl;
   } catch (errDrive) {
     console.error('[Drive]', errDrive.toString());
-    // On ne bloque pas l'inscription si Drive échoue
     inscription.pieceUrl  = 'Erreur upload Drive';
     inscription.photoUrl  = 'Erreur upload Drive';
   }
 
-  // 7. Enregistrement Google Sheets
   enregistrerInscription(inscription, montants, formations);
 
-  // 8. Emails
   envoyerEmailAdmin(inscription, montants);
   if (inscription.email) {
     envoyerEmailApprenant(inscription, montants);
@@ -301,10 +233,6 @@ function traiterInscription(data) {
   });
 }
 
-
-// =====================================================================
-// RENSEIGNEMENT — Traitement
-// =====================================================================
 function traiterRenseignement(data) {
 
   const erreurs = validerDonneesRenseignement(data);
@@ -339,10 +267,6 @@ function traiterRenseignement(data) {
   });
 }
 
-
-// =====================================================================
-// CALCUL MONTANTS — Somme de toutes les formations sélectionnées
-// =====================================================================
 function calculerMontantsTotal(formations) {
   const fraisInscription = CONFIG.FRAIS_INSCRIPTION;
   const coutTotal        = formations.reduce((s, f) => s + (CONFIG.COUTS_FORMATIONS[f] || 0), 0);
@@ -353,10 +277,6 @@ function calculerMontantsTotal(formations) {
   return { fraisInscription, coutTotal, tranche1, tranche2, tranche3, premierVirement };
 }
 
-
-// =====================================================================
-// VALIDATION
-// =====================================================================
 function validerDonneesInscription(data) {
   const erreurs = [];
   if (!data.prenom    || data.prenom.trim().length < 2)    erreurs.push('prénom');
@@ -378,7 +298,6 @@ function validerFichiersInscription(data) {
     erreurs.push('La pièce d\'identité (acte ou CIP) est obligatoire.');
   if (!data.photoBase64 || data.photoBase64.length < 4)
     erreurs.push('La photo d\'identité est obligatoire.');
-  // Preuve de paiement : optionnelle — pas de validation bloquante
   return erreurs;
 }
 
@@ -391,18 +310,11 @@ function validerDonneesRenseignement(data) {
   return erreurs;
 }
 
-
-// =====================================================================
-// DRIVE — Création arborescence + upload fichiers base64
-// Structure : [Racine LQD] → [Formation ou Multi-formations] → [ID — Prénom Nom]
-// =====================================================================
 function creerStructureDrive(inscription, data) {
 
-  // Dossier racine
   let racine = trouverDossierDrive(CONFIG.DRIVE_DOSSIER_NOM);
   if (!racine) racine = DriveApp.createFolder(CONFIG.DRIVE_DOSSIER_NOM);
 
-  // Sous-dossier par catégorie
   const nomCategorie = inscription.formations.length === 1
     ? inscription.formations[0]
     : 'Multi-formations';
@@ -410,11 +322,9 @@ function creerStructureDrive(inscription, data) {
   let dossierCat = trouverSousDossier(racine, nomCategorie);
   if (!dossierCat) dossierCat = racine.createFolder(nomCategorie);
 
-  // Dossier apprenant
   const nomApprenant  = `${inscription.id} — ${inscription.prenom} ${inscription.nom}`;
   const dossierApprenant = dossierCat.createFolder(nomApprenant);
 
-  // Upload pièce identité (obligatoire)
   const p1Mime = data.piece1MimeType || 'image/jpeg';
   const pieceUrl = sauvegarderFichierDrive(
     dossierApprenant,
@@ -423,7 +333,6 @@ function creerStructureDrive(inscription, data) {
     p1Mime
   );
 
-  // Upload photo identité (obligatoire)
   const phMime = data.photoMimeType || 'image/jpeg';
   const photoUrl = sauvegarderFichierDrive(
     dossierApprenant,
@@ -432,7 +341,6 @@ function creerStructureDrive(inscription, data) {
     phMime
   );
 
-  // Upload preuve paiement (optionnelle)
   let preuveUrl = '';
   if (data.preuveBase64 && data.preuveBase64.length > 10) {
     const prMime = data.preuveMimeType || 'image/jpeg';
@@ -451,7 +359,6 @@ function sauvegarderFichierDrive(dossier, base64, nom, mimeType) {
   const octets  = Utilities.base64Decode(base64);
   const blob    = Utilities.newBlob(octets, mimeType, nom);
   const fichier = dossier.createFile(blob);
-  // Accès lecture pour tout utilisateur avec le lien
   fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return fichier.getUrl();
 }
@@ -466,10 +373,6 @@ function extensionDepuisMime(mime) {
   return map[mime] || 'bin';
 }
 
-
-// =====================================================================
-// GOOGLE SHEETS — Enregistrement inscription
-// =====================================================================
 function enregistrerInscription(inscription, montants, formations) {
 
   let ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
@@ -506,18 +409,12 @@ function enregistrerInscription(inscription, montants, formations) {
     inscription.sexe
   ];
 
-  // Feuille maître (toutes les inscriptions) — colonne 5 = Téléphone
   ajouterLigneFeuille(ss, 'Toutes les inscriptions', ENTETES_INSCRIPTION, ligne, 5);
 
-  // Feuille par catégorie
   const nomFeuille = formations.length === 1 ? formations[0] : 'Multi-formations';
   ajouterLigneFeuille(ss, nomFeuille, ENTETES_INSCRIPTION, ligne, 5);
 }
 
-
-// =====================================================================
-// GOOGLE SHEETS — Enregistrement renseignement
-// =====================================================================
 function enregistrerRenseignement(renseignement) {
 
   let ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
@@ -539,17 +436,9 @@ function enregistrerRenseignement(renseignement) {
     renseignement.statut
   ];
 
-  ajouterLigneFeuille(ss, 'Renseignements', ENTETES_RENSEIGNEMENT, ligne, 5); // colonne 5 = Téléphone
+  ajouterLigneFeuille(ss, 'Renseignements', ENTETES_RENSEIGNEMENT, ligne, 5);
 }
 
-
-// =====================================================================
-// HELPER — Créer/alimenter une feuille Sheets
-// colTelephone (optionnel, 1-based) : colonne du numéro de téléphone.
-// Si fournie, force le format Texte sur cette cellule pour empêcher
-// Google Sheets de le convertir en nombre et de manger le "0" initial
-// (ex. "0197951230" affiché "197951230" ou en notation scientifique).
-// =====================================================================
 function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colTelephone) {
 
   let feuille = ss.getSheetByName(nomFeuille);
@@ -585,14 +474,6 @@ function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colTelephone) {
   }
 }
 
-
-// =====================================================================
-// HELPER — Force l'affichage en texte d'un numéro de téléphone déjà
-// écrit (feuilles alimentées par appendRow() direct plutôt que par
-// ajouterLigneFeuille : candidatures.gs, chat.gs). Empêche Google
-// Sheets de perdre le "0" initial ("0197951230" → "197951230").
-// À appeler juste après feuille.appendRow([...]).
-// =====================================================================
 function forcerTelephoneTexte(feuille, colTelephone, telephone) {
   const derniereLigne = feuille.getLastRow();
   const cellule = feuille.getRange(derniereLigne, colTelephone);
@@ -600,10 +481,6 @@ function forcerTelephoneTexte(feuille, colTelephone, telephone) {
   cellule.setValue(String(telephone || ''));
 }
 
-
-// =====================================================================
-// MISE À JOUR D'UNE COLONNE dans Sheets
-// =====================================================================
 function mettreAJourColonne(id, nomFeuille, nomColonne, valeur) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return;
@@ -617,10 +494,6 @@ function mettreAJourColonne(id, nomFeuille, nomColonne, valeur) {
   }
 }
 
-
-// =====================================================================
-// RAPPEL J+1
-// =====================================================================
 function programmerRappelJ1(inscription) {
   PropertiesService.getScriptProperties().setProperty(
     'RAPPEL_' + inscription.id,
@@ -662,10 +535,6 @@ function envoyerRappelJ1() {
   nettoyerTriggers('envoyerRappelJ1');
 }
 
-
-// =====================================================================
-// EMAILS — Inscription
-// =====================================================================
 function envoyerEmailAdmin(inscription, montants) {
   GmailApp.sendEmail(
     CONFIG.ADMIN_EMAIL,
@@ -707,10 +576,6 @@ function envoyerEmailVirement(inscription, montants) {
   );
 }
 
-
-// =====================================================================
-// EMAILS — Renseignement
-// =====================================================================
 function envoyerEmailAdminRenseignement(renseignement) {
   GmailApp.sendEmail(
     CONFIG.ADMIN_EMAIL,
@@ -737,10 +602,6 @@ function envoyerEmailAutoReponseRenseignement(renseignement) {
   );
 }
 
-
-// =====================================================================
-// TEMPLATES EMAIL — Admin inscription
-// =====================================================================
 function construireEmailAdmin(inscription, montants) {
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
@@ -819,10 +680,6 @@ function construireEmailAdmin(inscription, montants) {
 </body></html>`;
 }
 
-
-// =====================================================================
-// TEMPLATES EMAIL — Apprenant (confirmation + rappel J+1)
-// =====================================================================
 function construireEmailApprenant(inscription, montants, estRappel) {
   const intro = estRappel
     ? `Bonjour <strong>${inscription.prenom}</strong>,<br/><br/>
@@ -907,10 +764,6 @@ function construireEmailApprenant(inscription, montants, estRappel) {
 </body></html>`;
 }
 
-
-// =====================================================================
-// TEMPLATES EMAIL — Virement bancaire
-// =====================================================================
 function construireEmailVirement(inscription, montants) {
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
@@ -966,10 +819,6 @@ function construireEmailVirement(inscription, montants) {
 </body></html>`;
 }
 
-
-// =====================================================================
-// TEMPLATES EMAIL — Admin renseignement
-// =====================================================================
 function construireEmailAdminRenseignement(renseignement) {
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
@@ -1026,10 +875,6 @@ function construireEmailAdminRenseignement(renseignement) {
 </body></html>`;
 }
 
-
-// =====================================================================
-// TEMPLATES EMAIL — Auto-réponse renseignement
-// =====================================================================
 function construireEmailAutoReponseRenseignement(renseignement) {
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
@@ -1089,10 +934,6 @@ function construireEmailAutoReponseRenseignement(renseignement) {
 </body></html>`;
 }
 
-
-// =====================================================================
-// COMPOSANTS EMAIL RÉUTILISABLES
-// =====================================================================
 function ligneInfoEmail(label, valeur) {
   return `<tr style="border-top:1px solid #F3F4F6;">
     <td style="padding:11px 18px;color:#6B7280;font-size:13px;width:40%;vertical-align:top;">${label}</td>
@@ -1121,10 +962,6 @@ function formatFCFA(n) {
   return Number(n || 0).toLocaleString('fr-BJ') + ' F CFA';
 }
 
-
-// =====================================================================
-// UTILITAIRES
-// =====================================================================
 function trouverSpreadsheet(nom) {
   const f = DriveApp.getFilesByName(nom);
   return f.hasNext() ? SpreadsheetApp.openById(f.next().getId()) : null;

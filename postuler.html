@@ -200,7 +200,6 @@
 
         <form id="postulerForm" novalidate>
 
-          <!-- ÉTAPE 1 — Type + identité -->
           <div class="form-card" id="form-step-1">
             <div class="form-card-header">
               <div class="step-num">1</div>
@@ -283,7 +282,6 @@
             </div>
           </div>
 
-          <!-- ÉTAPE 2 — Parcours (dépend du type) -->
           <div class="form-card" id="form-step-2" style="display:none;">
             <div class="form-card-header">
               <div class="step-num">2</div>
@@ -357,7 +355,6 @@
             </div>
           </div>
 
-          <!-- ÉTAPE 3 — Documents -->
           <div class="form-card" id="form-step-3" style="display:none;">
             <div class="form-card-header">
               <div class="step-num">3</div>
@@ -445,7 +442,6 @@
             </div>
           </div>
 
-          <!-- SUCCÈS -->
           <div class="form-card" id="success-block">
             <div class="success-icon"><span class="iconify" data-icon="tabler:circle-check"></span></div>
             <h2>Candidature envoyée !</h2>
@@ -460,7 +456,6 @@
 
         </form>
 
-        <!-- ESPACE STAGIAIRE — récupération de l'attestation de fin de stage -->
         <div class="form-card" id="espace-stagiaire-card">
           <div class="form-card-header" style="cursor:pointer;" onclick="toggleEspaceStagiaire()">
             <div class="step-num"><span class="iconify" data-icon="tabler:certificate"></span></div>
@@ -491,7 +486,6 @@
     </div>
   </main>
 
-  <!-- MODALE ATTESTATION DE STAGE -->
   <div class="pk-modal-overlay" id="modal-attestation">
     <div class="pk-modal-box">
       <div class="pk-modal-header">
@@ -833,5 +827,25 @@
   </script>
 
   <script src="js/attestation_generator.js"></script>
+  <script>
+    (function () {
+      var GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+      async function chargerBandeau() {
+        try {
+          var resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'bandeau_get_public' })
+          });
+          var result = await resp.json();
+          if (result.status === 'success' && result.actif && result.texte) {
+            document.getElementById('bandeau-texte').textContent = result.texte;
+            document.getElementById('bandeau-info').style.display = 'block';
+          }
+        } catch (e) {}
+      }
+      chargerBandeau();
+    })();
+  </script>
 </body>
 </html>

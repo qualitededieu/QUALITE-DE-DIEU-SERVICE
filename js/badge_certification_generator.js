@@ -1,11 +1,5 @@
 "use strict";
 
-/* ============================================================
-   BADGE DE CERTIFICATION — LES QUALITÉS DE DIEU SERVICE
-   Format carré 1080x1080 (partage réseaux sociaux) — canvas
-   100% côté client, aucune dépendance serveur autre que GAS.
-   ============================================================ */
-
 const BADGE_C = {
   MARINE: "#04342C", MARINE_2: "#0F6E56", OR: "#F5A623", OR_LIGHT: "#FABD50",
   BLANC: "#FFFFFF", CREME: "#F8F7F2", GRIS: "#6B7280", TEXTE: "#1A1A2E",
@@ -45,7 +39,6 @@ function _bDrawCover(ctx, img, x, y, w, h, topBias = 0.5) {
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-// Une feuille de laurier simple (courbe + nervure)
 function _bFeuille(ctx, x, y, taille, angle, couleur, opacite) {
   ctx.save();
   ctx.translate(x, y);
@@ -77,8 +70,6 @@ function _bCouronneLaurier(ctx, cx, cy, rayon, couleur) {
   }
 }
 
-// apprenant : { id, prenom, nom, sexe, filiere, photoUrl }
-// token     : token carte HMAC (QR de vérification)
 async function genererBadgeCertification(apprenant, token) {
   const canvas = document.createElement("canvas");
   canvas.width = BADGE_C.W;
@@ -99,7 +90,6 @@ async function genererBadgeCertification(apprenant, token) {
   const CX = BADGE_C.W / 2;
   const MED_CY = 400;
 
-  // ── 1. FOND DÉGRADÉ RADIAL ──
   const gradFond = ctx.createRadialGradient(CX, MED_CY, 100, CX, BADGE_C.H / 2, 800);
   gradFond.addColorStop(0, "#0F6E56");
   gradFond.addColorStop(0.5, "#04342C");
@@ -107,7 +97,6 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.fillStyle = gradFond;
   ctx.fillRect(0, 0, BADGE_C.W, BADGE_C.H);
 
-  // ── 2. FILIGRANE LOGO ──
   if (logo) {
     ctx.save();
     ctx.globalAlpha = 0.05;
@@ -118,7 +107,6 @@ async function genererBadgeCertification(apprenant, token) {
     ctx.restore();
   }
 
-  // ── 3. MOTIF GÉOMÉTRIQUE + cercles ornementaux ──
   ctx.save();
   ctx.strokeStyle = "rgba(245,166,35,0.07)";
   ctx.lineWidth = 1.5;
@@ -142,7 +130,6 @@ async function genererBadgeCertification(apprenant, token) {
   });
   ctx.restore();
 
-  // ── 4. EN-TÊTE ──
   _bFont(ctx, 15, "600");
   _bCenterText(ctx, "◆ ATTESTATION DE COMPÉTENCE ◆", CX, 62, "rgba(250,189,80,0.75)");
   _bFont(ctx, 32, "700");
@@ -150,7 +137,6 @@ async function genererBadgeCertification(apprenant, token) {
   _bFont(ctx, 14, "500");
   _bCenterText(ctx, "CENTRE DE FORMATION PROFESSIONNELLE", CX, 134, BADGE_C.OR_LIGHT);
 
-  // ── 5. HALO ──
   const MED_R = 158;
   ctx.save();
   const haloGrad = ctx.createRadialGradient(CX, MED_CY, MED_R * 0.6, CX, MED_CY, MED_R * 2.1);
@@ -160,10 +146,8 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.fillRect(CX - MED_R * 2.1, MED_CY - MED_R * 2.1, MED_R * 4.2, MED_R * 4.2);
   ctx.restore();
 
-  // ── 6. COURONNE DE LAURIER ──
   _bCouronneLaurier(ctx, CX, MED_CY, MED_R, BADGE_C.OR_LIGHT);
 
-  // ── 7. MÉDAILLON PHOTO ──
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.35)";
   ctx.shadowBlur = 24;
@@ -190,7 +174,6 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.fillText("★", CX + MED_R - 6, MED_CY - MED_R + 34);
   ctx.restore();
 
-  // ── 8. NOM ──
   const sexeNorm = String(apprenant.sexe || "").trim().toUpperCase();
   const civ = sexeNorm === "F" ? "Mme" : (sexeNorm === "M" ? "M." : "");
   const nomComplet = (civ ? civ + " " : "") + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
@@ -202,11 +185,9 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.fillRect(CX - 40, 662, 80, 3);
   ctx.restore();
 
-  // ── 9. FORMATION ──
   _bFont(ctx, 24, "500");
   _bCenterText(ctx, apprenant.filiere || "", CX, 700, BADGE_C.OR_LIGHT);
 
-  // ── 10. PILULE DE VALIDATION (pas de système de notation chez LQD) ──
   const pillY = 738, pillH = 58;
   _bFont(ctx, 27, "700");
   const pillTxt = "FORMATION VALIDÉE";
@@ -227,7 +208,6 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.restore();
   _bCenterText(ctx, pillTxt, CX, pillY + 39, "#FFFFFF");
 
-  // ── 11. QR + DATE ──
   const QR_S = 108, QR_Y = BADGE_C.H - 234;
   if (qr) {
     ctx.save();
@@ -248,7 +228,6 @@ async function genererBadgeCertification(apprenant, token) {
   _bFont(ctx, 13, "400");
   _bCenterText(ctx, apprenant.id, CX, QR_Y + QR_S + 66, "rgba(255,255,255,0.4)");
 
-  // ── 12. FOOTER + ornements de coin ──
   _bFont(ctx, 14, "500");
   _bCenterText(ctx, BADGE_ENTREPRISE.SITE + " — Comé, Bénin", CX, BADGE_C.H - 24, "rgba(255,255,255,0.4)");
 

@@ -7,7 +7,7 @@
   <meta name="description" content="Mise en conformité des anciens apprenants — LQD Service" />
   <link rel="canonical" href="https://www.qualitededieuservice.com/regularisation.html" />
   <meta name="robots" content="noindex, follow" />
-  <!-- noindex : page de démarche administrative pour d'anciens apprenants identifiés, aucun intérêt à apparaître dans une recherche publique générique. "follow" laissé actif pour ne pas bloquer la découverte des autres pages liées. -->
+
   <link rel="icon" href="icons/logoqds.jpg" type="image/jpeg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -175,7 +175,6 @@
 </head>
 <body>
 
-  <!-- ===== TOPBAR ===== -->
   <header id="topbar">
     <div class="container">
       <div class="topbar-inner">
@@ -191,7 +190,6 @@
     </div>
   </header>
 
-  <!-- ===== HÉRO BANDEAU ===== -->
   <section id="page-hero">
     <div class="container">
       <div class="hero-tag">
@@ -212,12 +210,10 @@
     </div>
   </section>
 
-  <!-- ===== CONTENU PRINCIPAL ===== -->
   <main>
     <div id="stepper-wrap">
       <div class="container">
 
-        <!-- Stepper -->
         <div class="stepper" id="stepper" role="list" aria-label="Étapes du formulaire">
           <div class="step-item active" id="step-dot-1" role="listitem">
             <div class="step-dot">1</div>
@@ -241,12 +237,10 @@
           </div>
         </div>
 
-        <!-- Barre de progression -->
         <div class="progress-bar-wrap">
           <div class="progress-bar" id="progressBar" style="width:20%"></div>
         </div>
 
-        <!-- ==================== ÉTAPE 1 — Informations personnelles ==================== -->
         <div class="form-card" id="form-step-1">
           <div class="form-card-header">
             <div class="step-num">1</div>
@@ -331,7 +325,6 @@
           </div>
         </div>
 
-        <!-- ==================== ÉTAPE 2 — Affiliation parentale ==================== -->
         <div class="form-card" id="form-step-2" style="display:none">
           <div class="form-card-header">
             <div class="step-num">2</div>
@@ -421,7 +414,6 @@
           </div>
         </div>
 
-        <!-- ==================== ÉTAPE 3 — Filière & Formation ==================== -->
         <div class="form-card" id="form-step-3" style="display:none">
           <div class="form-card-header">
             <div class="step-num">3</div>
@@ -460,7 +452,6 @@
               </div>
             </div>
 
-            <!-- Champ conditionnel si "Autre" -->
             <div class="form-group" id="autre-filiere-wrap" style="display:none">
               <label for="autreFiliere">Précisez la filière <span class="req">*</span></label>
               <input type="text" id="autreFiliere" name="autreFiliere" placeholder="Ex : Maintenance informatique" />
@@ -516,7 +507,6 @@
           </div>
         </div>
 
-        <!-- ==================== ÉTAPE 4 — Pièces justificatives ==================== -->
         <div class="form-card" id="form-step-4" style="display:none">
           <div class="form-card-header">
             <div class="step-num">4</div>
@@ -527,7 +517,6 @@
           </div>
           <div class="form-card-body">
 
-            <!-- Type de pièce -->
             <div class="form-group">
               <label for="typePiece">Type de pièce d'identité <span class="req">*</span></label>
               <select id="typePiece" name="typePiece">
@@ -539,14 +528,12 @@
               <span class="field-error" id="err-typePiece">Sélectionnez le type de pièce.</span>
             </div>
 
-            <!-- Numéro de pièce -->
             <div class="form-group">
               <label for="numeroPiece">Numéro de la pièce d'identité <span class="req">*</span></label>
               <input type="text" id="numeroPiece" name="numeroPiece" placeholder="Ex : CIP123456789" />
               <span class="field-error" id="err-numeroPiece">Saisissez le numéro de la pièce.</span>
             </div>
 
-            <!-- Upload pièce -->
             <div class="form-group">
               <label>Copie scannée / photo de la pièce <span class="req">*</span>
                 <span style="font-size:11px;font-weight:400;color:var(--gray-400)">JPG, PNG ou PDF — max 5 Mo</span>
@@ -567,7 +554,6 @@
               <span class="field-error" id="err-piece1">La pièce d'identité est obligatoire.</span>
             </div>
 
-            <!-- Upload photo -->
             <div class="form-group">
               <label>Photo d'identité récente <span class="req">*</span>
                 <span style="font-size:11px;font-weight:400;color:var(--gray-400)">Format 35×45 mm — fond blanc — moins de 6 mois</span>
@@ -602,7 +588,6 @@
           </div>
         </div>
 
-        <!-- ==================== ÉTAPE 5 — Engagement & Signature ==================== -->
         <div class="form-card" id="form-step-5" style="display:none">
           <div class="form-card-header" style="background:linear-gradient(135deg,var(--teal-900),var(--teal-700))">
             <div class="step-num">5</div>
@@ -613,7 +598,6 @@
           </div>
           <div class="form-card-body">
 
-            <!-- Clause légale -->
             <div class="clause-box">
               <strong>DÉCLARATION SUR L'HONNEUR — MISE EN CONFORMITÉ</strong>
               <div class="article">
@@ -639,7 +623,6 @@
               </div>
             </div>
 
-            <!-- Checkbox consentements -->
             <div class="checkbox-group">
               <input type="checkbox" id="clause1" name="clause1" />
               <label for="clause1">
@@ -658,7 +641,6 @@
             </div>
             <span class="field-error" id="err-clause2">Veuillez accepter cette clause.</span>
 
-            <!-- Signature numérique -->
             <div class="form-group" style="margin-top:8px">
               <label>Signature numérique <span class="req">*</span>
                 <span style="font-size:11px;font-weight:400;color:var(--gray-400)">Signez directement avec votre doigt ou la souris</span>
@@ -689,7 +671,6 @@
           </div>
         </div>
 
-        <!-- ==================== SUCCÈS ==================== -->
         <div class="form-card" id="success-block" style="display:none">
           <div id="success-inner" style="text-align:center;padding:48px 28px">
             <div style="width:72px;height:72px;background:var(--teal-50);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--teal-500);margin:0 auto 24px">
@@ -713,11 +694,10 @@
           </div>
         </div>
 
-      </div><!-- /container -->
-    </div><!-- /stepper-wrap -->
+      </div>
+    </div>
   </main>
 
-  <!-- ===== TOAST ===== -->
   <div id="toast" role="alert" aria-live="assertive"></div>
 
   <script>
@@ -1151,5 +1131,25 @@
   }
   </script>
 
+  <script>
+    (function () {
+      var GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+      async function chargerBandeau() {
+        try {
+          var resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'bandeau_get_public' })
+          });
+          var result = await resp.json();
+          if (result.status === 'success' && result.actif && result.texte) {
+            document.getElementById('bandeau-texte').textContent = result.texte;
+            document.getElementById('bandeau-info').style.display = 'block';
+          }
+        } catch (e) {}
+      }
+      chargerBandeau();
+    })();
+  </script>
 </body>
 </html>

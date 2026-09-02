@@ -1,37 +1,13 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL — Backend du chat public
-   Fichier  : chat.gs
-   Version  : 1.0.0
-   Rôle     : Réceptionner les demandes de RDV et les leads capturés
-              par le widget de chat (js/chat-widget.js). 100% GAS pur —
-              pas de Supabase, pas de route Vercel intermédiaire.
-
-   ROUTES (routées directement depuis doPost, avant le switch admin_) :
-     action === 'chat_rdv'  : enregistrerRdvChat(data)   // public
-     action === 'chat_lead' : enregistrerLeadChat(data)  // public
-   ===================================================================== */
-
-
-// =====================================================================
-// EN-TÊTES — Feuille "RDV"
-// =====================================================================
 const ENTETES_RDV = [
   'ID', 'Date demande', 'Nom', 'Téléphone', 'Email',
-  'Type de RDV', 'Créneau souhaité', 'Message', 'Statut' // Nouveau | Contacté | Honoré | Annulé
+  'Type de RDV', 'Créneau souhaité', 'Message', 'Statut'
 ];
 
-// =====================================================================
-// EN-TÊTES — Feuille "Leads"
-// =====================================================================
 const ENTETES_LEADS = [
   'ID', 'Date', 'Nom', 'Téléphone', 'Email',
-  'Formation intérêt', 'Message', 'Statut' // Nouveau | Contacté | Converti | Perdu
+  'Formation intérêt', 'Message', 'Statut'
 ];
 
-
-// =====================================================================
-// ROUTE PUBLIC — Enregistrer une demande de RDV depuis le chat
-// =====================================================================
 function enregistrerRdvChat(data) {
   const nom       = nettoyer(data.nom || '');
   const telephone = nettoyer(data.telephone || '');
@@ -62,7 +38,7 @@ function enregistrerRdvChat(data) {
     nettoyer(data.message || ''),
     'Nouveau'
   ]);
-  forcerTelephoneTexte(feuille, 4, telephone); // colonne 4 = Téléphone
+  forcerTelephoneTexte(feuille, 4, telephone);
 
   try {
     _notifierAdminChat('Nouvelle demande de RDV', [
@@ -81,10 +57,6 @@ function enregistrerRdvChat(data) {
   return reponseJSON({ status: 'success', id, message: 'Votre demande de rendez-vous a bien été enregistrée. Nous vous contactons rapidement.' });
 }
 
-
-// =====================================================================
-// ROUTE PUBLIC — Enregistrer un lead depuis le chat
-// =====================================================================
 function enregistrerLeadChat(data) {
   const nom       = nettoyer(data.nom || '');
   const telephone = nettoyer(data.telephone || '');
@@ -114,7 +86,7 @@ function enregistrerLeadChat(data) {
     nettoyer(data.message || ''),
     'Nouveau'
   ]);
-  forcerTelephoneTexte(feuille, 4, telephone); // colonne 4 = Téléphone
+  forcerTelephoneTexte(feuille, 4, telephone);
 
   try {
     _notifierAdminChat('Nouveau contact via le chat du site', [
@@ -132,10 +104,6 @@ function enregistrerLeadChat(data) {
   return reponseJSON({ status: 'success', id, message: 'Merci ! Un conseiller vous recontacte très vite.' });
 }
 
-
-// =====================================================================
-// HELPER — Notification email admin (RDV / Leads chat)
-// =====================================================================
 function _notifierAdminChat(titre, lignes) {
   const lignesHtml = lignes.map(([label, valeur]) => `
     <tr>
@@ -168,11 +136,3 @@ function _notifierAdminChat(titre, lignes) {
     { htmlBody, name: CONFIG.EXPEDITEUR_NOM }
   );
 }
-
-
-/* =====================================================================
-   INTÉGRATION — déjà câblée dans doPost() de code.gs :
-
-   if (action === 'chat_rdv')  return enregistrerRdvChat(data);
-   if (action === 'chat_lead') return enregistrerLeadChat(data);
-   ===================================================================== */

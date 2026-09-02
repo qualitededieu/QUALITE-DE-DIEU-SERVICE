@@ -1,17 +1,10 @@
 "use strict";
 
-/* ============================================================
-   ATTESTATION DE FIN DE FORMATION — LES QUALITÉS DE DIEU SERVICE
-   Génération canvas 100% côté client — aucune dépendance serveur
-   autre que GAS (déjà utilisé pour retrouver le dossier apprenant).
-   Format : A4 Paysage — 3508 x 2480 px @ 300 DPI
-   ============================================================ */
-
 const ATT = {
-  MARINE:   "#04342C",   // teal-900 (identité LQD)
-  MARINE_2: "#0F6E56",   // teal-700
-  OR:       "#F5A623",   // orange-500
-  OR_LIGHT: "#FABD50",   // orange-400
+  MARINE:   "#04342C",
+  MARINE_2: "#0F6E56",
+  OR:       "#F5A623",
+  OR_LIGHT: "#FABD50",
   BLANC:    "#FFFFFF",
   CREME:    "#F8F7F2",
   GRIS:     "#6B7280",
@@ -20,11 +13,6 @@ const ATT = {
   H: 2480,
 };
 
-// Signataires — l'attestation LQD Service porte toujours deux
-// signatures/cachets : le Formateur à gauche, le PDG à droite.
-// Si .nom reste vide, seul le titre est affiché (cas du Formateur,
-// dont le nom varie selon la session — à renseigner au cas par cas
-// si besoin).
 const ATT_SIGNATAIRE_FORMATEUR = { nom: "M. TOSSOU C. Philippe", titre: "Le Formateur" };
 const ATT_SIGNATAIRE_PDG       = { nom: "M. ATO Blaise", titre: "Président Directeur Général" };
 
@@ -38,7 +26,6 @@ const ATT_ENTREPRISE = {
   LOGO_URL: "icons/logoqds.jpg",
 };
 
-// ─── Descriptions par filière (clés = valeurs exactes CONFIG.FORMATIONS_VALIDES) ───
 const ATT_DESCRIPTIONS = {
   "Informatique & Bureautique": "Maîtrise des outils bureautiques (Word, Excel, PowerPoint), gestion de base de l'outil informatique, saisie et mise en forme de documents professionnels, navigation Internet.",
   "Graphisme & PAO":            "Publication assistée par ordinateur, conception d'affiches et de supports visuels, maîtrise des logiciels professionnels (Photoshop, Illustrator, CorelDRAW, Canva Pro).",
@@ -49,20 +36,11 @@ const ATT_DESCRIPTIONS = {
 function _attDescription(filiere) {
   const f = String(filiere || "");
   if (ATT_DESCRIPTIONS[f]) return ATT_DESCRIPTIONS[f];
-  // Dossier multi-formations ("A, B") ou libellé partiel : recherche par inclusion
   const cle = Object.keys(ATT_DESCRIPTIONS).find(k => f.includes(k) || k.includes(f));
   if (cle) return ATT_DESCRIPTIONS[cle];
   return "Formation professionnelle qualifiante dispensée par le centre.";
 }
 
-// ─── Compétences groupées par catégorie — modèle "formation longue" ───
-// Contrairement au stage/formation courte (une seule phrase), le modèle
-// papier des formations longues (1 an et plus) présente les compétences
-// validées regroupées par catégorie, chacune avec son propre intitulé
-// en gras. Plusieurs filières peuvent partager la même catégorie (ex.
-// Graphisme & PAO et Sérigraphie relèvent toutes deux de "Design &
-// Impression") : leurs descriptions sont alors fusionnées sous un seul
-// intitulé plutôt que répétées.
 const ATT_CATEGORIES_LONGUE = {
   "Informatique & Bureautique": { categorie: "Bureautique & Digital", texte: ATT_DESCRIPTIONS["Informatique & Bureautique"] },
   "Graphisme & PAO":            { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Graphisme & PAO"] },
@@ -70,8 +48,6 @@ const ATT_CATEGORIES_LONGUE = {
   "Création de sites web":      { categorie: "Développement Web",     texte: ATT_DESCRIPTIONS["Création de sites web"] },
 };
 
-// Module systématique pour toute formation longue, quelle que soit la
-// filière suivie — confirmé explicitement par le centre.
 const ATT_MODULE_MANAGEMENT = {
   categorie: "Management",
   texte: "Initiation à la gestion d'entreprise et à l'entrepreneuriat.",
@@ -93,19 +69,10 @@ function _competencesLongue(filiereStr) {
     texte: textes.join(" "),
   }));
 
-  // Si aucune filière connue n'a été trouvée (libellé inattendu), on
-  // affiche au moins le module Management plutôt qu'une liste vide.
   resultat.push(ATT_MODULE_MANAGEMENT);
   return resultat;
 }
 
-// ─── Description de stage à partir des missions cochées en admin ───
-// Construit une phrase française correcte à partir d'une liste de
-// fragments (déjà rédigés pour s'enchaîner naturellement après
-// "notamment"), avec "et" avant le dernier élément plutôt qu'une
-// simple virgule. Retombe sur la phrase générique si la liste est
-// vide (dossier créé avant l'ajout de cette fonctionnalité, ou aucune
-// mission cochée).
 function _joindreListeFr(items) {
   if (!items || items.length === 0) return "";
   if (items.length === 1) return items[0];
@@ -121,7 +88,6 @@ function _attDescriptionStage(missionsStage) {
     _joindreListeFr(missions) + ".";
 }
 
-// ─── Utilitaires canvas ─────────────────────────────────────
 function _font(ctx, size, style = "normal", family = "Times New Roman") {
   ctx.font = `${style} ${size}px '${family}', Times, serif`;
 }
@@ -175,14 +141,6 @@ function _loadImg(src) {
   });
 }
 
-// Zone d'encre réelle d'une image (rectangle englobant des pixels non
-// transparents), calculée à la volée sur l'image effectivement chargée
-// — jamais des coordonnées codées en dur pour un fichier précis, qui
-// deviendraient fausses (recadrage au mauvais endroit) si ce fichier
-// est un jour remplacé par une image de dimensions différentes, ou si
-// une ancienne version reste sercvie depuis un cache navigateur/CDN.
-// Retombe sur l'image entière si le calcul échoue (canvas "tainted"
-// par exemple) ou si l'image est entièrement transparente.
 function _bboxEncre(img, seuilAlpha = 10) {
   try {
     const c = document.createElement("canvas");
@@ -232,11 +190,6 @@ function _wrap(ctx, txt, x, y, maxW, lh) {
   return curY;
 }
 
-// ─── Ruban diagonal décoratif de coin — modèle "formation longue" ───
-// Bande à deux couleurs (marine + or), tournée autour d'un point
-// d'ancrage, débordant volontairement des bords du canevas : le
-// débordement est automatiquement rogné par le canevas lui-même,
-// aucun découpage manuel nécessaire.
 function _dessinerRubanCoin(ctx, ancrageX, ancrageY, angleDeg, longueur, largeurPrincipale, couleurPrincipale, couleurSecondaire) {
   ctx.save();
   ctx.translate(ancrageX, ancrageY);
@@ -248,7 +201,6 @@ function _dessinerRubanCoin(ctx, ancrageX, ancrageY, angleDeg, longueur, largeur
   ctx.restore();
 }
 
-// ─── Police calligraphique pour l'intitulé de formation ──────
 let _policeScriptChargee = false;
 async function _chargerPoliceScript() {
   if (_policeScriptChargee) return;
@@ -266,24 +218,11 @@ async function _chargerPoliceScript() {
   }
 }
 
-// ─── GÉNÉRATEUR PRINCIPAL ──────────────────────────────────────
-// apprenant : { id, prenom, nom, sexe, dateNaissance, filiere, dateEntree, dateFin, photoUrl, email }
-// token     : token carte HMAC déjà obtenu (sert au QR de vérification)
 async function genererAttestationCanvas(apprenant, token) {
   await _chargerPoliceScript();
 
-  // Deux origines possibles pour cette attestation : un apprenant qui a
-  // suivi une formation (source par défaut, cartes.gs), ou un candidat
-  // qui a effectué un stage via la page Postuler (source explicite
-  // "candidature-stage", voir GAS/candidatures.gs). Le texte s'adapte.
   const estStage = apprenant.source === "candidature-stage";
 
-  // Durée réelle de la formation, calculée à partir des dates déjà
-  // enregistrées (aucun nouveau champ nécessaire) — sert à distinguer
-  // les formations courtes (initiation, 1 à 3 mois) des formations
-  // longues (1 an à 1 an et demi), qui ont chacune leur propre modèle
-  // papier au centre. Seuil à 6 mois : marge large entre les deux
-  // fourchettes annoncées, aucun risque de mauvaise classification.
   function _dureeEnMois(debut, fin) {
     if (!debut || !fin) return null;
     const d1 = new Date(debut);
@@ -294,13 +233,6 @@ async function genererAttestationCanvas(apprenant, token) {
   const dureeMois = _dureeEnMois(apprenant.dateEntree, apprenant.dateFin);
   const estFormationLongue = !estStage && (dureeMois === null || dureeMois >= 6);
 
-  // Palette de couleur :
-  // - Stage                     → identité actuelle (teal/marine), inchangée
-  // - Formation longue (1 an+)  → identité actuelle (teal/marine) EN ATTENDANT
-  //   le visuel de référence du centre pour ce modèle spécifique — ne jamais
-  //   deviner une couleur pour un document officiel non encore vu.
-  // - Formation courte (1-3 mois) → bleu marine foncé, esprit de l'ancien
-  //   modèle papier du centre pour ce cas précis (confirmé par le centre).
   const COULEUR_PRINCIPALE = (estStage || estFormationLongue) ? ATT.MARINE : "#0B2447";
 
   const canvas = document.createElement("canvas");
@@ -322,24 +254,15 @@ async function genererAttestationCanvas(apprenant, token) {
     : `https://${ATT_ENTREPRISE.SITE}/verifier.html`;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=2&data=" + encodeURIComponent(lienVerif);
 
-  // "?v=2" sur les icônes : vercel.json met icons/ en cache navigateur
-  // "immutable" (jamais revérifié pendant 1 an) — sans ce paramètre,
-  // un visiteur ayant déjà chargé une ancienne version d'un de ces
-  // fichiers continuerait à la voir indéfiniment, même après un
-  // nouveau déploiement. À incrémenter si ces fichiers sont remplacés
-  // à l'avenir (icons/signature-formateur.png, signature-pdg.png,
-  // cachet.png uniquement — ne pas mettre .png?v= sur d'autres icônes
-  // qui n'ont pas cette contrainte).
   const [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
     _loadImg(ATT_ENTREPRISE.LOGO_URL),
     _loadImg(QR_URL),
     _loadImg(apprenant.photoUrl),
     _loadImg(typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png?v=2"),
     _loadImg(typeof SIGNATURE_PDG_DATA       !== "undefined" ? SIGNATURE_PDG_DATA       : "icons/signature-pdg.png?v=2"),
-    _loadImg(typeof CACHET_DATA              !== "undefined" ? CACHET_DATA              : "icons/cachet.png?v=2"), // cachet officiel, partagé par les deux signatures
+    _loadImg(typeof CACHET_DATA              !== "undefined" ? CACHET_DATA              : "icons/cachet.png?v=2"),
   ]);
 
-  // ── FOND ──
   _rect(ctx, 0, 0, ATT.W, ATT.H, ATT.CREME);
   _rect(ctx, 0, 0, 18, ATT.H, ATT.OR);
   _rect(ctx, ATT.W - 18, 0, 18, ATT.H, ATT.OR);
@@ -356,19 +279,11 @@ async function genererAttestationCanvas(apprenant, token) {
     });
   ctx.restore();
 
-  // ── HEADER ──
-  // Deux mises en page radicalement différentes : bandeau plein
-  // (stage / formation courte, existant) contre lettre à en-tête avec
-  // rubans de coin (formation longue, nouveau modèle papier du centre).
   let HDR_H;
 
   if (estFormationLongue) {
     HDR_H = 560;
 
-    // Rubans diagonaux de coin (haut-gauche et bas-gauche), esprit du
-    // modèle papier fourni par le centre — reproduction non pixel-
-    // perfect, jamais vérifiée visuellement (pas de moteur de rendu
-    // disponible côté génération de ce code).
     _dessinerRubanCoin(ctx, 0, 0, -35, 900, 70, "#1B3A6B", ATT.OR);
     _dessinerRubanCoin(ctx, 0, ATT.H, -35, 900, 70, "#1B3A6B", ATT.OR);
 
@@ -461,7 +376,6 @@ async function genererAttestationCanvas(apprenant, token) {
     });
   }
 
-  // ── PHOTO IDENTITÉ ──
   const PHOTO_W = 413, PHOTO_H = 531;
   const PHOTO_X = ATT.W - 240 - PHOTO_W;
   const PHOTO_Y = HDR_H + 68;
@@ -496,7 +410,6 @@ async function genererAttestationCanvas(apprenant, token) {
   const lblPhoto = "Photo d'identité";
   ctx.fillText(lblPhoto, PHOTO_X + (PHOTO_W - _mw(ctx, lblPhoto)) / 2, PHOTO_Y + PHOTO_H + 40);
 
-  // ── FILIGRANE ──
   if (logo) {
     ctx.save();
     ctx.globalAlpha = 0.05;
@@ -505,13 +418,11 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.restore();
   }
 
-  // ── TITRE + CORPS ──
   const CX = 240, CW = ATT.W - 480;
   let posY;
 
   if (estFormationLongue) {
 
-    // ===== TITRE (formation longue) =====
     const TITRE_Y = HDR_H + 60;
     _font(ctx, 108, "bold");
     ctx.fillStyle = "#1B3A6B";
@@ -524,7 +435,6 @@ async function genererAttestationCanvas(apprenant, token) {
 
     posY = TITRE_Y + 160;
 
-    // ===== PRÉAMBULE LÉGAL (nomme les deux signataires) =====
     _font(ctx, 40, "normal");
     ctx.fillStyle = ATT.TEXTE;
     const preambule =
@@ -539,7 +449,6 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(attestePar, (ATT.W - _mw(ctx, attestePar)) / 2, posY);
     posY += 76;
 
-    // ===== NOM DE L'APPRENANT (même bannière que le reste du système) =====
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
     const civiliteLg = sexeNorm === "F" ? "Madame " : (sexeNorm === "M" ? "Monsieur " : "");
     const nomComplet = `${civiliteLg}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
@@ -550,9 +459,6 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
     posY += 190;
 
-    // Naissance : uniquement si connue (dossiers "Toutes les inscriptions"
-    // n'ont pas ce champ, seuls les dossiers "Régularisations" l'ont —
-    // ne jamais afficher "né le  à " avec des trous visibles).
     if (apprenant.dateNaissance) {
       _font(ctx, 40, "normal");
       ctx.fillStyle = ATT.TEXTE;
@@ -562,7 +468,6 @@ async function genererAttestationCanvas(apprenant, token) {
       posY += 64;
     }
 
-    // ===== DURÉE (avec nombre de mois explicite) =====
     _font(ctx, 44, "normal");
     const dureeTxt = dureeMois !== null ? ` (${dureeMois} mois)` : "";
     const d1 = "A suivi avec assiduité et succès, du ", d2 = dateDebut, d3 = " au ", d4 = dateFin + dureeTxt + ",";
@@ -577,7 +482,6 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillStyle = ATT.TEXTE;
     posY = _wrap(ctx, "une formation professionnelle complète. À l'issue de ce parcours, l'intéressé(e) a validé les compétences suivantes :", CX, posY, CW, 54) + 10;
 
-    // ===== COMPÉTENCES GROUPÉES PAR CATÉGORIE =====
     const competences = _competencesLongue(apprenant.filiere);
     competences.forEach(bloc => {
       _font(ctx, 42, "bold");
@@ -588,8 +492,6 @@ async function genererAttestationCanvas(apprenant, token) {
 
       _font(ctx, 42, "normal");
       ctx.fillStyle = ATT.TEXTE;
-      // Première ligne partage la ligne avec le label (comme sur le
-      // modèle papier), les lignes suivantes reprennent en marge gauche.
       const words = String(bloc.texte).split(" ");
       let ligne = "", x = CX + labelW, premierMot = true;
       const finLigneX = CX + CW;
@@ -656,10 +558,6 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(intro3, ix, posY);
     posY += 90;
 
-    // .trim().toUpperCase() : tolère un espace superflu ou une casse
-    // différente dans la cellule "Sexe" du tableur (ex. "f" au lieu de
-    // "F"), qui ferait sinon échouer silencieusement la comparaison
-    // stricte et laisserait la civilité vide sans aucune erreur visible.
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
     const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
     const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
@@ -720,15 +618,6 @@ async function genererAttestationCanvas(apprenant, token) {
     posY += 20;
   }
 
-  // ── RUBAN D'APPRÉCIATION — suit désormais le flux dynamique du texte
-  // (posY), juste après "Fait à Comé". FIX : l'ancienne version le
-  // plaçait à une position FIXE (1500px) calculée en supposant une
-  // description courte sur une seule ligne — dès que le corps du texte
-  // (description + 2 phrases de clôture) dépassait cette estimation,
-  // le ruban se dessinait PAR-DESSUS le texte au lieu d'en dessous
-  // (chevauchement visible sur l'attestation de stage de test). En le
-  // faisant suivre posY, il ne peut plus jamais chevaucher ce qui est
-  // au-dessus, quelle que soit la longueur réelle du texte.
   _font(ctx, 36, "italic");
   ctx.fillStyle = ATT.OR;
   const ruban = estStage
@@ -737,25 +626,11 @@ async function genererAttestationCanvas(apprenant, token) {
   ctx.fillText(ruban, (ATT.W - _mw(ctx, ruban)) / 2, posY);
   posY += 50;
 
-  // ── DEUX SIGNATURES — Formateur à gauche, PDG à droite ──
-  // SIG_Y suit lui aussi posY (avec un plancher à 1560 pour ne pas
-  // remonter inutilement sur un document court, et un plafond à 1700
-  // pour ne jamais empiéter sur le pied de page même dans le pire des
-  // cas) — même principe que le ruban ci-dessus.
   const SIG_Y = Math.min(Math.max(1560, posY + 30), 1700);
 
-  // Bloc réutilisable, translaté horizontalement (ancrage = bord gauche
-  // de la ligne pointillée) pour dupliquer exactement la même
-  // composition (signature légèrement sous le cachet — chevauchement
-  // volontaire, mesure anti-fraude) des deux côtés.
   function _dessinerSignataire(ancrageX, signatureImg, titre, nom, avecDateFait, cachetIntegreDansSignature) {
     const centreTitre = ancrageX + 480;
 
-    // "Fait à Comé, le [date]" — affiché uniquement au-dessus de la
-    // signature du PDG (là où on signe traditionnellement ce genre de
-    // mention sur un document papier), plus au centre du corps du
-    // texte comme avant : évite la redondance avec la mention réelle
-    // déjà présente sur le tampon/signature scanné du PDG.
     if (avecDateFait) {
       _font(ctx, 34, "normal", "DM Sans");
       ctx.fillStyle = ATT.GRIS;
@@ -775,31 +650,9 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(titre, centreTitre - _mw(ctx, titre) / 2, SIG_Y + 80);
 
     const SIG_W = 300;
-    const CACHET_W = 340; // cachet seul (icons/cachet.png), redessiné sous une signature séparée
+    const CACHET_W = 340;
 
     if (cachetIntegreDansSignature) {
-      // Cas où le cachet officiel et la signature ne font qu'un seul
-      // fichier (tampon + paraphe scannés ensemble) : on dessine cette
-      // image unique, et on NE redessine PAS le cachet séparé en-dessous
-      // (il y serait en double, l'un par-dessus l'autre).
-      // Le fichier source a en général une marge transparente autour du
-      // cachet+signature réels — on recadre sur la zone d'encre (calculée
-      // dynamiquement par _bboxEncre sur l'image effectivement chargée,
-      // jamais des coordonnées fixes) avant d'agrandir, sinon on agrandit
-      // surtout du vide.
-      //
-      // La boîte cible (575×335 max) est ajustée pour respecter DEUX
-      // contraintes simultanément, quelle que soit la forme réelle de
-      // l'image chargée :
-      //   - ne jamais chevaucher le titre au-dessus (baseline à SIG_Y+80,
-      //     empattement visuel jusqu'à environ SIG_Y+90) → l'image démarre
-      //     à SIG_Y+105, marge de 15px ;
-      //   - ne jamais dépasser la ligne pointillée en dessous (SIG_Y+450)
-      //     → hauteur plafonnée à 335px, donc fin d'image à SIG_Y+440 au
-      //     pire des cas, marge de 10px.
-      // PIÈGE DÉJÀ RENCONTRÉ : une version précédente démarrait à
-      // SIG_Y+80, exactement la même position que le titre — collision
-      // directe, rendu illisible. Ne jamais faire coïncider ces deux Y.
       if (signatureImg) {
         const b = _bboxEncre(signatureImg);
         const ratio = b.h / b.w;
@@ -846,12 +699,6 @@ async function genererAttestationCanvas(apprenant, token) {
   _dessinerSignataire(CX, sigFormateur, titreFormateur, ATT_SIGNATAIRE_FORMATEUR.nom, false, false);
   _dessinerSignataire(ATT.W - CX - 908, sigPdg, ATT_SIGNATAIRE_PDG.titre, ATT_SIGNATAIRE_PDG.nom, true, true);
 
-  // ── QR de vérification — centré dans l'espace vide entre les deux
-  // blocs de signature (1212px de large exactement, entre 1148 et 2360
-  // sur une largeur totale de 3508 — vérifié par calcul, pas occupé
-  // par les signatures contrairement à ce que suggérait l'ancien
-  // commentaire à cet endroit). Remplace l'ancienne version, plus
-  // petite, qui vivait dans le pied de page.
   const QR_CENTRE_S = 300;
   if (qr) {
     const qrX = (ATT.W - QR_CENTRE_S) / 2;
@@ -864,10 +711,6 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(lblQr, (ATT.W - _mw(ctx, lblQr)) / 2, qrY + QR_CENTRE_S + 38);
   }
 
-  // ── FOOTER — hauteur réduite (200 au lieu de 270) pour dégager de la
-  // marge au-dessus, quitte à ce que SIG_Y grandisse sur un document
-  // au texte long (voir plafond 1700 ci-dessus, qui garantit toujours
-  // au moins ~30px de marge avant ce bandeau) ──
   const FTR_Y = ATT.H - 210;
   _rect(ctx, 0, FTR_Y, ATT.W, 10, ATT.OR);
   _rect(ctx, 0, FTR_Y + 10, ATT.W, 200, COULEUR_PRINCIPALE);
@@ -892,7 +735,6 @@ async function genererAttestationCanvas(apprenant, token) {
   return canvas;
 }
 
-// ─── AFFICHAGE + TÉLÉCHARGEMENT ───────────────────────────────
 async function afficherAttestationCanvas(apprenant, token) {
   const preview = document.getElementById("attestation-preview");
   if (!preview) return;
@@ -942,13 +784,6 @@ async function telechargerAttestation(canvas, id, format = "pdf") {
     return;
   }
 
-  // FIX : l'ancienne version passait par html2pdf.js (rendu d'un <img>
-  // dans le DOM, puis capture html2canvas de cet élément) — le PDF sortait
-  // vide car html2canvas capturait souvent le DOM avant que l'image en
-  // base64 n'ait fini de se décoder (pas d'attente de son "load"). On
-  // insère directement le canvas déjà généré dans un PDF via jsPDF, sans
-  // repasser par un rendu DOM intermédiaire — même approche fiable que
-  // verifier.html.
   if (!window.jspdf) {
     await new Promise((res, rej) => {
       const s = document.createElement("script");

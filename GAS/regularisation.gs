@@ -1,27 +1,7 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL
-   Module : Régularisation des anciens apprenants
-   Version : 1.0.0
-   Rôle : Traiter les dossiers de mise en conformité,
-          générer un ID apprenant unique, sauvegarder dans
-          Google Sheets et Drive, notifier par email.
-
-   INTÉGRATION :
-     1. Copier ce fichier dans le projet GAS existant
-     2. Dans doPost() de code.gs, ajouter AVANT le return final :
-           if (action === 'regularisation') return traiterRegularisation(data);
-   ===================================================================== */
-
-
-// =====================================================================
-// EN-TÊTES — Feuille "Régularisations"
-// =====================================================================
 const ENTETES_REGULARISATION = [
-  // Identifiant
   'ID Apprenant',
   'Date soumission',
 
-  // Étape 1 — Identité
   'Prénom(s)',
   'Nom',
   'Sexe',
@@ -32,7 +12,6 @@ const ENTETES_REGULARISATION = [
   'Email',
   'Adresse',
 
-  // Étape 2 — Filiation
   'Prénom mère',
   'Nom mère',
   'Téléphone mère',
@@ -44,7 +23,6 @@ const ENTETES_REGULARISATION = [
   'Prénom tuteur',
   'Nom tuteur',
 
-  // Étape 3 — Formation
   'Filière',
   'Durée formation',
   'Date d\'entrée',
@@ -53,7 +31,6 @@ const ENTETES_REGULARISATION = [
   'Montant payé (F CFA)',
   'Observations formation',
 
-  // Étape 4 — Pièces
   'Type pièce identité',
   'N° pièce identité',
   'Pièce identité (Drive)',
@@ -61,31 +38,22 @@ const ENTETES_REGULARISATION = [
   'Signature (Drive)',
   'Dossier Drive',
 
-  // Étape 5 — Consentement
   'Clause 1 acceptée',
   'Clause 2 acceptée',
   'Date signature',
 
-  // Statut admin
-  'Statut dossier',          // En attente | Validé | Rejeté
+  'Statut dossier',
   'Traité par',
   'Date traitement'
 ];
 
-
-// =====================================================================
-// POINT D'ENTRÉE — traiterRegularisation
-// Appelé depuis doPost() de code.gs
-// =====================================================================
 function traiterRegularisation(data) {
-  // Guard — protection si appelé sans argument depuis l'éditeur
   if (!data) {
     return reponseJSON({
       status:  'error',
       message: 'data manquant. Utilisez testerRegularisation() pour les tests éditeur.'
     });
   }
-  // 1. Validation des champs obligatoires
   const erreurs = validerDonneesRegularisation(data);
   if (erreurs.length > 0) {
     return reponseJSON({
@@ -94,7 +62,6 @@ function traiterRegularisation(data) {
     });
   }
 
-  // 2. Validation des fichiers obligatoires
   const erreursFichiers = validerFichiersRegularisation(data);
   if (erreursFichiers.length > 0) {
     return reponseJSON({
@@ -103,12 +70,10 @@ function traiterRegularisation(data) {
     });
   }
 
-  // 3. Construire l'objet apprenant
   const apprenant = {
     id:            genererID('REG'),
     dateSoumission: new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }),
 
-    // Identité
     prenom:        nettoyer(data.prenom),
     nom:           nettoyer(data.nom),
     sexe:          nettoyer(data.sexe || ''),
@@ -119,7 +84,6 @@ function traiterRegularisation(data) {
     email:         nettoyer(data.email || ''),
     adresse:       nettoyer(data.adresse || ''),
 
-    // Filiation
     prenomMere:     nettoyer(data.prenomMere || ''),
     nomMere:        nettoyer(data.nomMere || ''),
     telephoneMere:  nettoyer(data.telephoneMere || ''),
@@ -131,7 +95,6 @@ function traiterRegularisation(data) {
     prenomTuteur:   nettoyer(data.prenomTuteur || ''),
     nomTuteur:      nettoyer(data.nomTuteur || ''),
 
-    // Formation
     filiere:              nettoyer(data.filiere || ''),
     dureeFormation:       nettoyer(data.dureeFormation || ''),
     dateEntree:           nettoyer(data.dateEntree || ''),
@@ -140,7 +103,6 @@ function traiterRegularisation(data) {
     montantPaye:          nettoyer(data.montantPaye || '0'),
     observationFormation: nettoyer(data.observationFormation || ''),
 
-    // Pièces
     typePiece:   nettoyer(data.typePiece || ''),
     numeroPiece: nettoyer(data.numeroPiece || ''),
     pieceUrl:    '',
@@ -148,18 +110,15 @@ function traiterRegularisation(data) {
     signatureUrl:'',
     dossierUrl:  '',
 
-    // Consentement
     clause1: data.clause1Acceptee === true ? 'Oui' : 'Non',
     clause2: data.clause2Acceptee === true ? 'Oui' : 'Non',
     dateSignature: nettoyer(data.dateSignature || ''),
 
-    // Statut initial
     statutDossier: 'En attente',
     traitePar:     '',
     dateTraitement:''
   };
 
-  // 4. Sauvegarder les fichiers dans Drive
   try {
     const driveResult      = creerDossierRegularisation(apprenant, data);
     apprenant.pieceUrl     = driveResult.pieceUrl;
@@ -168,15 +127,12 @@ function traiterRegularisation(data) {
     apprenant.dossierUrl   = driveResult.dossierUrl;
   } catch (errDrive) {
     console.error('[Drive Régularisation]', errDrive.toString());
-    // Ne pas bloquer l'enregistrement si Drive échoue
     apprenant.pieceUrl = 'Erreur upload Drive';
     apprenant.photoUrl = 'Erreur upload Drive';
   }
 
-  // 5. Enregistrer dans Google Sheets
   enregistrerRegularisation(apprenant);
 
-  // 6. Envoyer les emails
   envoyerEmailAdminRegularisation(apprenant);
   if (apprenant.email) {
     envoyerEmailApprenantRegularisation(apprenant);
@@ -189,10 +145,6 @@ function traiterRegularisation(data) {
   });
 }
 
-
-// =====================================================================
-// VALIDATION
-// =====================================================================
 function validerDonneesRegularisation(data) {
   const erreurs = [];
 
@@ -241,25 +193,17 @@ function validerFichiersRegularisation(data) {
   return erreurs;
 }
 
-
-// =====================================================================
-// DRIVE — Arborescence : [Racine LQD] / Régularisations / [ID — Prénom Nom]
-// =====================================================================
 function creerDossierRegularisation(apprenant, data) {
 
-  // Dossier racine existant (partagé avec code.gs)
   let racine = trouverDossierDrive(CONFIG.DRIVE_DOSSIER_NOM);
   if (!racine) racine = DriveApp.createFolder(CONFIG.DRIVE_DOSSIER_NOM);
 
-  // Sous-dossier "Régularisations"
   let dossierReg = trouverSousDossier(racine, 'Régularisations');
   if (!dossierReg) dossierReg = racine.createFolder('Régularisations');
 
-  // Dossier individuel de l'apprenant
   const nomApprenant    = apprenant.id + ' — ' + apprenant.prenom + ' ' + apprenant.nom;
   const dossierApprenant = dossierReg.createFolder(nomApprenant);
 
-  // Upload — pièce d'identité
   const p1Mime  = data.piece1MimeType || 'image/jpeg';
   const pieceUrl = sauvegarderFichierDrive(
     dossierApprenant,
@@ -268,7 +212,6 @@ function creerDossierRegularisation(apprenant, data) {
     p1Mime
   );
 
-  // Upload — photo d'identité
   const phMime   = data.photoMimeType || 'image/jpeg';
   const photoUrl = sauvegarderFichierDrive(
     dossierApprenant,
@@ -277,7 +220,6 @@ function creerDossierRegularisation(apprenant, data) {
     phMime
   );
 
-  // Upload — signature numérique (PNG canvas)
   const signatureUrl = sauvegarderFichierDrive(
     dossierApprenant,
     data.signatureBase64,
@@ -293,10 +235,6 @@ function creerDossierRegularisation(apprenant, data) {
   };
 }
 
-
-// =====================================================================
-// GOOGLE SHEETS — Enregistrement
-// =====================================================================
 function enregistrerRegularisation(apprenant) {
 
   let ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
@@ -310,7 +248,6 @@ function enregistrerRegularisation(apprenant) {
     apprenant.id,
     apprenant.dateSoumission,
 
-    // Identité
     apprenant.prenom,
     apprenant.nom,
     apprenant.sexe,
@@ -321,7 +258,6 @@ function enregistrerRegularisation(apprenant) {
     apprenant.email    || '—',
     apprenant.adresse,
 
-    // Filiation
     apprenant.prenomMere,
     apprenant.nomMere,
     apprenant.telephoneMere  || '—',
@@ -333,7 +269,6 @@ function enregistrerRegularisation(apprenant) {
     apprenant.prenomTuteur   || '—',
     apprenant.nomTuteur      || '—',
 
-    // Formation
     apprenant.filiere,
     apprenant.dureeFormation,
     apprenant.dateEntree,
@@ -342,7 +277,6 @@ function enregistrerRegularisation(apprenant) {
     apprenant.montantPaye          || '0',
     apprenant.observationFormation || '—',
 
-    // Pièces (URLs Drive)
     apprenant.typePiece,
     apprenant.numeroPiece,
     apprenant.pieceUrl     || '—',
@@ -350,24 +284,18 @@ function enregistrerRegularisation(apprenant) {
     apprenant.signatureUrl || '—',
     apprenant.dossierUrl   || '—',
 
-    // Consentement
     apprenant.clause1,
     apprenant.clause2,
     apprenant.dateSignature || '—',
 
-    // Statut admin
     apprenant.statutDossier,
     apprenant.traitePar      || '—',
     apprenant.dateTraitement || '—'
   ];
 
-  ajouterLigneFeuille(ss, 'Régularisations', ENTETES_REGULARISATION, ligne, 9); // colonne 9 = Téléphone
+  ajouterLigneFeuille(ss, 'Régularisations', ENTETES_REGULARISATION, ligne, 9);
 }
 
-
-// =====================================================================
-// EMAIL — Notification admin
-// =====================================================================
 function envoyerEmailAdminRegularisation(apprenant) {
   const sujet = '[Régularisation] ' + apprenant.prenom + ' ' + apprenant.nom
               + ' — ' + apprenant.filiere;
@@ -392,22 +320,18 @@ function construireEmailAdminReg(a) {
   + '<tr><td align="center">'
   + '<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">'
 
-  // En-tête
   + '<tr><td style="background:' + CONFIG.COULEUR_DARK + ';border-radius:16px 16px 0 0;padding:28px 36px;text-align:center;">'
   + '<img src="' + CONFIG.LOGO_URL + '" width="72" style="border-radius:8px;display:inline-block;margin-bottom:12px;"/>'
   + '<h1 style="margin:0;font-size:19px;font-weight:700;color:#FFF;">Les Qualités de Dieu Service</h1>'
   + '<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">Centre de Formation Professionnelle — Comé, Bénin</p>'
   + '</td></tr>'
 
-  // Bandeau type
   + '<tr><td style="background:' + CONFIG.COULEUR_ORANGE + ';padding:14px 36px;text-align:center;">'
   + '<p style="margin:0;font-size:14px;font-weight:700;color:#FFF;letter-spacing:.05em;">NOUVEAU DOSSIER — RÉGULARISATION APPRENANT</p>'
   + '</td></tr>'
 
-  // Corps
   + '<tr><td style="background:#FFF;padding:32px 36px;">'
 
-  // Bloc identité
   + '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:20px;">'
   + '<tr style="background:#F0F9FA;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:' + CONFIG.COULEUR_TEAL + ';font-size:12px;text-transform:uppercase;">Identité de l\'apprenant</td></tr>'
   + ligneInfoEmail('Référence',       a.id)
@@ -421,7 +345,6 @@ function construireEmailAdminReg(a) {
   + ligneInfoEmail('Adresse',        a.adresse)
   + '</table>'
 
-  // Bloc filiation
   + '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:20px;">'
   + '<tr style="background:#F0F9FA;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:' + CONFIG.COULEUR_TEAL + ';font-size:12px;text-transform:uppercase;">Filiation parentale</td></tr>'
   + ligneInfoEmail('Mère',       a.prenomMere + ' ' + a.nomMere + (a.telephoneMere ? ' — ' + a.telephoneMere : ''))
@@ -429,7 +352,6 @@ function construireEmailAdminReg(a) {
   + (a.prenomTuteur ? ligneInfoEmail('Tuteur', a.prenomTuteur + ' ' + a.nomTuteur) : '')
   + '</table>'
 
-  // Bloc formation
   + '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:20px;">'
   + '<tr style="background:#FFF6E5;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:' + CONFIG.COULEUR_ORANGE + ';font-size:12px;text-transform:uppercase;">Formation suivie</td></tr>'
   + ligneInfoEmailAccent('Filière',        a.filiere)
@@ -439,7 +361,6 @@ function construireEmailAdminReg(a) {
   + ligneInfoEmail('Montant payé',        formatFCFA(a.montantPaye))
   + '</table>'
 
-  // Bloc pièces Drive
   + '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:20px;">'
   + '<tr style="background:#F0F9FA;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:' + CONFIG.COULEUR_TEAL + ';font-size:12px;text-transform:uppercase;">Pièces & Documents</td></tr>'
   + ligneInfoEmail('Type pièce',    a.typePiece + ' — N° ' + a.numeroPiece)
@@ -449,7 +370,6 @@ function construireEmailAdminReg(a) {
   + ligneInfoEmail('Dossier complet', '<a href="' + a.dossierUrl + '" style="color:' + CONFIG.COULEUR_TEAL + ';font-weight:600;">Ouvrir le dossier Drive</a>')
   + '</table>'
 
-  // Boutons action
   + '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
   + '<td style="padding-right:8px;"><a href="tel:' + a.telephone.replace(/[\s+]/g,'') + '" style="display:block;text-align:center;background:' + CONFIG.COULEUR_TEAL + ';color:#FFF;font-size:14px;font-weight:700;padding:13px;border-radius:10px;text-decoration:none;">Appeler l\'apprenant</a></td>'
   + (a.email ? '<td style="padding-left:8px;"><a href="mailto:' + a.email + '" style="display:block;text-align:center;background:#F3F4F6;color:#1A1A2E;font-size:14px;font-weight:700;padding:13px;border-radius:10px;text-decoration:none;border:1px solid #E5E7EB;">Envoyer un email</a></td>' : '')
@@ -460,10 +380,6 @@ function construireEmailAdminReg(a) {
   + '</table></td></tr></table></body></html>';
 }
 
-
-// =====================================================================
-// EMAIL — Confirmation apprenant
-// =====================================================================
 function envoyerEmailApprenantRegularisation(apprenant) {
   GmailApp.sendEmail(
     apprenant.email,
@@ -539,16 +455,10 @@ function construireEmailApprenantReg(a) {
   + '</table></td></tr></table></body></html>';
 }
 
-
-// =====================================================================
-// FONCTION DE TEST — À exécuter depuis l'éditeur GAS
-// Ne jamais lancer traiterRegularisation() directement.
-// =====================================================================
 function testerRegularisation() {
   const fakeData = {
     action: 'regularisation',
 
-    // Identité
     prenom:        'Christelle',
     nom:           'AGOSSOU',
     sexe:          'Féminin',
@@ -559,7 +469,6 @@ function testerRegularisation() {
     email:         'christelle@test.bj',
     adresse:       'Comé, Hongodé, Bénin',
 
-    // Filiation
     prenomMere:     'Aïchatou',
     nomMere:        'HOUNSOU',
     telephoneMere:  '',
@@ -571,7 +480,6 @@ function testerRegularisation() {
     prenomTuteur:   '',
     nomTuteur:      '',
 
-    // Formation
     filiere:              'Informatique & Bureautique',
     dureeFormation:       '3 mois',
     dateEntree:           '2023-01-09',
@@ -580,7 +488,6 @@ function testerRegularisation() {
     montantPaye:          '45000',
     observationFormation: 'Paiement effectué en espèces à l\'accueil.',
 
-    // Pièces (chaînes base64 valides minimales pour test)
     typePiece:       'CIP (Certificat d\'Identification Personnelle)',
     numeroPiece:     'CIP-TEST-12345',
     piece1Base64:    'dGVzdA==',
@@ -589,7 +496,6 @@ function testerRegularisation() {
     photoMimeType:   'image/jpeg',
     signatureBase64: 'dGVzdA==',
 
-    // Consentement
     clause1Acceptee: true,
     clause2Acceptee: true,
     dateSignature:   new Date().toISOString()

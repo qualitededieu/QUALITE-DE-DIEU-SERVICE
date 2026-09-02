@@ -1,63 +1,18 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL — Candidatures (page Postuler)
-   Fichier  : candidatures.gs
-   Version  : 1.0.0
-   Rôle     : Candidatures formateur/staff et stage, totalement séparées
-              du parcours d'inscription apprenant (pas de paiement, pas
-              de lien avec le Sheet "Toutes les inscriptions").
-
-   ROUTES :
-     action === 'candidature'                    : enregistrerCandidature(data)         // public
-     action === 'candidature_attestation_get_data': candidatureAttestationGetData(data)  // public
-     case 'admin_get_candidatures'               : requireAuth(data, adminGetCandidatures)
-     case 'admin_update_statut_candidature'      : requireAuth(data, adminUpdateStatutCandidature)
-     case 'admin_obtenir_doc_candidature'        : requireAuth(data, adminObtenirDocumentCandidature)
-     case 'admin_delete_candidature'             : requireAuth(data, adminDeleteCandidature)
-     case 'admin_set_periode_stage'              : requireAuth(data, adminSetPeriodeStage)
-
-     (À ajouter dans routerAdmin() de admin.gs — voir bloc en bas de fichier)
-
-   ATTESTATION DE FIN DE STAGE :
-     Une candidature de type 'stage' dont le statut est 'Terminé' devient
-     éligible à une attestation de fin de stage, récupérable en libre-
-     service (ID + téléphone) via candidatureAttestationGetData(), sur
-     le même principe que la carte d'apprentissage (carte.gs) — token
-     HMAC signé (réutilise _genererTokenCarte/CARTE_CONFIG), généré et
-     mis en page côté client par js/attestation_generator.js (détecte
-     apprenant.source === 'candidature-stage' pour adapter le texte).
-   ===================================================================== */
-
-
-// =====================================================================
-// EN-TÊTES — Feuille "Candidatures"
-// Les 3 avant-dernières colonnes (Sexe, Date début stage, Date fin
-// stage) puis la dernière (Missions stage) sont ajoutées EN FIN de
-// tableau exprès : ça préserve les index des colonnes déjà utilisées
-// (documents, statut...) pour les dossiers déjà soumis avant cet ajout.
-// =====================================================================
 const ENTETES_CANDIDATURE = [
-  'ID', 'Type',                 // formateur | stage
+  'ID', 'Type',
   'Date candidature',
   'Prénom(s)', 'Nom', 'Téléphone', 'Email', 'Adresse',
   'Domaine', 'Expérience', 'Établissement', 'Niveau d\'études',
   'Durée souhaitée (stage)', 'Disponibilité', 'Motivation',
   'CV (Drive ID)', 'Lettre (Drive ID)', 'Pièce identité (Drive ID)', 'Recommandation (Drive ID)',
-  'Statut',                     // Nouveau | Vu | Contacté | Retenu | Terminé | Rejeté
+  'Statut',
   'Traité par', 'Date traitement',
   'Sexe', 'Date début stage', 'Date fin stage',
-  'Missions stage (JSON)'       // ex : ["la photocopie","un projet de développement web"]
+  'Missions stage (JSON)'
 ];
 
 const STATUTS_CANDIDATURE_VALIDES = ['Nouveau', 'Vu', 'Contacté', 'Retenu', 'Terminé', 'Rejeté'];
 
-// =====================================================================
-// RÉPARATION — Remet en cohérence l'en-tête (titres + mise en forme +
-// validations) de l'onglet "Candidatures", qui n'a JAMAIS eu de mise
-// en forme codée : il se crée à la volée au tout premier dépôt de
-// candidature (voir plus bas), avec seulement les titres bruts, sans
-// couleur ni largeur ni liste déroulante. À exécuter UNE SEULE FOIS
-// depuis l'éditeur GAS. Ne touche jamais aux lignes de données.
-// =====================================================================
 function repararEnTeteCandidatures() {
   Logger.log('=== RÉPARATION EN-TÊTE CANDIDATURES — Démarrage ===');
 
@@ -109,14 +64,11 @@ function repararEnTeteCandidatures() {
     if (i < ENTETES_CANDIDATURE.length) feuille.setColumnWidth(i + 1, l);
   });
 
-  // Statut = colonne T (20e colonne)
   const regleStatut = SpreadsheetApp.newDataValidation()
     .requireValueInList(STATUTS_CANDIDATURE_VALIDES, true)
     .setAllowInvalid(false).build();
   feuille.getRange('T2:T1000').setDataValidation(regleStatut);
 
-  // Sexe = colonne W (23e colonne) — même convention M/F que sur les
-  // onglets d'inscription (voir _ecrireEnTeteInscription dans init.gs)
   const regleSexe = SpreadsheetApp.newDataValidation()
     .requireValueInList(['M', 'F'], true)
     .setAllowInvalid(false).build();
@@ -126,13 +78,6 @@ function repararEnTeteCandidatures() {
   Logger.log('=== RÉPARATION EN-TÊTE CANDIDATURES — Terminé ===');
 }
 
-// =====================================================================
-// MISSIONS DE STAGE — liste fixe proposée en cases à cocher côté admin.
-// Chaque libellé est déjà rédigé pour s'insérer directement dans la
-// phrase de description de l'attestation (voir _phraseMissionsStage
-// plus bas). Garder cette liste synchronisée avec celle codée en dur
-// dans admin.html (section "Période de stage").
-// =====================================================================
 const MISSIONS_STAGE_OPTIONS = [
   'la photocopie',
   "l'impression de documents",
@@ -151,10 +96,6 @@ const MISSIONS_STAGE_OPTIONS = [
   "un projet de développement d'application mobile",
 ];
 
-
-// =====================================================================
-// ROUTE PUBLIC — Enregistrer une candidature
-// =====================================================================
 function enregistrerCandidature(data) {
   const type = String(data.type || '').trim();
   if (!['formateur', 'stage'].includes(type)) {
@@ -185,8 +126,6 @@ function enregistrerCandidature(data) {
 
   const id = genererID('CAND');
 
-  // Upload des pièces — dossier Drive PRIVÉ dédié (jamais de lien public,
-  // contrairement aux photos d'inscription : ce sont CV/pièce d'identité).
   let cvId = '', lettreId = '', pieceId = '', recoId = '';
   try {
     const racine = trouverDossierDrive(CONFIG.DRIVE_DOSSIER_NOM);
@@ -223,7 +162,7 @@ function enregistrerCandidature(data) {
     'Nouveau', '', '',
     nettoyer(data.sexe || ''), '', ''
   ]);
-  forcerTelephoneTexte(feuille, 6, telephone); // colonne 6 = Téléphone
+  forcerTelephoneTexte(feuille, 6, telephone);
 
   try { _envoyerEmailConfirmationCandidature(data, id, type); } catch (e) { console.error('[enregistrerCandidature] mail candidat', e.toString()); }
   try { _envoyerEmailAdminCandidature(data, id, type); } catch (e) { console.error('[enregistrerCandidature] mail admin', e.toString()); }
@@ -231,15 +170,6 @@ function enregistrerCandidature(data) {
   return reponseJSON({ status: 'success', id, message: 'Votre candidature a bien été reçue. Nous reviendrons vers vous si votre profil correspond à nos besoins.' });
 }
 
-
-// =====================================================================
-// HELPER — Sauvegarde un fichier dans Drive SANS le rendre public
-// (à la différence de sauvegarderFichierDrive() dans code.gs, utilisée
-// pour les pièces d'inscription qui doivent rester consultables via
-// lien direct). Les documents de candidature ne sont lus que par
-// l'admin, via obtenirDocumentCandidature() qui renvoie le contenu
-// encodé en base64 après vérification de session.
-// =====================================================================
 function _sauvegarderFichierPrive(dossier, base64, nom, mimeType) {
   const octets  = Utilities.base64Decode(base64);
   const blob    = Utilities.newBlob(octets, mimeType || 'application/octet-stream', nom);
@@ -247,10 +177,6 @@ function _sauvegarderFichierPrive(dossier, base64, nom, mimeType) {
   return fichier.getId();
 }
 
-
-// =====================================================================
-// ROUTE ADMIN — Liste des candidatures
-// =====================================================================
 function adminGetCandidatures(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
@@ -278,10 +204,6 @@ function adminGetCandidatures(data, email) {
   return reponseJSON({ status: 'success', candidatures });
 }
 
-
-// =====================================================================
-// ROUTE ADMIN — Changer le statut d'une candidature
-// =====================================================================
 function adminUpdateStatutCandidature(data, email) {
   const id     = String(data.id || '').trim();
   const statut = String(data.statut || '').trim();
@@ -296,27 +218,18 @@ function adminUpdateStatutCandidature(data, email) {
   const rows = feuille.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() !== id) continue;
-    feuille.getRange(i + 1, 20).setValue(statut);        // colonne "Statut" (20e, 1-based)
-    feuille.getRange(i + 1, 21).setValue(email);          // "Traité par"
-    feuille.getRange(i + 1, 22).setValue(new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' })); // "Date traitement"
+    feuille.getRange(i + 1, 20).setValue(statut);
+    feuille.getRange(i + 1, 21).setValue(email);
+    feuille.getRange(i + 1, 22).setValue(new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }));
     return reponseJSON({ status: 'success', message: 'Statut mis à jour.' });
   }
   return reponseJSON({ status: 'error', message: 'Candidature introuvable.' });
 }
 
-
-// =====================================================================
-// ROUTE ADMIN — Fixer la période de stage (dates début/fin) et les
-// missions effectuées (cases à cocher, utilisées sur l'attestation).
-// Utilisé quand l'admin marque un stage comme "Terminé" : ces
-// informations apparaîtront sur l'attestation de fin de stage.
-// =====================================================================
 function adminSetPeriodeStage(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
 
-  // Ne garder que des libellés reconnus (évite d'enregistrer n'importe
-  // quoi si jamais le payload est manipulé côté client).
   const missionsRecues = Array.isArray(data.missionsStage) ? data.missionsStage : [];
   const missionsValides = missionsRecues.filter(m => MISSIONS_STAGE_OPTIONS.includes(m));
 
@@ -327,20 +240,14 @@ function adminSetPeriodeStage(data, email) {
   const rows = feuille.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() !== id) continue;
-    feuille.getRange(i + 1, 24).setValue(String(data.dateDebutStage || '')); // colonne "Date début stage" (24e, 1-based)
-    feuille.getRange(i + 1, 25).setValue(String(data.dateFinStage   || '')); // colonne "Date fin stage" (25e, 1-based)
-    feuille.getRange(i + 1, 26).setValue(JSON.stringify(missionsValides));  // colonne "Missions stage" (26e, 1-based)
+    feuille.getRange(i + 1, 24).setValue(String(data.dateDebutStage || ''));
+    feuille.getRange(i + 1, 25).setValue(String(data.dateFinStage   || ''));
+    feuille.getRange(i + 1, 26).setValue(JSON.stringify(missionsValides));
     return reponseJSON({ status: 'success', message: 'Période de stage enregistrée.' });
   }
   return reponseJSON({ status: 'error', message: 'Candidature introuvable.' });
 }
 
-
-// =====================================================================
-// Parse défensif du JSON stocké en colonne 26 — jamais planter si la
-// cellule est vide ou contient une valeur invalide (ancien dossier
-// créé avant cet ajout, par exemple).
-// =====================================================================
 function _parseMissionsStageJSON(valeurCellule) {
   if (!valeurCellule) return [];
   try {
@@ -351,13 +258,6 @@ function _parseMissionsStageJSON(valeurCellule) {
   }
 }
 
-
-// =====================================================================
-// ROUTE PUBLIC — Récupérer les données pour l'attestation de fin de
-// stage (candidat ayant postulé via "Postuler", type stage, statut
-// "Terminé"). Vérification : ID dossier (CAND-...) + téléphone,
-// normalisé comme pour la carte (voir _normaliserTel dans carte.gs).
-// =====================================================================
 function candidatureAttestationGetData(data) {
   const id        = String(data.id        || '').trim();
   const telephone = String(data.telephone || '').trim();
@@ -385,9 +285,6 @@ function candidatureAttestationGetData(data) {
       return reponseJSON({ status: 'error', message: 'Votre stage n\'est pas encore marqué comme terminé par l\'administration.' });
     }
 
-    // Objet compatible avec js/attestation_generator.js (mêmes clés
-    // que l'apprenant carte.gs) — le générateur détecte "source" pour
-    // adapter le texte au vocabulaire "stage" plutôt que "formation".
     const candidat = {
       id:            String(r[0]),
       prenom:        String(r[3]),
@@ -396,9 +293,9 @@ function candidatureAttestationGetData(data) {
       dateNaissance: '',
       telephone:     String(r[5]),
       email:         String(r[6]),
-      filiere:       String(r[8] || 'Stage professionnel'), // domaine
-      dateEntree:    String(r[23] || ''), // date début stage
-      dateFin:       String(r[24] || ''), // date fin stage
+      filiere:       String(r[8] || 'Stage professionnel'),
+      dateEntree:    String(r[23] || ''),
+      dateFin:       String(r[24] || ''),
       missionsStage: _parseMissionsStageJSON(r[25]),
       photoUrl:      '',
       source:        'candidature-stage'
@@ -418,14 +315,10 @@ function candidatureAttestationGetData(data) {
   return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });
 }
 
-
-// =====================================================================
-// ROUTE ADMIN — Lire un document de candidature (CV, lettre, pièce...)
-// =====================================================================
 function adminObtenirDocumentCandidature(data, email) {
   const id   = String(data.id || '').trim();
   const type = String(data.typeDocument || '').trim();
-  const COL_DOCUMENT = { cv: 15, lettre: 16, piece: 17, recommandation: 18 }; // 0-based
+  const COL_DOCUMENT = { cv: 15, lettre: 16, piece: 17, recommandation: 18 };
 
   if (!id || !COL_DOCUMENT.hasOwnProperty(type)) {
     return reponseJSON({ status: 'error', message: 'Paramètres invalides.' });
@@ -456,10 +349,6 @@ function adminObtenirDocumentCandidature(data, email) {
   return reponseJSON({ status: 'error', message: 'Candidature introuvable.' });
 }
 
-
-// =====================================================================
-// ROUTE ADMIN — Supprimer une candidature (dossier Drive mis à la corbeille)
-// =====================================================================
 function adminDeleteCandidature(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -487,10 +376,6 @@ function adminDeleteCandidature(data, email) {
   return reponseJSON({ status: 'error', message: 'Candidature introuvable.' });
 }
 
-
-// =====================================================================
-// EMAIL — Accusé de réception au candidat
-// =====================================================================
 function _envoyerEmailConfirmationCandidature(data, id, type) {
   if (!data.email) return;
   const labelType = type === 'formateur' ? 'Formateur / Staff' : 'Stage';
@@ -543,10 +428,6 @@ function _envoyerEmailConfirmationCandidature(data, id, type) {
   );
 }
 
-
-// =====================================================================
-// EMAIL — Notification admin
-// =====================================================================
 function _envoyerEmailAdminCandidature(data, id, type) {
   const labelType = type === 'formateur' ? 'Formateur / Staff' : 'Stage';
 
@@ -583,7 +464,6 @@ function _envoyerEmailAdminCandidature(data, id, type) {
     { htmlBody, name: CONFIG.EXPEDITEUR_NOM }
   );
 }
-
 
 /* =====================================================================
    INTÉGRATION — À ajouter dans routerAdmin() de admin.gs :

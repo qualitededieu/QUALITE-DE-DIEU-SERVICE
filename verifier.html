@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vérification — Carte d'apprentissage LQD Service</title>
   <meta name="robots" content="noindex, nofollow" />
-  <!-- Chaque URL de cette page contient un jeton individuel (?t=...) : ne jamais indexer, sinon des jetons de vérification personnels pourraient apparaître dans les résultats de recherche. -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -406,7 +406,6 @@
 </head>
 <body>
 
-  <!-- HEADER -->
   <header>
     <img src="icons/logoqds.jpg" alt="LQD Service"/>
     <div class="brand">
@@ -419,10 +418,9 @@
     </div>
   </header>
 
-  <!-- CONTENU -->
   <main>
     <div class="container" id="app">
-      <!-- État initial : chargement -->
+
       <div class="state-loading" id="state-loading">
         <div class="spinner"></div>
         <p>Vérification de la carte en cours…</p>
@@ -430,7 +428,6 @@
     </div>
   </main>
 
-  <!-- jsPDF pour export PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -513,17 +510,14 @@
       document.getElementById('app').innerHTML = `
         <div class="carte-wrap" id="carte-wrap">
 
-          <!-- Bandeau statut -->
           <div class="statut-banner">
             <span class="valide-dot"></span>
             <iconify-icon icon="tabler:shield-check"></iconify-icon>
             DOCUMENT AUTHENTIFIÉ — VALIDE
           </div>
 
-          <!-- Corps -->
           <div class="carte-body" id="carte-body">
 
-            <!-- Identité -->
             <div class="identite">
               <div class="photo-wrap">${photoHtml}</div>
               <div class="identite-info">
@@ -536,7 +530,6 @@
               </div>
             </div>
 
-            <!-- Infos grille -->
             <div class="infos-grid">
               <div class="info-cell">
                 <div class="info-label">Sexe</div>
@@ -560,7 +553,6 @@
               </div>
             </div>
 
-            <!-- Pied -->
             <div class="carte-footer">
               <div class="footer-text">
                 <strong>LQD Service — Officiel</strong>
@@ -569,9 +561,8 @@
               <div class="emis-date">Vérifié le<br/>${dateEmission}</div>
             </div>
 
-          </div><!-- /.carte-body -->
+          </div>
 
-          <!-- Bouton PDF -->
           <button class="btn-pdf" id="btn-pdf" onclick="telechargerPDF()">
             <iconify-icon icon="tabler:file-type-pdf"></iconify-icon>
             Télécharger en PDF
@@ -649,6 +640,26 @@
     }
 
     init();
+  </script>
+  <script>
+    (function () {
+      var GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+      async function chargerBandeau() {
+        try {
+          var resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'bandeau_get_public' })
+          });
+          var result = await resp.json();
+          if (result.status === 'success' && result.actif && result.texte) {
+            document.getElementById('bandeau-texte').textContent = result.texte;
+            document.getElementById('bandeau-info').style.display = 'block';
+          }
+        } catch (e) {}
+      }
+      chargerBandeau();
+    })();
   </script>
 </body>
 </html>

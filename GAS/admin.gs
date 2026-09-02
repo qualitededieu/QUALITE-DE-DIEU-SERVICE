@@ -1,14 +1,3 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL — Admin Backend
-   Fichier  : admin.gs
-   Version  : 1.2.0
-   Auteur   : LQD Web Studio / PHANOS KOSMOS
-   ===================================================================== */
-
-
-// =====================================================================
-// CONFIG ADMIN
-// =====================================================================
 const ADMIN_CONFIG = {
   EMAILS_AUTORISES: [
     'lqddssarl@gmail.com',
@@ -24,25 +13,10 @@ const ADMIN_CONFIG = {
   SESSION_PREFIX:   'SESSION_'
 };
 
-
-// =====================================================================
-// CONFIG CARTE D'APPRENTISSAGE — voir CARTE_CONFIG dans carte.gs.
-// (Ne pas redéclarer ici : dans un projet Apps Script, tous les fichiers
-// .gs partagent le même espace global — une seconde déclaration `const
-// CARTE_CONFIG` provoque une erreur "Identifier has already been
-// declared" qui empêche l'exécution de TOUT le script, pas seulement
-// de la carte.)
-// =====================================================================
-
-
-// =====================================================================
-// ROUTAGE ADMIN
-// =====================================================================
 function routerAdmin(data, action) {
   try {
     switch (action) {
 
-      // AUTH
       case 'admin_login':               return adminLogin(data);
       case 'admin_verify_otp':          return adminVerifyOtp(data);
       case 'admin_verify_google':       return adminVerifyGoogle(data);
@@ -50,13 +24,11 @@ function routerAdmin(data, action) {
       case 'admin_forgot_password_request': return adminForgotPasswordRequest(data);
       case 'admin_forgot_password_reset':   return adminForgotPasswordReset(data);
 
-      // LECTURE
       case 'admin_get_stats':           return requireAuth(data, adminGetStats);
       case 'admin_get_dossiers':        return requireAuth(data, adminGetDossiers);
       case 'admin_get_rens':            return requireAuth(data, adminGetRenseignements);
       case 'admin_get_dossier':         return requireAuth(data, adminGetDossier);
 
-      // WRITE
       case 'admin_update_statut':       return requireAuth(data, adminUpdateStatut);
       case 'admin_update_paiement':     return requireAuth(data, adminUpdatePaiement);
       case 'admin_send_relance':        return requireAuth(data, adminSendRelance);
@@ -67,25 +39,21 @@ function routerAdmin(data, action) {
       case 'admin_update_reg_statut':   return requireAuth(data, adminUpdateRegStatut);
       case 'admin_delete_reg':          return requireAuth(data, adminDeleteRegularisation);
 
-      // CARTE D'APPRENTISSAGE (publique + admin)
       case 'carte_get_data':            return getCarte(data);
       case 'carte_verifier':            return verifierCarte(data);
       case 'admin_envoyer_carte':       return requireAuth(data, envoyerCarteAdmin);
 
-      // CANDIDATURES (page Postuler — admin uniquement, l'envoi est public via action 'candidature')
       case 'admin_get_candidatures':          return requireAuth(data, adminGetCandidatures);
       case 'admin_update_statut_candidature': return requireAuth(data, adminUpdateStatutCandidature);
       case 'admin_obtenir_doc_candidature':   return requireAuth(data, adminObtenirDocumentCandidature);
       case 'admin_delete_candidature':        return requireAuth(data, adminDeleteCandidature);
       case 'admin_set_periode_stage':         return requireAuth(data, adminSetPeriodeStage);
 
-      // ANNONCES / ACTUALITÉS (lecture publique via action 'annonces_list_publiees', voir annonces.gs)
       case 'admin_annonces_list':       return requireAuth(data, adminAnnoncesList);
       case 'admin_annonce_creer':       return requireAuth(data, adminAnnonceCreer);
       case 'admin_annonce_modifier':    return requireAuth(data, adminAnnonceModifier);
       case 'admin_annonce_supprimer':   return requireAuth(data, adminAnnonceSupprimer);
 
-      // BANDEAU D'INFORMATION (haut de page, même principe que Le Compagnon Yaovi)
       case 'admin_bandeau_get':         return requireAuth(data, adminBandeauGet);
       case 'admin_bandeau_set':         return requireAuth(data, adminBandeauSet);
       case 'bandeau_get_public':        return bandeauGetPublic(data);
@@ -99,10 +67,6 @@ function routerAdmin(data, action) {
   }
 }
 
-
-// =====================================================================
-// AUTH — Middleware
-// =====================================================================
 function requireAuth(data, fn) {
   const token = data.token;
   if (!token) return reponseJSON({ status: 'auth_error', message: 'Token manquant.' });
@@ -111,10 +75,6 @@ function requireAuth(data, fn) {
   return fn(data, payload.email);
 }
 
-
-// =====================================================================
-// AUTH — Login étape 1
-// =====================================================================
 function adminLogin(data) {
   const email = (data.email || '').trim().toLowerCase();
   const mdp   = data.password || '';
@@ -138,10 +98,6 @@ function adminLogin(data) {
   return reponseJSON({ status: 'otp_sent', message: `Code OTP envoyé à ${email}. Valide 10 minutes.` });
 }
 
-
-// =====================================================================
-// AUTH — Login étape 2 (OTP)
-// =====================================================================
 function adminVerifyOtp(data) {
   const email    = (data.email || '').trim().toLowerCase();
   const otpSaisi = String(data.otp || '').trim();
@@ -169,34 +125,15 @@ function adminVerifyOtp(data) {
   return reponseJSON({ status: 'success', token, email });
 }
 
-
-// =====================================================================
-// MOT DE PASSE ADMIN — stocké dans les Propriétés du script (modifiable
-// à l'exécution), PAS dans ADMIN_CONFIG.MOT_DE_PASSE (constante figée
-// dans le code source, qu'un script ne peut jamais réécrire lui-même).
-// Tant qu'aucune réinitialisation n'a eu lieu, on retombe sur la valeur
-// d'origine du code — migration silencieuse, aucune interruption pour
-// les admins existants au moment de ce déploiement.
-// =====================================================================
 function _getMotDePasseActuel() {
   const stocke = PropertiesService.getScriptProperties().getProperty('ADMIN_MOT_DE_PASSE');
   return stocke || ADMIN_CONFIG.MOT_DE_PASSE;
 }
 
-
-// =====================================================================
-// MOT DE PASSE OUBLIÉ — étape 1 : demande de réinitialisation
-// N'exige PAS l'ancien mot de passe (c'est tout le principe) : seule
-// l'appartenance à la liste des emails autorisés est vérifiée, puis un
-// code à usage unique est envoyé par email pour confirmer l'identité
-// avant d'accepter un nouveau mot de passe.
-// =====================================================================
 function adminForgotPasswordRequest(data) {
   const email = (data.email || '').trim().toLowerCase();
 
   if (!ADMIN_CONFIG.EMAILS_AUTORISES.map(e => e.toLowerCase()).includes(email)) {
-    // Message volontairement identique à un succès : ne jamais révéler
-    // si un email fait partie ou non de la liste des admins autorisés.
     return reponseJSON({ status: 'otp_sent', message: `Si cet email est autorisé, un code a été envoyé.` });
   }
 
@@ -212,11 +149,6 @@ function adminForgotPasswordRequest(data) {
   return reponseJSON({ status: 'otp_sent', message: `Code envoyé à ${email}. Valide 10 minutes.` });
 }
 
-
-// =====================================================================
-// MOT DE PASSE OUBLIÉ — étape 2 : vérification du code + nouveau
-// mot de passe
-// =====================================================================
 function adminForgotPasswordReset(data) {
   const email        = (data.email || '').trim().toLowerCase();
   const otpSaisi      = String(data.otp || '').trim();
@@ -249,11 +181,6 @@ function adminForgotPasswordReset(data) {
   return reponseJSON({ status: 'success', message: 'Mot de passe mis à jour. Vous pouvez vous connecter.' });
 }
 
-
-
-// =====================================================================
-// AUTH — OAuth Google
-// =====================================================================
 function adminVerifyGoogle(data) {
   const googleToken = data.googleToken || '';
   try {
@@ -284,18 +211,10 @@ function adminVerifyGoogle(data) {
   }
 }
 
-
-// =====================================================================
-// AUTH — Logout
-// =====================================================================
 function adminLogout(data) {
   return reponseJSON({ status: 'success', message: 'Déconnecté.' });
 }
 
-
-// =====================================================================
-// LECTURE — Statistiques dashboard
-// =====================================================================
 function adminGetStats(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
@@ -345,7 +264,6 @@ function adminGetStats(data, email) {
     }
   }
 
-  // Régularisations en attente
   const feuilleRegs = ss.getSheetByName('Régularisations');
   if (feuilleRegs) {
     const donneesR = feuilleRegs.getDataRange().getValues();
@@ -359,10 +277,6 @@ function adminGetStats(data, email) {
   return reponseJSON({ status: 'success', stats });
 }
 
-
-// =====================================================================
-// LECTURE — Liste des dossiers
-// =====================================================================
 function adminGetDossiers(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
@@ -404,10 +318,6 @@ function adminGetDossiers(data, email) {
   return reponseJSON({ status: 'success', dossiers: page_, total, page, perPage, pages: Math.ceil(total / perPage) });
 }
 
-
-// =====================================================================
-// LECTURE — Renseignements
-// =====================================================================
 function adminGetRenseignements(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
@@ -439,10 +349,6 @@ function adminGetRenseignements(data, email) {
   return reponseJSON({ status: 'success', renseignements: rens });
 }
 
-
-// =====================================================================
-// LECTURE — Dossier individuel
-// =====================================================================
 function adminGetDossier(data, email) {
   const id = data.id || '';
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -462,10 +368,6 @@ function adminGetDossier(data, email) {
   return reponseJSON({ status: 'error', message: `Dossier ${id} introuvable.` });
 }
 
-
-// =====================================================================
-// WRITE — Statut dossier
-// =====================================================================
 function adminUpdateStatut(data, email) {
   const { id, statut } = data;
   const valeursValides  = ['En attente', 'Confirmé', 'Annulé'];
@@ -492,10 +394,6 @@ function adminUpdateStatut(data, email) {
   return reponseJSON({ status: 'success', message: `Statut mis à jour : ${statut}` });
 }
 
-
-// =====================================================================
-// WRITE — Statut paiement
-// =====================================================================
 function adminUpdatePaiement(data, email) {
   const { id, statut } = data;
   const valeursValides  = ['En attente', 'Reçu', 'Vérifié'];
@@ -534,10 +432,6 @@ function adminUpdatePaiement(data, email) {
   return reponseJSON({ status: 'success', message: `Paiement mis à jour : ${statut}` });
 }
 
-
-// =====================================================================
-// WRITE — Relance email
-// =====================================================================
 function adminSendRelance(data, email) {
   const id = data.id || '';
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -565,10 +459,6 @@ function adminSendRelance(data, email) {
   return reponseJSON({ status: 'success', message: `Relance envoyée à ${dossier.email}` });
 }
 
-
-// =====================================================================
-// WRITE — Supprimer dossier
-// =====================================================================
 function adminDeleteDossier(data, email) {
   const id = data.id || '';
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -602,10 +492,6 @@ function adminDeleteDossier(data, email) {
   return reponseJSON({ status: 'success', message: `Dossier ${id} supprimé.` });
 }
 
-
-// =====================================================================
-// WRITE — Export CSV
-// =====================================================================
 function adminExportCSV(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
@@ -623,23 +509,6 @@ function adminExportCSV(data, email) {
   return reponseJSON({ status: 'success', csv, total: donnees.length - 1 });
 }
 
-
-// =====================================================================
-// RÉGULARISATIONS — admin (BUG FIX)
-// Ces 4 fonctions étaient appelées par routerAdmin() (admin_get_regs,
-// admin_get_reg, admin_update_reg_statut, admin_delete_reg) mais
-// n'existaient nulle part dans le projet d'origine — chaque appel
-// levait une ReferenceError, rattrapée par le catch générique de
-// routerAdmin() et renvoyée comme "Erreur interne admin.". Le panel
-// "Régularisations" de l'admin n'a donc jamais fonctionné. Écrites ici
-// sur le même modèle que les fonctions équivalentes pour les dossiers
-// d'inscription (adminGetDossiers / adminGetDossier / adminUpdateStatut
-// / adminDeleteDossier ci-dessus).
-// =====================================================================
-
-// Mappe une ligne de la feuille "Régularisations" (voir
-// ENTETES_REGULARISATION dans regularisation.gs) vers un objet exploité
-// par admin.html (renderTableauRegularisations / renderModalReg).
 function _mapperLigneRegularisation(row, ligneIndex) {
   return {
     ligneIndex,
@@ -686,7 +555,6 @@ function _mapperLigneRegularisation(row, ligneIndex) {
   };
 }
 
-// LECTURE — Liste des dossiers de régularisation
 function adminGetRegularisations(data, email) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
@@ -724,7 +592,6 @@ function adminGetRegularisations(data, email) {
   return reponseJSON({ status: 'success', regs: page_, total, page, perPage, pages: Math.ceil(total / perPage) });
 }
 
-// LECTURE — Un dossier de régularisation précis
 function adminGetRegularisation(data, email) {
   const id = data.id || '';
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -744,7 +611,6 @@ function adminGetRegularisation(data, email) {
   return reponseJSON({ status: 'error', message: `Dossier ${id} introuvable.` });
 }
 
-// WRITE — Statut d'un dossier de régularisation
 function adminUpdateRegStatut(data, email) {
   const id     = data.id || '';
   const statut = data.statut || '';
@@ -761,16 +627,15 @@ function adminUpdateRegStatut(data, email) {
   const donnees = feuille.getDataRange().getValues();
   for (let i = 1; i < donnees.length; i++) {
     if (String(donnees[i][0]).trim() !== id) continue;
-    feuille.getRange(i + 1, 38).setValue(statut);                    // "Statut dossier" (38e, 1-based)
-    feuille.getRange(i + 1, 39).setValue(email);                     // "Traité par"
-    feuille.getRange(i + 1, 40).setValue(new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' })); // "Date traitement"
+    feuille.getRange(i + 1, 38).setValue(statut);
+    feuille.getRange(i + 1, 39).setValue(email);
+    feuille.getRange(i + 1, 40).setValue(new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }));
     console.log(`[Admin:${email}] Statut régularisation ${id} → ${statut}`);
     return reponseJSON({ status: 'success', message: `Statut mis à jour : ${statut}` });
   }
   return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
 }
 
-// WRITE — Suppression d'un dossier de régularisation
 function adminDeleteRegularisation(data, email) {
   const id = data.id || '';
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -785,7 +650,7 @@ function adminDeleteRegularisation(data, email) {
   for (let i = donnees.length - 1; i >= 1; i--) {
     if (String(donnees[i][0]).trim() !== id) continue;
 
-    const dossierUrl = donnees[i][33]; // "Dossier Drive"
+    const dossierUrl = donnees[i][33];
     if (dossierUrl) {
       try {
         const idDrive = String(dossierUrl).match(/[-\w]{25,}/);
@@ -800,10 +665,6 @@ function adminDeleteRegularisation(data, email) {
   return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
 }
 
-
-// =====================================================================
-// EMAIL — OTP
-// =====================================================================
 function envoyerEmailOTP(email, otp) {
   const htmlBody = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
@@ -837,13 +698,6 @@ function envoyerEmailOTP(email, otp) {
   });
 }
 
-
-// =====================================================================
-// Email dédié à la réinitialisation de mot de passe — texte différent
-// de envoyerEmailOTP() ci-dessus, pour que l'admin comprenne bien
-// pourquoi il reçoit ce code (éviter la confusion avec une simple
-// tentative de connexion qu'il n'aurait pas initiée).
-// =====================================================================
 function envoyerEmailResetOTP(email, otp) {
   const htmlBody = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
@@ -881,10 +735,6 @@ function envoyerEmailResetOTP(email, otp) {
   });
 }
 
-
-// =====================================================================
-// EMAIL — Confirmation paiement vérifié
-// =====================================================================
 function envoyerEmailConfirmationPaiement(dossier) {
   const montants = calculerMontantsTotal(dossier.formations || []);
   GmailApp.sendEmail(
@@ -927,10 +777,6 @@ function envoyerEmailConfirmationPaiement(dossier) {
   );
 }
 
-
-// =====================================================================
-// TOKEN ADMIN — Génération et vérification HMAC
-// =====================================================================
 function genererToken(email) {
   const expireAt   = Math.floor(Date.now() / 1000) + ADMIN_CONFIG.TOKEN_EXPIRY_SEC;
   const payload    = JSON.stringify({ email, expireAt });
@@ -957,18 +803,10 @@ function signerHMAC(data) {
   );
 }
 
-
-// =====================================================================
-// OTP — Génération 6 chiffres
-// =====================================================================
 function genererOTP() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-
-// =====================================================================
-// HELPER — Mapper ligne Sheets → objet dossier
-// =====================================================================
 function mapperLigneDossier(row, ligneIndex) {
   const formations = String(row[6] || '').split(' | ').map(f => f.trim()).filter(Boolean);
   const montants   = calculerMontantsTotal(formations);
@@ -1002,10 +840,6 @@ function mapperLigneDossier(row, ligneIndex) {
   };
 }
 
-
-// =====================================================================
-// HELPER — Mise à jour colonne par ID + nom colonne
-// =====================================================================
 function mettreAJourColonnePrecise(nomFeuille, id, nomColonne, valeur) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return false;
@@ -1025,14 +859,3 @@ function mettreAJourColonnePrecise(nomFeuille, id, nomColonne, valeur) {
   }
   return false;
 }
-
-
-/* =====================================================================
-   INTÉGRATION code.gs — ligne 139, remplacer par :
-
-   if (action.startsWith('admin_') ||
-       action === 'carte_get_data'  ||
-       action === 'carte_verifier') {
-     return routerAdmin(data, action);
-   }
-   ===================================================================== */

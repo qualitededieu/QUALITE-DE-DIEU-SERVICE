@@ -1,49 +1,9 @@
-/* =====================================================================
-   LES QUALITÉS DE DIEU SERVICE SARL — Carte d'apprentissage
-   Fichier  : carte.gs
-   Version  : 1.0.0
-
-   ROUTES (à ajouter dans routerAdmin de admin.gs) :
-     case 'carte_get_data':     return getCarte(data);          // public
-     case 'carte_verifier':     return verifierCarte(data);     // public
-     case 'admin_envoyer_carte':return requireAuth(data, envoyerCarteAdmin); // admin
-
-   SÉCURITÉ :
-     - Vérification ID dossier + téléphone (apprenant) ou token admin
-     - Token carte signé HMAC-SHA256, non modifiable
-     - Expiration liée à dateFin de formation
-     - Page de vérification publique via token dans URL
-   ===================================================================== */
-
-
-// =====================================================================
-// CONFIG CARTE
-// =====================================================================
 const CARTE_CONFIG = {
-  // Clé HMAC dédiée aux cartes (différente du token admin)
   SECRET:      'lqd-carte-secret-2026-Xm7kP9nQ2rW4vZ6j',
   VERIF_URL:   'https://www.qualitededieuservice.com/verifier.html',
   VERSION:     '1.0'
 };
 
-
-// =====================================================================
-// HELPER — Normalisation téléphone (Bénin)
-// Google Sheets peut stocker un numéro saisi "+229 01 97 95 12 30" sous
-// forme de nombre et supprimer le "+" et les espaces. Comparer les
-// numéros bruts provoque alors de faux négatifs ("Aucun dossier
-// trouvé" alors que le dossier existe).
-//
-// _normaliserTel() retire tout ce qui n'est pas un chiffre, puis retire
-// l'indicatif Bénin quelle que soit sa forme (+229, 00229, 229...).
-//
-// _formesTelephone()/_telephonesEquivalents() vont plus loin : depuis
-// 2021, les numéros béninois ont un préfixe "01" ajouté devant l'ancien
-// numéro à 8 chiffres. Un apprenant qui tape son numéro sans ce "01"
-// (ex. "97951230" au lieu de "0197951230") ne doit pas être bloqué —
-// on considère les deux formes comme équivalentes, dans les deux sens
-// (numéro stocké ancien format vs saisie nouveau format, et l'inverse).
-// =====================================================================
 function _normaliserTel(tel) {
   let s = String(tel || '').replace(/\D/g, '');
   if (s.indexOf('00229') === 0) s = s.slice(5);
@@ -54,8 +14,8 @@ function _normaliserTel(tel) {
 function _formesTelephone(tel) {
   const base   = _normaliserTel(tel);
   const formes = [base];
-  if (base.length === 8) formes.push('01' + base);                        // ancien format saisi sans le 01
-  if (base.length === 10 && base.indexOf('01') === 0) formes.push(base.slice(2)); // nouveau format vs numéro stocké à l'ancien format
+  if (base.length === 8) formes.push('01' + base);
+  if (base.length === 10 && base.indexOf('01') === 0) formes.push(base.slice(2));
   return formes;
 }
 
@@ -65,29 +25,10 @@ function _telephonesEquivalents(telA, telB) {
   return formesA.some(f => formesB.indexOf(f) !== -1);
 }
 
-// Numéro visiblement incomplet pour le Bénin (8 chiffres, sans le
-// préfixe "01" obligatoire depuis 2021) — sert à affiner le message
-// d'erreur quand aucun dossier n'est trouvé.
 function _telephoneSembleIncomplet(tel) {
   return _normaliserTel(tel).length === 8;
 }
 
-
-// =====================================================================
-// ROUTE PUBLIC — Récupérer les données carte (apprenant)
-// Vérification : ID dossier + téléphone
-// Cherche dans "Toutes les inscriptions" ET "Régularisations"
-//
-// FIX (audit) : un dossier de régularisation existe dans le Sheet dès
-// sa soumission, avec le statut initial 'En attente' — bien avant
-// validation admin. L'ancienne version arrêtait la recherche dès qu'un
-// ID+téléphone correspondait dans "Régularisations", même non validé,
-// ce qui bloquait l'accès à la carte pour un apprenant qui avait
-// pourtant déjà un dossier "Confirmé" valide dans "Toutes les
-// inscriptions". Désormais, si le dossier de régularisation trouvé
-// n'est pas encore validé, on continue la recherche dans "Toutes les
-// inscriptions" avant d'abandonner.
-// =====================================================================
 function getCarte(data) {
   const id        = String(data.id        || '').trim();
   const telephone = String(data.telephone || '').trim();
@@ -100,13 +41,8 @@ function getCarte(data) {
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
   let dossierTrouveNonValide = false;
-  // ID trouvé sur au moins une ligne, mais téléphone non correspondant
-  // sur cette même ligne — permet un message bien plus utile que le
-  // générique "Aucun dossier trouvé" (même principe que
-  // candidatureAttestationGetData() dans candidatures.gs).
   let idTrouveTelIncorrect = false;
 
-  // --- Recherche dans "Régularisations" (priorité : données complètes) ---
   const feuilleRegs = ss.getSheetByName('Régularisations');
   if (feuilleRegs) {
     const donneesR = feuilleRegs.getDataRange().getValues();
@@ -117,13 +53,11 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       if (idRow !== id) continue;
 
-      const telRow = String(row[8] || '').trim(); // col 8 = téléphone dans Régularisations
+      const telRow = String(row[8] || '').trim();
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
       const statut = String(row[37] || '').trim();
       if (statut !== 'Validé') {
-        // Ne pas sortir tout de suite : le même apprenant peut avoir
-        // un dossier d'inscription déjà confirmé (voir plus bas).
         dossierTrouveNonValide = true;
         break;
       }
@@ -135,7 +69,6 @@ function getCarte(data) {
     }
   }
 
-  // --- Recherche dans "Toutes les inscriptions" (fallback) ---
   const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
   if (feuilleMaitre) {
     const donnees = feuilleMaitre.getDataRange().getValues();
@@ -146,11 +79,11 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       if (idRow !== id) continue;
 
-      const telRow = String(row[4] || '').trim(); // col 4 = téléphone dans inscriptions
+      const telRow = String(row[4] || '').trim();
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
       const statut = String(row[9] || '').trim();
-      if (statut !== 'Confirmé') continue; // on continue au cas où une autre ligne correspond
+      if (statut !== 'Confirmé') continue;
 
       const apprenant = _mapperApprenantInscription(row);
       const token     = _genererTokenCarte(apprenant);
@@ -177,10 +110,6 @@ function getCarte(data) {
   return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });
 }
 
-
-// =====================================================================
-// ROUTE PUBLIC — Vérifier un token de carte (page verifier.html)
-// =====================================================================
 function verifierCarte(data) {
   const token = String(data.token || '').trim();
   if (!token) return reponseJSON({ status: 'error', message: 'Token manquant.' });
@@ -190,12 +119,10 @@ function verifierCarte(data) {
     return reponseJSON({ status: 'error', message: 'Carte invalide ou falsifiée.' });
   }
 
-  // Vérifier expiration (dateFin)
   const maintenant = new Date();
   const dateFin    = new Date(payload.dateFin);
 
   if (isNaN(dateFin.getTime())) {
-    // Pas de date de fin définie → carte valide indéfiniment
   } else if (maintenant > dateFin) {
     return reponseJSON({
       status:   'expired',
@@ -207,10 +134,6 @@ function verifierCarte(data) {
   return reponseJSON({ status: 'success', apprenant: payload, valide: true });
 }
 
-
-// =====================================================================
-// ROUTE ADMIN — Générer et envoyer la carte par email
-// =====================================================================
 function envoyerCarteAdmin(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -229,7 +152,6 @@ function envoyerCarteAdmin(data, email) {
 
   const token = _genererTokenCarte(apprenant);
 
-  // Envoi email avec lien de téléchargement de la carte
   _envoyerEmailCarte(apprenant, token);
 
   console.log(`[Admin:${email}] Carte envoyée → ${apprenant.email} (${id})`);
@@ -241,13 +163,6 @@ function envoyerCarteAdmin(data, email) {
   });
 }
 
-
-// =====================================================================
-// HELPER — Cherche un apprenant par ID seul (usage admin), dans
-// "Régularisations" puis "Toutes les inscriptions", sans condition de
-// statut. Centralise la logique déjà utilisée par envoyerCarteAdmin()
-// et réutilisable par toute future route admin sur un dossier précis.
-// =====================================================================
 function _trouverApprenantParId(ss, id) {
   const feuilleRegs = ss.getSheetByName('Régularisations');
   if (feuilleRegs) {
@@ -272,10 +187,6 @@ function _trouverApprenantParId(ss, id) {
   return null;
 }
 
-
-// =====================================================================
-// HELPER — Mapper apprenant depuis Régularisations
-// =====================================================================
 function _mapperApprenantReg(row) {
   return {
     id:           String(row[0]  || ''),
@@ -294,12 +205,7 @@ function _mapperApprenantReg(row) {
   };
 }
 
-
-// =====================================================================
-// HELPER — Mapper apprenant depuis Toutes les inscriptions
-// =====================================================================
 function _mapperApprenantInscription(row) {
-  // Calcul dateFin : dateInscription + 1 an (par défaut si non renseigné)
   let dateFin = '';
   if (row[1]) {
     const d = new Date(row[1]);
@@ -324,36 +230,19 @@ function _mapperApprenantInscription(row) {
   };
 }
 
-
-// =====================================================================
-// HELPER — Convertit un lien de partage Google Drive (page "view") en
-// URL d'image directement affichable dans une balise <img> ou <canvas>.
-//
-// FIX (audit) : sauvegarderFichierDrive() (code.gs) renvoie fichier.getUrl(),
-// c-à-d un lien du type "https://drive.google.com/file/d/{ID}/view?usp=...".
-// Ce lien pointe vers une page HTML de prévisualisation, pas vers l'image
-// brute : utilisé tel quel comme src d'une <img>, il ne s'affiche jamais
-// (icône image cassée sur verifier.html, sur la carte, l'attestation, la
-// fiche et le badge). On extrait l'ID du fichier et on reconstruit une URL
-// d'image directe.
-// =====================================================================
 function _urlImageDriveDirecte(url) {
   if (!url) return '';
   const patterns = [
-    /\/d\/([a-zA-Z0-9_-]{20,})/,     // .../file/d/{ID}/view
-    /[?&]id=([a-zA-Z0-9_-]{20,})/    // .../open?id={ID} ou uc?id={ID}
+    /\/d\/([a-zA-Z0-9_-]{20,})/,
+    /[?&]id=([a-zA-Z0-9_-]{20,})/
   ];
   for (const re of patterns) {
     const m = String(url).match(re);
     if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w800`;
   }
-  return url; // déjà une URL directe (ou format inconnu) — inchangée
+  return url;
 }
 
-
-// =====================================================================
-// TOKEN CARTE — Génération HMAC
-// =====================================================================
 function _genererTokenCarte(apprenant) {
   const payload = {
     id:           apprenant.id,
@@ -376,10 +265,6 @@ function _genererTokenCarte(apprenant) {
   return `${payloadB64}.${signature}`;
 }
 
-
-// =====================================================================
-// TOKEN CARTE — Vérification HMAC
-// =====================================================================
 function _verifierTokenCarte(token) {
   try {
     const parts = token.split('.');
@@ -404,10 +289,6 @@ function _signerCarte(data) {
   return Utilities.base64EncodeWebSafe(sig);
 }
 
-
-// =====================================================================
-// EMAIL — Envoi carte à l'apprenant
-// =====================================================================
 function _envoyerEmailCarte(apprenant, token) {
   const lienCarte = `${CONFIG.SITE_URL}/verifier.html?t=${encodeURIComponent(token)}`;
   const annee     = new Date().getFullYear();
@@ -504,17 +385,3 @@ function _envoyerEmailCarte(apprenant, token) {
     }
   );
 }
-
-
-/* =====================================================================
-   INTÉGRATION — À ajouter dans routerAdmin() de admin.gs :
-
-   case 'carte_get_data':      return getCarte(data);
-   case 'carte_verifier':      return verifierCarte(data);
-   case 'admin_envoyer_carte': return requireAuth(data, envoyerCarteAdmin);
-
-   Et dans doPost de code.gs, AVANT le switch admin_ :
-   if (action === 'carte_get_data' || action === 'carte_verifier') {
-     return routerAdmin(data, action);
-   }
-   ===================================================================== */
