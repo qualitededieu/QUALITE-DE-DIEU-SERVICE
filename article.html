@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Actualité — Les Qualités de Dieu Service</title>
+  <meta name="description" id="page-description" content="Actualité du centre de formation Les Qualités de Dieu Service, Comé, Bénin." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" id="page-canonical" href="https://www.qualitededieuservice.com/article.html" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Les Qualités de Dieu Service" />
+  <meta property="og:title" id="og-title" content="Actualité — Les Qualités de Dieu Service" />
+  <meta property="og:description" id="og-description" content="Actualité du centre de formation Les Qualités de Dieu Service, Comé, Bénin." />
+  <meta property="og:image" id="og-image" content="https://www.qualitededieuservice.com/icons/logoqds.jpg" />
+  <meta property="og:locale" content="fr_FR" />
+
+  <link rel="icon" href="icons/icon-192x192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
+
+  <style>
+    :root {
+      --teal-900:#04342C;--teal-800:#085041;--teal-700:#0F6E56;
+      --teal-600:#0D7A8A;--teal-500:#1D9E75;--teal-400:#5DCAA5;
+      --teal-100:#9FE1CB;--teal-50:#E1F5EE;
+      --orange-600:#E8901A;--orange-500:#F5A623;--orange-400:#FABD50;
+      --orange-100:#FDE8BB;--orange-50:#FFF6E5;
+      --gray-900:#1A1A2E;--gray-800:#2C2C3E;--gray-700:#444455;
+      --gray-500:#6B7280;--gray-300:#D1D5DB;--gray-100:#F3F4F6;--gray-50:#F9FAFB;
+      --white:#FFFFFF;
+      --radius-md:12px;--radius-sm:8px;
+      --transition:.25s ease;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',Arial,sans-serif;color:var(--gray-800);background:var(--gray-50);-webkit-font-smoothing:antialiased;}
+    h1,h2,h3,h4{font-family:'Sora',sans-serif;line-height:1.25;}
+    a{text-decoration:none;color:inherit;}
+    .container{max-width:900px;margin:0 auto;padding:0 24px;}
+
+    #navbar{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--gray-100);}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1180px;margin:0 auto;padding:0 24px;}
+    .nav-logo{display:flex;align-items:center;gap:10px;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;color:var(--teal-700);}
+    .nav-logo img{height:44px;width:auto;}
+    .nav-back{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--teal-700);}
+    .nav-back:hover{color:var(--orange-600);}
+
+    .art-hero{padding:150px 0 40px;background:linear-gradient(145deg,var(--teal-900) 0%,var(--teal-700) 60%,#0A5F6B 100%);color:var(--white);}
+    .art-cat{display:inline-block;background:var(--orange-500);color:var(--white);font-size:12px;font-weight:700;letter-spacing:.03em;padding:5px 14px;border-radius:50px;margin-bottom:18px;}
+    .art-title{font-size:clamp(1.6rem,3.4vw,2.6rem);font-weight:800;margin-bottom:16px;}
+    .art-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.72);}
+
+    .art-cover{max-width:900px;margin:-40px auto 0;padding:0 24px;}
+    .art-cover img{width:100%;height:auto;max-height:440px;object-fit:cover;border-radius:var(--radius-md);box-shadow:0 20px 50px rgba(4,52,44,0.25);display:block;}
+
+    .art-body-wrap{padding:48px 0 90px;}
+    .art-body{background:var(--white);border-radius:var(--radius-md);padding:40px 44px;box-shadow:0 4px 24px rgba(0,0,0,0.05);}
+    .art-content{font-size:16px;line-height:1.85;color:var(--gray-800);}
+    .art-content p{margin-bottom:18px;}
+    .art-content h2{font-size:1.4rem;margin:32px 0 14px;color:var(--teal-800);}
+    .art-content h3{font-size:1.15rem;margin:26px 0 12px;color:var(--teal-800);}
+    .art-content img{max-width:100%;height:auto;border-radius:10px;margin:20px 0;display:block;}
+    .art-content ul,.art-content ol{margin:0 0 18px 22px;}
+    .art-content li{margin-bottom:8px;}
+    .art-content a{color:var(--teal-600);text-decoration:underline;}
+    .art-content blockquote{border-left:4px solid var(--orange-500);padding:10px 20px;margin:20px 0;background:var(--orange-50);color:var(--gray-700);font-style:italic;border-radius:0 8px 8px 0;}
+    .art-content table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;}
+    .art-content table td,.art-content table th{border:1px solid var(--gray-300);padding:10px 12px;}
+    .art-content table th{background:var(--gray-100);font-weight:700;}
+
+    .art-cta{margin-top:36px;padding-top:28px;border-top:1px solid var(--gray-100);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;}
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--orange-500);color:var(--white);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;padding:12px 24px;border-radius:var(--radius-md);box-shadow:0 4px 20px rgba(245,166,35,0.35);transition:transform var(--transition);}
+    .btn-primary:hover{transform:translateY(-2px);}
+    .btn-ghost{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--teal-700);}
+
+    .art-loading,.art-error{padding:220px 24px 100px;text-align:center;color:var(--gray-500);}
+    .art-error span.iconify{font-size:40px;color:var(--orange-500);margin-bottom:14px;display:block;}
+
+    footer{background:var(--teal-900);color:rgba(255,255,255,0.75);padding:40px 0;margin-top:0;}
+    .footer-bottom{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:12.5px;max-width:1180px;margin:0 auto;padding:0 24px;}
+    .footer-bottom a{color:var(--orange-400);}
+
+    @media(max-width:640px){
+      .art-body{padding:26px 22px;}
+      .art-cover{padding:0 14px;margin-top:-30px;}
+    }
+  </style>
+</head>
+<body>
+
+  <div id="bandeau-info" style="display:none;background:#04342C;border-bottom:2px solid #F5A623;overflow:hidden;position:relative;white-space:nowrap;">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#A6402F;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 14px;position:relative;z-index:2;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;animation:bandeau-pulse 1.4s infinite;"></span>
+      EN DIRECT
+    </div>
+    <div style="display:inline-block;overflow:hidden;vertical-align:middle;width:calc(100% - 100px);">
+      <div id="bandeau-texte" style="display:inline-block;padding:6px 0;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 22s linear infinite;">
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes bandeau-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    @keyframes bandeau-scroll { from{transform:translateX(0);} to{transform:translateX(-100%);} }
+  </style>
+
+  <nav id="navbar">
+    <div class="nav-inner">
+      <a class="nav-logo" href="/">
+        <img src="icons/logoqds.jpg" alt="LQD Service" />
+        <span>LQD Service</span>
+      </a>
+      <a class="nav-back" href="/#blog">
+        <span class="iconify" data-icon="tabler:arrow-left"></span> Retour aux actualités
+      </a>
+    </div>
+  </nav>
+
+  <div id="art-loading" class="art-loading">
+    <div style="width:36px;height:36px;border:3px solid var(--teal-100);border-top-color:var(--teal-600);border-radius:50%;margin:0 auto 14px;animation:spin .8s linear infinite;"></div>
+    Chargement de l'article...
+  </div>
+
+  <div id="art-error" class="art-error" style="display:none;">
+    <span class="iconify" data-icon="tabler:file-off"></span>
+    <h2 style="margin-bottom:10px;">Article introuvable</h2>
+    <p style="margin-bottom:24px;">Cette actualité n'existe plus ou n'est pas publiée.</p>
+    <a href="/#blog" class="btn-primary">Voir toutes les actualités</a>
+  </div>
+
+  <div id="art-page" style="display:none;">
+    <header class="art-hero">
+      <div class="container">
+        <span class="art-cat" id="art-categorie">Général</span>
+        <h1 class="art-title" id="art-titre"></h1>
+        <div class="art-meta">
+          <span class="iconify" data-icon="tabler:calendar"></span>
+          <span id="art-date"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="art-cover" id="art-cover-wrap" style="display:none;">
+      <img id="art-cover-img" src="" alt="" />
+    </div>
+
+    <div class="art-body-wrap">
+      <div class="container">
+        <div class="art-body">
+          <div class="art-content" id="art-contenu"></div>
+
+          <div class="art-cta">
+            <a href="/#blog" class="btn-ghost">
+              <span class="iconify" data-icon="tabler:arrow-left"></span> Toutes les actualités
+            </a>
+            <a href="/#inscription" class="btn-primary">
+              <span class="iconify" data-icon="tabler:pencil"></span> S'inscrire à une formation
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-bottom">
+      <span>© 2026 LES QUALITÉS DE DIEU SERVICE SARL — Tous droits réservés</span>
+      <span>Conçu avec <a href="https://phanoskosmos.vercel.app">PHANOS KOSMOS Web Studio</a></span>
+    </div>
+  </footer>
+
+  <style>
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+
+    const ANNONCE_CATEGORIES_STYLE = {
+      'Informatique & Bureautique': { icone: 'tabler:device-laptop', couleur: '#0F6E56' },
+      'Graphisme & PAO':            { icone: 'tabler:vector-bezier', couleur: '#7B2EFF' },
+      'Sérigraphie':                { icone: 'tabler:shirt',         couleur: '#C97A1A' },
+      'Création de sites web':      { icone: 'tabler:code',          couleur: '#0D7A8A' },
+      'Général':                    { icone: 'tabler:speakerphone',  couleur: '#04342C' },
+    };
+
+    function _formatDateArticle(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function _extraitTexte(html, max) {
+      const div = document.createElement('div');
+      div.innerHTML = html || '';
+      const texte = (div.textContent || '').replace(/\s+/g, ' ').trim();
+      return texte.length > max ? texte.slice(0, max).trim() + '…' : texte;
+    }
+
+    async function chargerArticle() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      const loading = document.getElementById('art-loading');
+      const errBox  = document.getElementById('art-error');
+      const page    = document.getElementById('art-page');
+
+      if (!id) { loading.style.display = 'none'; errBox.style.display = 'block'; return; }
+
+      try {
+        const resp = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'annonce_get_publique', id })
+        });
+        const result = await resp.json();
+
+        if (result.status !== 'success' || !result.annonce) {
+          loading.style.display = 'none';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        const a = result.annonce;
+        const style = ANNONCE_CATEGORIES_STYLE[a.categorie] || ANNONCE_CATEGORIES_STYLE['Général'];
+
+        document.getElementById('art-categorie').textContent = a.categorie;
+        document.getElementById('art-categorie').style.background = style.couleur;
+        document.getElementById('art-titre').textContent = a.titre;
+        document.getElementById('art-date').textContent = _formatDateArticle(a.datePublication);
+
+        const contenuPropre = (typeof DOMPurify !== 'undefined')
+          ? DOMPurify.sanitize(a.contenu, { ADD_ATTR: ['target'] })
+          : a.contenu;
+        document.getElementById('art-contenu').innerHTML = contenuPropre;
+
+        if (a.imageCouverture) {
+          document.getElementById('art-cover-img').src = a.imageCouverture;
+          document.getElementById('art-cover-wrap').style.display = 'block';
+        }
+
+        const titreComplet = a.titre + ' — Les Qualités de Dieu Service';
+        const extrait = _extraitTexte(a.contenu, 160);
+        document.title = titreComplet;
+        document.getElementById('page-title').textContent = titreComplet;
+        document.getElementById('page-description').setAttribute('content', extrait);
+        document.getElementById('og-title').setAttribute('content', titreComplet);
+        document.getElementById('og-description').setAttribute('content', extrait);
+        document.getElementById('page-canonical').setAttribute('href', 'https://www.qualitededieuservice.com/article.html?id=' + encodeURIComponent(a.id));
+        if (a.imageCouverture) document.getElementById('og-image').setAttribute('content', a.imageCouverture);
+
+        loading.style.display = 'none';
+        page.style.display = 'block';
+      } catch (e) {
+        loading.style.display = 'none';
+        errBox.style.display = 'block';
+        console.warn('[article] chargement impossible :', e.message);
+      }
+    }
+    chargerArticle();
+
+    (function () {
+      async function chargerBandeau() {
+        try {
+          const resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'bandeau_get_public' })
+          });
+          const result = await resp.json();
+          if (result.status === 'success' && result.actif && result.texte) {
+            document.getElementById('bandeau-texte').textContent = result.texte;
+            document.getElementById('bandeau-info').style.display = 'block';
+          }
+        } catch (e) {}
+      }
+      chargerBandeau();
+    })();
+  </script>
+</body>
+</html>

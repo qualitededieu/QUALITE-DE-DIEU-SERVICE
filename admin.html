@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+  <script src="tinymce/tinymce.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
@@ -802,7 +803,7 @@
 </div>
 
 <div class="modal-overlay" id="modal-annonce">
-  <div class="modal" style="max-width:640px;">
+  <div class="modal" style="max-width:760px;">
     <div class="modal-header">
       <h3 id="annonce-modal-title">Nouvelle annonce</h3>
       <button class="modal-close" onclick="fermerModal('modal-annonce')">
@@ -823,8 +824,20 @@
         <option value="Création de sites web">Création de sites web</option>
       </select>
 
+      <label class="auth-label" style="margin-top:14px;display:block;">Image de couverture</label>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div id="annonce-image-preview-wrap" style="width:120px;height:80px;border-radius:8px;overflow:hidden;background:var(--gray-100,#F3F4F6);flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px dashed var(--gray-300,#D1D5DB);">
+          <img id="annonce-image-preview" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;" />
+          <span class="iconify" id="annonce-image-placeholder" data-icon="tabler:photo" style="font-size:28px;color:var(--gray-400,#9CA3AF);"></span>
+        </div>
+        <div style="flex:1;">
+          <input type="file" id="annonce-image-input" accept="image/*" style="font-size:13px;" />
+          <p style="font-size:11px;color:var(--text-3);margin-top:6px;">JPG ou PNG, redimensionnée automatiquement. Facultative — une illustration par catégorie s'affiche sinon.</p>
+        </div>
+      </div>
+
       <label class="auth-label" for="annonce-contenu" style="margin-top:14px;display:block;">Contenu</label>
-      <textarea id="annonce-contenu" class="auth-input" rows="6" style="resize:vertical;font-family:inherit;" placeholder="Texte complet de l'annonce..."></textarea>
+      <textarea id="annonce-contenu"></textarea>
 
       <label class="auth-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px;">
         <input type="checkbox" id="annonce-publier" style="width:18px;height:18px;cursor:pointer;" />
@@ -2041,9 +2054,13 @@ function renderTableauAnnonces(annonces) {
     <div style="overflow-x:auto;">
     <table class="data-table">
       <thead><tr>
-        <th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date publication</th><th>Actions</th>
+        <th></th><th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date publication</th><th>Actions</th>
       </tr></thead>
       <tbody>${annonces.map(a => `<tr>
+        <td>${a.imageCouverture
+          ? `<img src="${a.imageCouverture}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:6px;" />`
+          : `<div style="width:48px;height:36px;border-radius:6px;background:var(--gray-100,#F3F4F6);display:flex;align-items:center;justify-content:center;"><span class="iconify" data-icon="tabler:photo-off" style="color:var(--gray-300,#D1D5DB);font-size:16px;"></span></div>`
+        }</td>
         <td><strong>${a.titre}</strong></td>
         <td style="font-size:12px;color:var(--text-3);">${a.categorie}</td>
         <td>${badgeAnnonceStatut(a.statut)}</td>
@@ -2060,8 +2077,112 @@ function renderTableauAnnonces(annonces) {
     </table></div>`;
 }
 
-function ouvrirModalAnnonce(id) {
+/* ================================================================
+   ÉDITEUR TINYMCE — init/destruction propre à chaque ouverture de
+   modale (évite les instances fantômes empilées à chaque édition)
+================================================================ */
+function detruireEditeurAnnonce() {
+  const inst = tinymce.get('annonce-contenu');
+  if (inst) inst.remove();
+}
+
+function initEditeurAnnonce(contenuInitial) {
+  const el = document.getElementById('annonce-contenu');
+  el.value = contenuInitial || '';
+  return new Promise((resolve) => {
+    tinymce.init({
+      selector:      '#annonce-contenu',
+      license_key:   'gpl',
+      base_url:      'tinymce',
+      suffix:        '.min',
+      height:        380,
+      menubar:       false,
+      branding:      false,
+      promotion:     false,
+      plugins:       'lists advlist link autolink code wordcount image table',
+      toolbar:       'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image table blockquote | removeformat | code',
+      content_style: "body { font-family: 'Poppins', Arial, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A2E; padding: 8px; }",
+      images_upload_handler: (blobInfo) => new Promise((resolve2, reject2) => {
+        redimensionnerImageAnnonce(blobInfo.blob(), 1400, 0.85)
+          .then(({ base64, mimeType }) => apiCall('admin_annonce_upload_image', {
+            imageBase64:     base64,
+            imageMimeType:   mimeType,
+            imageNomFichier: blobInfo.filename() || ('image-' + Date.now() + '.jpg'),
+          }))
+          .then((result) => {
+            if (result.status === 'success') resolve2(result.url);
+            else reject2(result.message || "Échec de l'upload.");
+          })
+          .catch((err) => reject2("Échec de l'upload : " + err.message));
+      }),
+      paste_data_images: true,
+      setup: (editor) => { editor.on('init', () => resolve(editor)); },
+    });
+  });
+}
+
+/* ================================================================
+   IMAGE — redimensionnement côté navigateur avant envoi
+   (couverture ET images insérées dans le contenu)
+================================================================ */
+function redimensionnerImageAnnonce(fichier, maxLargeur = 1200, qualite = 0.82) {
+  if (fichier.size > 15 * 1024 * 1024) {
+    return Promise.reject(new Error('Image trop volumineuse (15 Mo maximum).'));
+  }
+  return new Promise((resolve, reject) => {
+    const lecteur = new FileReader();
+    lecteur.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio   = Math.min(1, maxLargeur / img.width);
+        const largeur = Math.round(img.width * ratio);
+        const hauteur = Math.round(img.height * ratio);
+        const canvas  = document.createElement('canvas');
+        canvas.width  = largeur;
+        canvas.height = hauteur;
+        canvas.getContext('2d').drawImage(img, 0, 0, largeur, hauteur);
+        const dataUrl = canvas.toDataURL('image/jpeg', qualite);
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', dataUrl });
+      };
+      img.onerror = () => reject(new Error('Image illisible.'));
+      img.src = e.target.result;
+    };
+    lecteur.onerror = () => reject(new Error('Lecture du fichier impossible.'));
+    lecteur.readAsDataURL(fichier);
+  });
+}
+
+let _annonceImageCouvertureBase64 = null;
+let _annonceImageCouvertureMime   = null;
+
+document.getElementById('annonce-image-input').addEventListener('change', async (e) => {
+  const fichier = e.target.files[0];
+  if (!fichier) return;
+  try {
+    const { base64, mimeType, dataUrl } = await redimensionnerImageAnnonce(fichier, 1200, 0.82);
+    _annonceImageCouvertureBase64 = base64;
+    _annonceImageCouvertureMime   = mimeType;
+    const img = document.getElementById('annonce-image-preview');
+    img.src = dataUrl;
+    img.style.display = 'block';
+    document.getElementById('annonce-image-placeholder').style.display = 'none';
+  } catch (err) {
+    toast(err.message || "Impossible de lire l'image.", 'error');
+    e.target.value = '';
+  }
+});
+
+async function ouvrirModalAnnonce(id) {
   document.getElementById('err-annonce').classList.remove('show');
+  _annonceImageCouvertureBase64 = null;
+  _annonceImageCouvertureMime   = null;
+  document.getElementById('annonce-image-input').value = '';
+
+  const img         = document.getElementById('annonce-image-preview');
+  const placeholder = document.getElementById('annonce-image-placeholder');
+
+  let contenuInitial = '';
+
   if (id) {
     const a = annoncesCache.find(x => x.id === id);
     if (!a) return;
@@ -2069,31 +2190,46 @@ function ouvrirModalAnnonce(id) {
     document.getElementById('annonce-id').value = a.id;
     document.getElementById('annonce-titre').value = a.titre;
     document.getElementById('annonce-categorie').value = a.categorie;
-    document.getElementById('annonce-contenu').value = a.contenu;
     document.getElementById('annonce-publier').checked = a.statut === 'Publié';
+    contenuInitial = a.contenu;
+
+    if (a.imageCouverture) {
+      img.src = a.imageCouverture;
+      img.style.display = 'block';
+      placeholder.style.display = 'none';
+    } else {
+      img.style.display = 'none';
+      placeholder.style.display = 'block';
+    }
   } else {
     document.getElementById('annonce-modal-title').textContent = 'Nouvelle annonce';
     document.getElementById('annonce-id').value = '';
     document.getElementById('annonce-titre').value = '';
     document.getElementById('annonce-categorie').value = 'Général';
-    document.getElementById('annonce-contenu').value = '';
     document.getElementById('annonce-publier').checked = false;
+    img.style.display = 'none';
+    placeholder.style.display = 'block';
   }
+
   ouvrirModal('modal-annonce');
+  detruireEditeurAnnonce();
+  await initEditeurAnnonce(contenuInitial);
 }
 
 async function enregistrerAnnonce() {
-  const id       = document.getElementById('annonce-id').value.trim();
-  const titre    = document.getElementById('annonce-titre').value.trim();
-  const categorie= document.getElementById('annonce-categorie').value;
-  const contenu  = document.getElementById('annonce-contenu').value.trim();
-  const publier  = document.getElementById('annonce-publier').checked;
-  const errEl    = document.getElementById('err-annonce');
-  const btn      = document.getElementById('btn-annonce-save');
+  const id        = document.getElementById('annonce-id').value.trim();
+  const titre     = document.getElementById('annonce-titre').value.trim();
+  const categorie = document.getElementById('annonce-categorie').value;
+  const contenu   = tinymce.get('annonce-contenu') ? tinymce.get('annonce-contenu').getContent() : '';
+  const publier   = document.getElementById('annonce-publier').checked;
+  const errEl     = document.getElementById('err-annonce');
+  const btn       = document.getElementById('btn-annonce-save');
+
+  const contenuTexte = contenu.replace(/<[^>]*>/g, '').trim();
 
   errEl.classList.remove('show');
-  if (!titre)   { errEl.textContent = 'Le titre est obligatoire.'; errEl.classList.add('show'); return; }
-  if (!contenu) { errEl.textContent = 'Le contenu est obligatoire.'; errEl.classList.add('show'); return; }
+  if (!titre)         { errEl.textContent = 'Le titre est obligatoire.'; errEl.classList.add('show'); return; }
+  if (!contenuTexte)  { errEl.textContent = 'Le contenu est obligatoire.'; errEl.classList.add('show'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Enregistrement...';
@@ -2101,11 +2237,18 @@ async function enregistrerAnnonce() {
   try {
     const statut = publier ? 'Publié' : 'Brouillon';
     const action = id ? 'admin_annonce_modifier' : 'admin_annonce_creer';
-    const payload = id ? { id, titre, categorie, contenu, statut } : { titre, categorie, contenu, statut };
+    const payload = { titre, categorie, contenu, statut };
+    if (id) payload.id = id;
+    if (_annonceImageCouvertureBase64) {
+      payload.imageCouvertureBase64     = _annonceImageCouvertureBase64;
+      payload.imageCouvertureMimeType   = _annonceImageCouvertureMime;
+      payload.imageCouvertureNomFichier = 'couverture-' + Date.now() + '.jpg';
+    }
     const result = await apiCall(action, payload);
 
     if (result.status === 'success') {
       toast(id ? 'Annonce mise à jour.' : 'Annonce créée.', 'success');
+      detruireEditeurAnnonce();
       fermerModal('modal-annonce');
       chargerActualitesAdmin();
     } else {
@@ -2185,7 +2328,11 @@ async function enregistrerBandeau() {
 }
 
 function ouvrirModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
-function fermerModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
+function fermerModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+  if (id === 'modal-annonce' && typeof detruireEditeurAnnonce === 'function') detruireEditeurAnnonce();
+}
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => { if (e.target === overlay) fermerModal(overlay.id); });
 });

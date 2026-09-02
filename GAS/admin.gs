@@ -53,6 +53,7 @@ function routerAdmin(data, action) {
       case 'admin_annonce_creer':       return requireAuth(data, adminAnnonceCreer);
       case 'admin_annonce_modifier':    return requireAuth(data, adminAnnonceModifier);
       case 'admin_annonce_supprimer':   return requireAuth(data, adminAnnonceSupprimer);
+      case 'admin_annonce_upload_image': return requireAuth(data, adminAnnonceUploadImage);
 
       case 'admin_bandeau_get':         return requireAuth(data, adminBandeauGet);
       case 'admin_bandeau_set':         return requireAuth(data, adminBandeauSet);
