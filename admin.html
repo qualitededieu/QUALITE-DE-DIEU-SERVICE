@@ -824,6 +824,13 @@
         <option value="Création de sites web">Création de sites web</option>
       </select>
 
+      <label class="auth-label" for="annonce-type" style="margin-top:14px;display:block;">Type d'annonce</label>
+      <select id="annonce-type" class="filter-select" style="width:100%;">
+        <option value="Formation">Formation — invite à s'inscrire à une formation</option>
+        <option value="Recrutement">Recrutement — invite à postuler (staff / stage)</option>
+      </select>
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Détermine le bouton d'action affiché en bas de la page de l'annonce.</p>
+
       <label class="auth-label" style="margin-top:14px;display:block;">Image de couverture</label>
       <div style="display:flex;align-items:center;gap:14px;">
         <div id="annonce-image-preview-wrap" style="width:120px;height:80px;border-radius:8px;overflow:hidden;background:var(--gray-100,#F3F4F6);flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px dashed var(--gray-300,#D1D5DB);">
@@ -2054,7 +2061,7 @@ function renderTableauAnnonces(annonces) {
     <div style="overflow-x:auto;">
     <table class="data-table">
       <thead><tr>
-        <th></th><th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date publication</th><th>Actions</th>
+        <th></th><th>Titre</th><th>Catégorie</th><th>Type</th><th>Statut</th><th>Date publication</th><th>Actions</th>
       </tr></thead>
       <tbody>${annonces.map(a => `<tr>
         <td>${a.imageCouverture
@@ -2063,6 +2070,10 @@ function renderTableauAnnonces(annonces) {
         }</td>
         <td><strong>${a.titre}</strong></td>
         <td style="font-size:12px;color:var(--text-3);">${a.categorie}</td>
+        <td>${a.type === 'Recrutement'
+          ? '<span class="badge" style="background:#FDE8BB;color:#8A5A00;">Recrutement</span>'
+          : '<span class="badge" style="background:#E1F5EE;color:#0F6E56;">Formation</span>'
+        }</td>
         <td>${badgeAnnonceStatut(a.statut)}</td>
         <td style="font-size:12px;color:var(--text-3);">${a.datePublication ? new Date(a.datePublication).toLocaleDateString('fr-FR') : '—'}</td>
         <td>
@@ -2190,6 +2201,7 @@ async function ouvrirModalAnnonce(id) {
     document.getElementById('annonce-id').value = a.id;
     document.getElementById('annonce-titre').value = a.titre;
     document.getElementById('annonce-categorie').value = a.categorie;
+    document.getElementById('annonce-type').value = a.type || 'Formation';
     document.getElementById('annonce-publier').checked = a.statut === 'Publié';
     contenuInitial = a.contenu;
 
@@ -2206,6 +2218,7 @@ async function ouvrirModalAnnonce(id) {
     document.getElementById('annonce-id').value = '';
     document.getElementById('annonce-titre').value = '';
     document.getElementById('annonce-categorie').value = 'Général';
+    document.getElementById('annonce-type').value = 'Formation';
     document.getElementById('annonce-publier').checked = false;
     img.style.display = 'none';
     placeholder.style.display = 'block';
@@ -2220,6 +2233,7 @@ async function enregistrerAnnonce() {
   const id        = document.getElementById('annonce-id').value.trim();
   const titre     = document.getElementById('annonce-titre').value.trim();
   const categorie = document.getElementById('annonce-categorie').value;
+  const type      = document.getElementById('annonce-type').value;
   const contenu   = tinymce.get('annonce-contenu') ? tinymce.get('annonce-contenu').getContent() : '';
   const publier   = document.getElementById('annonce-publier').checked;
   const errEl     = document.getElementById('err-annonce');
@@ -2237,7 +2251,7 @@ async function enregistrerAnnonce() {
   try {
     const statut = publier ? 'Publié' : 'Brouillon';
     const action = id ? 'admin_annonce_modifier' : 'admin_annonce_creer';
-    const payload = { titre, categorie, contenu, statut };
+    const payload = { titre, categorie, contenu, statut, type };
     if (id) payload.id = id;
     if (_annonceImageCouvertureBase64) {
       payload.imageCouvertureBase64     = _annonceImageCouvertureBase64;

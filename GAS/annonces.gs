@@ -1,10 +1,11 @@
 const ENTETES_ANNONCE = [
   'ID', 'Titre', 'Contenu', 'Catégorie', 'Statut',
   'Date publication', 'Auteur', 'Date création',
-  'Image couverture URL', 'Image couverture ID'
+  'Image couverture URL', 'Image couverture ID', 'Type'
 ];
 
 const STATUTS_ANNONCE_VALIDES = ['Brouillon', 'Publié'];
+const TYPES_ANNONCE_VALIDES   = ['Formation', 'Recrutement'];
 
 const ANNONCE_CATEGORIES = {
   'Informatique & Bureautique': { icone: 'tabler:device-laptop', couleur: '#0F6E56', fond: 'linear-gradient(135deg,#E6F5F1,#CDEBE3)' },
@@ -48,6 +49,7 @@ function _mapperAnnonce(row) {
     dateCreation:      String(row[7] || ''),
     imageCouverture:   String(row[8] || ''),
     imageCouvertureId: String(row[9] || ''),
+    type:              TYPES_ANNONCE_VALIDES.includes(row[10]) ? row[10] : 'Formation',
   };
 }
 
@@ -129,6 +131,7 @@ function annoncesListPubliees(data) {
         categorie:       a.categorie,
         datePublication: a.datePublication,
         imageCouverture: a.imageCouverture,
+        type:            a.type,
       });
     }
   }
@@ -159,6 +162,7 @@ function annonceGetPublique(data) {
         categorie:       a.categorie,
         datePublication: a.datePublication,
         imageCouverture: a.imageCouverture,
+        type:            a.type,
       }
     });
   }
@@ -186,6 +190,7 @@ function adminAnnonceCreer(data, email) {
   const contenu   = _sanitiserContenuHTML(data.contenu || '');
   const categorie = ANNONCE_CATEGORIES[data.categorie] ? data.categorie : 'Général';
   const statut    = STATUTS_ANNONCE_VALIDES.includes(data.statut) ? data.statut : 'Brouillon';
+  const type      = TYPES_ANNONCE_VALIDES.includes(data.type) ? data.type : 'Formation';
 
   if (!titre)   return reponseJSON({ status: 'error', message: 'Le titre est obligatoire.' });
   if (!_extraireTexteBrut(contenu, 999999)) return reponseJSON({ status: 'error', message: 'Le contenu est obligatoire.' });
@@ -208,7 +213,7 @@ function adminAnnonceCreer(data, email) {
 
   feuille.appendRow([
     id, titre, contenu, categorie, statut, datePublication, email, maintenant.toISOString(),
-    image.url, image.fileId
+    image.url, image.fileId, type
   ]);
 
   return reponseJSON({ status: 'success', message: 'Annonce créée.', id });
@@ -229,6 +234,7 @@ function adminAnnonceModifier(data, email) {
     const contenu   = data.contenu !== undefined ? _sanitiserContenuHTML(data.contenu) : String(donnees[i][2] || '');
     const categorie = ANNONCE_CATEGORIES[data.categorie] ? data.categorie : String(donnees[i][3] || 'Général');
     const statut    = STATUTS_ANNONCE_VALIDES.includes(data.statut) ? data.statut : String(donnees[i][4] || 'Brouillon');
+    const type      = TYPES_ANNONCE_VALIDES.includes(data.type) ? data.type : (TYPES_ANNONCE_VALIDES.includes(donnees[i][10]) ? donnees[i][10] : 'Formation');
 
     let datePublication = String(donnees[i][5] || '');
     if (statut === 'Publié' && !datePublication) {
@@ -243,6 +249,7 @@ function adminAnnonceModifier(data, email) {
     feuille.getRange(i + 1, 4).setValue(categorie);
     feuille.getRange(i + 1, 5).setValue(statut);
     feuille.getRange(i + 1, 6).setValue(datePublication);
+    feuille.getRange(i + 1, 11).setValue(type);
 
     if (data.imageCouvertureBase64) {
       const ancienFileId = String(donnees[i][9] || '');

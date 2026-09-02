@@ -151,12 +151,12 @@
         <div class="art-body">
           <div class="art-content" id="art-contenu"></div>
 
-          <div class="art-cta">
+          <div class="art-cta" id="art-cta">
             <a href="/#blog" class="btn-ghost">
               <span class="iconify" data-icon="tabler:arrow-left"></span> Toutes les actualités
             </a>
-            <a href="/postuler" class="btn-primary">
-              <span class="iconify" data-icon="tabler:send"></span> Postuler chez nous
+            <a href="/#inscription" class="btn-primary" id="art-cta-action">
+              <span class="iconify" data-icon="tabler:pencil"></span> S'inscrire à une formation
             </a>
           </div>
         </div>
@@ -239,6 +239,15 @@
         if (a.imageCouverture) {
           document.getElementById('art-cover-img').src = a.imageCouverture;
           document.getElementById('art-cover-wrap').style.display = 'block';
+        }
+
+        const ctaAction = document.getElementById('art-cta-action');
+        if (a.type === 'Recrutement') {
+          ctaAction.href = '/postuler';
+          ctaAction.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> Postuler chez nous';
+        } else {
+          ctaAction.href = '/#inscription';
+          ctaAction.innerHTML = '<span class="iconify" data-icon="tabler:pencil"></span> S\'inscrire à une formation';
         }
 
         const titreComplet = a.titre + ' — Les Qualités de Dieu Service';
