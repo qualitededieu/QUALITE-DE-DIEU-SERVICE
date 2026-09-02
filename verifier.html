@@ -405,6 +405,21 @@
   </style>
 </head>
 <body>
+  <div id="bandeau-info" style="display:none;background:#04342C;border-bottom:2px solid #F5A623;overflow:hidden;position:relative;white-space:nowrap;">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#A6402F;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 14px;position:relative;z-index:2;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;animation:bandeau-pulse 1.4s infinite;"></span>
+      EN DIRECT
+    </div>
+    <div style="display:inline-block;overflow:hidden;vertical-align:middle;width:calc(100% - 100px);">
+      <div id="bandeau-texte" style="display:inline-block;padding:6px 0;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 22s linear infinite;">
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes bandeau-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    @keyframes bandeau-scroll { from{transform:translateX(0);} to{transform:translateX(-100%);} }
+  </style>
+
 
   <header>
     <img src="icons/logoqds.jpg" alt="LQD Service"/>
