@@ -375,19 +375,21 @@
 </head>
 <body>
 
-  <div id="bandeau-info" style="display:none;background:#04342C;border-bottom:2px solid #F5A623;overflow:hidden;position:relative;white-space:nowrap;">
-    <div style="display:inline-flex;align-items:center;gap:8px;background:#A6402F;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 14px;position:relative;z-index:2;">
+  <div id="bandeau-info" style="display:none;position:fixed;top:0;left:0;right:0;z-index:1200;height:36px;background:#04342C;border-bottom:2px solid #F5A623;overflow:hidden;white-space:nowrap;align-items:center;">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#A6402F;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 14px;height:100%;position:relative;z-index:2;flex-shrink:0;">
       <span style="width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;animation:bandeau-pulse 1.4s infinite;"></span>
       EN DIRECT
     </div>
-    <div style="display:inline-block;overflow:hidden;vertical-align:middle;width:calc(100% - 100px);">
-      <div id="bandeau-texte" style="display:inline-block;padding:6px 0;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 22s linear infinite;">
+    <div style="flex:1;overflow:hidden;height:100%;display:flex;align-items:center;">
+      <div id="bandeau-texte" style="display:inline-block;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 22s linear infinite;">
       </div>
     </div>
   </div>
   <style>
     @keyframes bandeau-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
     @keyframes bandeau-scroll { from{transform:translateX(0);} to{transform:translateX(-100%);} }
+    body.bandeau-visible #navbar{ top:36px; }
+    body.bandeau-visible #hero{ padding-top:104px; }
   </style>
 
   <nav id="navbar">
@@ -1228,7 +1230,8 @@
         const result = await resp.json();
         if (result.status === 'success' && result.actif && result.texte) {
           document.getElementById('bandeau-texte').textContent = result.texte;
-          document.getElementById('bandeau-info').style.display = 'block';
+          document.getElementById('bandeau-info').style.display = 'flex';
+          document.body.classList.add('bandeau-visible');
         }
       } catch (e) {
         // Silencieux : l'absence de bandeau n'est jamais bloquante pour le reste du site
