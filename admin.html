@@ -829,7 +829,27 @@
         <option value="Formation">Formation — invite à s'inscrire à une formation</option>
         <option value="Recrutement">Recrutement — invite à postuler (staff / stage)</option>
       </select>
-      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Détermine le bouton d'action affiché en bas de la page de l'annonce.</p>
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Détermine le bouton d'action par défaut affiché en bas de la page de l'annonce.</p>
+
+      <div style="margin-top:14px;padding:14px;border:1px solid var(--gray-100,#F3F4F6);border-radius:10px;background:var(--gray-50,#F9FAFB);">
+        <label class="auth-label" for="annonce-cta-mode" style="display:block;">Bouton d'action de la page (avancé)</label>
+        <select id="annonce-cta-mode" class="filter-select" style="width:100%;margin-top:6px;">
+          <option value="auto">Automatique — suit le Type ci-dessus</option>
+          <option value="formulaire">Formulaire de candidature (/postuler)</option>
+          <option value="telephone">Appeler un numéro</option>
+          <option value="email">Écrire un email</option>
+          <option value="lien">Lien personnalisé</option>
+        </select>
+
+        <div id="annonce-cta-valeur-wrap" style="display:none;margin-top:10px;">
+          <label class="auth-label" for="annonce-cta-valeur" id="annonce-cta-valeur-label" style="display:block;">Valeur</label>
+          <input type="text" id="annonce-cta-valeur" class="auth-input" placeholder="" />
+        </div>
+
+        <label class="auth-label" for="annonce-cta-label" style="display:block;margin-top:10px;">Libellé du bouton (facultatif)</label>
+        <input type="text" id="annonce-cta-label" class="auth-input" placeholder="Laisser vide pour le texte par défaut" maxlength="60" />
+        <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Utile pour une offre externe (ex. poste chez un partenaire) : choisis « Appeler un numéro » pour rediriger directement vers le téléphone plutôt que vers le formulaire interne.</p>
+      </div>
 
       <label class="auth-label" style="margin-top:14px;display:block;">Image de couverture</label>
       <div style="display:flex;align-items:center;gap:14px;">
@@ -2193,6 +2213,31 @@ document.getElementById('annonce-image-input').addEventListener('change', async 
   }
 });
 
+/* ================================================================
+   BOUTON D'ACTION (CTA) — le champ "Valeur" change de nature
+   (numéro, email ou URL) selon le mode choisi par l'admin
+================================================================ */
+const CTA_MODE_CONFIG = {
+  telephone: { label: 'Numéro de téléphone',        placeholder: '+229 01 97 95 12 30', type: 'tel'  },
+  email:     { label: 'Adresse email',               placeholder: 'contact@exemple.com', type: 'email' },
+  lien:      { label: 'URL du lien',                 placeholder: 'https://...',         type: 'url'  },
+};
+
+function actualiserChampCtaValeur() {
+  const mode    = document.getElementById('annonce-cta-mode').value;
+  const wrap    = document.getElementById('annonce-cta-valeur-wrap');
+  const label   = document.getElementById('annonce-cta-valeur-label');
+  const input   = document.getElementById('annonce-cta-valeur');
+  const config  = CTA_MODE_CONFIG[mode];
+
+  if (!config) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  label.textContent = config.label;
+  input.type = config.type;
+  input.placeholder = config.placeholder;
+}
+document.getElementById('annonce-cta-mode').addEventListener('change', actualiserChampCtaValeur);
+
 async function ouvrirModalAnnonce(id) {
   document.getElementById('err-annonce').classList.remove('show');
   _annonceImageCouvertureBase64 = null;
@@ -2213,6 +2258,10 @@ async function ouvrirModalAnnonce(id) {
     document.getElementById('annonce-categorie').value = a.categorie;
     document.getElementById('annonce-type').value = a.type || 'Formation';
     document.getElementById('annonce-publier').checked = a.statut === 'Publié';
+    document.getElementById('annonce-cta-mode').value = a.ctaMode || 'auto';
+    document.getElementById('annonce-cta-label').value = a.ctaLabel || '';
+    document.getElementById('annonce-cta-valeur').value = a.ctaValeur || '';
+    actualiserChampCtaValeur();
     contenuInitial = a.contenu;
 
     if (a.imageCouverture) {
@@ -2230,6 +2279,10 @@ async function ouvrirModalAnnonce(id) {
     document.getElementById('annonce-categorie').value = 'Général';
     document.getElementById('annonce-type').value = 'Formation';
     document.getElementById('annonce-publier').checked = false;
+    document.getElementById('annonce-cta-mode').value = 'auto';
+    document.getElementById('annonce-cta-label').value = '';
+    document.getElementById('annonce-cta-valeur').value = '';
+    actualiserChampCtaValeur();
     img.style.display = 'none';
     placeholder.style.display = 'block';
   }
@@ -2244,6 +2297,9 @@ async function enregistrerAnnonce() {
   const titre     = document.getElementById('annonce-titre').value.trim();
   const categorie = document.getElementById('annonce-categorie').value;
   const type      = document.getElementById('annonce-type').value;
+  const ctaMode   = document.getElementById('annonce-cta-mode').value;
+  const ctaLabel  = document.getElementById('annonce-cta-label').value.trim();
+  const ctaValeur = document.getElementById('annonce-cta-valeur').value.trim();
   const contenu   = tinymce.get('annonce-contenu') ? tinymce.get('annonce-contenu').getContent() : '';
   const publier   = document.getElementById('annonce-publier').checked;
   const errEl     = document.getElementById('err-annonce');
@@ -2254,6 +2310,11 @@ async function enregistrerAnnonce() {
   errEl.classList.remove('show');
   if (!titre)         { errEl.textContent = 'Le titre est obligatoire.'; errEl.classList.add('show'); return; }
   if (!contenuTexte)  { errEl.textContent = 'Le contenu est obligatoire.'; errEl.classList.add('show'); return; }
+  if (['telephone', 'email', 'lien'].includes(ctaMode) && !ctaValeur) {
+    errEl.textContent = 'Renseigne la valeur du bouton d\'action (numéro, email ou lien).';
+    errEl.classList.add('show');
+    return;
+  }
 
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Enregistrement...';
@@ -2261,7 +2322,7 @@ async function enregistrerAnnonce() {
   try {
     const statut = publier ? 'Publié' : 'Brouillon';
     const action = id ? 'admin_annonce_modifier' : 'admin_annonce_creer';
-    const payload = { titre, categorie, contenu, statut, type };
+    const payload = { titre, categorie, contenu, statut, type, ctaMode, ctaLabel, ctaValeur };
     if (id) payload.id = id;
     if (_annonceImageCouvertureBase64) {
       payload.imageCouvertureBase64     = _annonceImageCouvertureBase64;

@@ -200,6 +200,50 @@
       return texte.length > max ? texte.slice(0, max).trim() + '…' : texte;
     }
 
+    // Traduit la configuration CTA choisie par l'admin (mode/libellé/valeur)
+    // en un bouton concret. 'auto' retombe sur le comportement historique
+    // basé sur le Type de l'annonce — comportement de secours pour toute
+    // annonce créée avant l'ajout de cette fonctionnalité.
+    function _appliquerCTA(el, a) {
+      const mode = a.ctaMode || 'auto';
+
+      if (mode === 'telephone' && a.ctaValeur) {
+        el.href = 'tel:' + a.ctaValeur.replace(/[\s.\-()]/g, '');
+        el.removeAttribute('target');
+        el.innerHTML = '<span class="iconify" data-icon="tabler:phone"></span> ' + (a.ctaLabel || 'Appeler maintenant');
+        return;
+      }
+      if (mode === 'email' && a.ctaValeur) {
+        el.href = 'mailto:' + a.ctaValeur;
+        el.removeAttribute('target');
+        el.innerHTML = '<span class="iconify" data-icon="tabler:mail"></span> ' + (a.ctaLabel || 'Écrire un email');
+        return;
+      }
+      if (mode === 'lien' && a.ctaValeur) {
+        el.href = a.ctaValeur;
+        el.setAttribute('target', '_blank');
+        el.setAttribute('rel', 'noopener');
+        el.innerHTML = '<span class="iconify" data-icon="tabler:external-link"></span> ' + (a.ctaLabel || 'En savoir plus');
+        return;
+      }
+      if (mode === 'formulaire') {
+        el.href = '/postuler';
+        el.removeAttribute('target');
+        el.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> ' + (a.ctaLabel || "Je suis intéressé(e) par cette offre");
+        return;
+      }
+
+      // auto : suit le Type de l'annonce
+      el.removeAttribute('target');
+      if (a.type === 'Recrutement') {
+        el.href = '/postuler';
+        el.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> ' + (a.ctaLabel || "Je suis intéressé(e) par cette offre");
+      } else {
+        el.href = '/#inscription';
+        el.innerHTML = '<span class="iconify" data-icon="tabler:pencil"></span> ' + (a.ctaLabel || "S'inscrire à une formation");
+      }
+    }
+
     async function chargerArticle() {
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
@@ -242,13 +286,7 @@
         }
 
         const ctaAction = document.getElementById('art-cta-action');
-        if (a.type === 'Recrutement') {
-          ctaAction.href = '/postuler';
-          ctaAction.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> Postuler chez nous';
-        } else {
-          ctaAction.href = '/#inscription';
-          ctaAction.innerHTML = '<span class="iconify" data-icon="tabler:pencil"></span> S\'inscrire à une formation';
-        }
+        _appliquerCTA(ctaAction, a);
 
         const titreComplet = a.titre + ' — Les Qualités de Dieu Service';
         const extrait = _extraitTexte(a.contenu, 160);

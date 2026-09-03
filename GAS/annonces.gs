@@ -1,11 +1,13 @@
 const ENTETES_ANNONCE = [
   'ID', 'Titre', 'Contenu', 'Catégorie', 'Statut',
   'Date publication', 'Auteur', 'Date création',
-  'Image couverture URL', 'Image couverture ID', 'Type'
+  'Image couverture URL', 'Image couverture ID', 'Type',
+  'CTA Mode', 'CTA Libellé', 'CTA Valeur'
 ];
 
 const STATUTS_ANNONCE_VALIDES = ['Brouillon', 'Publié'];
 const TYPES_ANNONCE_VALIDES   = ['Formation', 'Recrutement'];
+const CTA_MODES_VALIDES       = ['auto', 'formulaire', 'telephone', 'email', 'lien'];
 
 const ANNONCE_CATEGORIES = {
   'Informatique & Bureautique': { icone: 'tabler:device-laptop', couleur: '#0F6E56', fond: 'linear-gradient(135deg,#E6F5F1,#CDEBE3)' },
@@ -50,6 +52,9 @@ function _mapperAnnonce(row) {
     imageCouverture:   String(row[8] || ''),
     imageCouvertureId: String(row[9] || ''),
     type:              TYPES_ANNONCE_VALIDES.includes(row[10]) ? row[10] : 'Formation',
+    ctaMode:           CTA_MODES_VALIDES.includes(row[11]) ? row[11] : 'auto',
+    ctaLabel:          String(row[12] || ''),
+    ctaValeur:         String(row[13] || ''),
   };
 }
 
@@ -163,6 +168,9 @@ function annonceGetPublique(data) {
         datePublication: a.datePublication,
         imageCouverture: a.imageCouverture,
         type:            a.type,
+        ctaMode:         a.ctaMode,
+        ctaLabel:        a.ctaLabel,
+        ctaValeur:       a.ctaValeur,
       }
     });
   }
@@ -185,12 +193,44 @@ function adminAnnoncesList(data, email) {
   return reponseJSON({ status: 'success', annonces });
 }
 
+// Valide et normalise le trio (mode, libellé, valeur) du bouton d'action.
+// 'auto' et 'formulaire' n'ont besoin d'aucune valeur — le premier suit le
+// Type de l'annonce, le second pointe toujours vers /postuler.
+// 'telephone' / 'email' / 'lien' exigent une valeur cohérente avec le mode.
+function _validerCTA(modeBrut, labelBrut, valeurBrut) {
+  const mode  = CTA_MODES_VALIDES.includes(modeBrut) ? modeBrut : 'auto';
+  const label = nettoyer(labelBrut || '');
+  let   valeur = String(valeurBrut || '').trim();
+
+  if (mode === 'telephone') {
+    valeur = valeur.replace(/[\s.\-()]/g, '');
+    if (!/^\+?\d{6,15}$/.test(valeur)) {
+      return { erreur: 'Le numéro de téléphone du bouton semble invalide.' };
+    }
+  } else if (mode === 'email') {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur)) {
+      return { erreur: "L'adresse email du bouton semble invalide." };
+    }
+  } else if (mode === 'lien') {
+    if (!/^https?:\/\//i.test(valeur)) {
+      return { erreur: 'Le lien personnalisé doit commencer par http:// ou https://' };
+    }
+  } else {
+    valeur = '';
+  }
+
+  return { mode, label, valeur };
+}
+
 function adminAnnonceCreer(data, email) {
   const titre     = nettoyer(data.titre || '');
   const contenu   = _sanitiserContenuHTML(data.contenu || '');
   const categorie = ANNONCE_CATEGORIES[data.categorie] ? data.categorie : 'Général';
   const statut    = STATUTS_ANNONCE_VALIDES.includes(data.statut) ? data.statut : 'Brouillon';
   const type      = TYPES_ANNONCE_VALIDES.includes(data.type) ? data.type : 'Formation';
+
+  const cta = _validerCTA(data.ctaMode, data.ctaLabel, data.ctaValeur);
+  if (cta.erreur) return reponseJSON({ status: 'error', message: cta.erreur });
 
   if (!titre)   return reponseJSON({ status: 'error', message: 'Le titre est obligatoire.' });
   if (!_extraireTexteBrut(contenu, 999999)) return reponseJSON({ status: 'error', message: 'Le contenu est obligatoire.' });
@@ -213,7 +253,7 @@ function adminAnnonceCreer(data, email) {
 
   feuille.appendRow([
     id, titre, contenu, categorie, statut, datePublication, email, maintenant.toISOString(),
-    image.url, image.fileId, type
+    image.url, image.fileId, type, cta.mode, cta.label, cta.valeur
   ]);
 
   return reponseJSON({ status: 'success', message: 'Annonce créée.', id });
@@ -236,6 +276,13 @@ function adminAnnonceModifier(data, email) {
     const statut    = STATUTS_ANNONCE_VALIDES.includes(data.statut) ? data.statut : String(donnees[i][4] || 'Brouillon');
     const type      = TYPES_ANNONCE_VALIDES.includes(data.type) ? data.type : (TYPES_ANNONCE_VALIDES.includes(donnees[i][10]) ? donnees[i][10] : 'Formation');
 
+    const cta = _validerCTA(
+      data.ctaMode !== undefined ? data.ctaMode : donnees[i][11],
+      data.ctaLabel !== undefined ? data.ctaLabel : donnees[i][12],
+      data.ctaValeur !== undefined ? data.ctaValeur : donnees[i][13]
+    );
+    if (cta.erreur) return reponseJSON({ status: 'error', message: cta.erreur });
+
     let datePublication = String(donnees[i][5] || '');
     if (statut === 'Publié' && !datePublication) {
       datePublication = new Date().toISOString();
@@ -250,6 +297,9 @@ function adminAnnonceModifier(data, email) {
     feuille.getRange(i + 1, 5).setValue(statut);
     feuille.getRange(i + 1, 6).setValue(datePublication);
     feuille.getRange(i + 1, 11).setValue(type);
+    feuille.getRange(i + 1, 12).setValue(cta.mode);
+    feuille.getRange(i + 1, 13).setValue(cta.label);
+    feuille.getRange(i + 1, 14).setValue(cta.valeur);
 
     if (data.imageCouvertureBase64) {
       const ancienFileId = String(donnees[i][9] || '');
