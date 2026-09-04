@@ -74,15 +74,37 @@ function _sanitiserContenuHTML(html) {
   return propre.slice(0, 60000);
 }
 
+// Table des entités HTML nommées les plus courantes en contenu francophone.
+// Nécessaire car GAS n'a pas de DOMParser côté serveur pour décoder
+// nativement — contrairement au navigateur qui gère déjà tout ça seul
+// quand le contenu complet est affiché sur article.html.
+const ENTITES_HTML = {
+  'amp': '&', 'lt': '<', 'gt': '>', 'quot': '"', 'apos': "'", 'nbsp': ' ',
+  'eacute': 'é', 'egrave': 'è', 'ecirc': 'ê', 'euml': 'ë',
+  'agrave': 'à', 'acirc': 'â', 'auml': 'ä',
+  'ccedil': 'ç', 'ocirc': 'ô', 'ouml': 'ö',
+  'ugrave': 'ù', 'ucirc': 'û', 'uuml': 'ü',
+  'icirc': 'î', 'iuml': 'ï', 'ntilde': 'ñ',
+  'oelig': 'œ', 'aelig': 'æ', 'szlig': 'ß',
+  'Eacute': 'É', 'Egrave': 'È', 'Agrave': 'À', 'Ccedil': 'Ç',
+  'hellip': '…', 'mdash': '—', 'ndash': '–',
+  'lsquo': '‘', 'rsquo': '’', 'ldquo': '“', 'rdquo': '”',
+  'laquo': '«', 'raquo': '»', 'middot': '·',
+  'deg': '°', 'euro': '€', 'copy': '©', 'reg': '®', 'trade': '™',
+  'times': '×', 'divide': '÷', 'plusmn': '±', 'sect': '§', 'para': '¶',
+};
+
+function _decoderEntitesHTML(texte) {
+  return String(texte || '')
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (m, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&([a-zA-Z]+);/g, (m, nom) => (nom in ENTITES_HTML) ? ENTITES_HTML[nom] : m);
+}
+
 function _extraireTexteBrut(html, longueurMax) {
-  const texte = String(html || '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const texte = _decoderEntitesHTML(
+    String(html || '').replace(/<[^>]*>/g, ' ')
+  ).replace(/\s+/g, ' ').trim();
   const max = longueurMax || 140;
   return texte.length > max ? texte.slice(0, max).trim() + '…' : texte;
 }
