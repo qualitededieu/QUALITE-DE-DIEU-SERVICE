@@ -21,7 +21,7 @@ const ATT_ENTREPRISE = {
   SUFFIXE:  "SARL — Centre de formation professionnelle",
   ADRESSE:  "Comé, Hongodé — en face Hôpital de Zone de Comé, Bénin",
   TEL:      "+229 01 97 95 12 30 / 01 60 98 90 94",
-  EMAIL:    "contact@lqdservice.bj",
+  EMAIL:    "papablaise1993@gmail.com",
   SITE:     "www.qualitededieuservice.com",
   LOGO_URL: "icons/logoqds.jpg",
 };
