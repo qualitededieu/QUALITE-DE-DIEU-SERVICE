@@ -20,7 +20,7 @@ const ATT_ENTREPRISE = {
   NOM:      "LES QUALITÉS DE DIEU SERVICE",
   SUFFIXE:  "SARL — Centre de formation professionnelle",
   ADRESSE:  "Comé, Hongodé — en face Hôpital de Zone de Comé, Bénin",
-  TEL:      "+229 01 97 95 12 30",
+  TEL:      "+229 01 97 95 12 30 / 01 60 98 90 94",
   EMAIL:    "contact@lqdservice.bj",
   SITE:     "www.qualitededieuservice.com",
   LOGO_URL: "icons/logoqds.jpg",
@@ -447,7 +447,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
     _font(ctx, 44, "bold");
     ctx.fillStyle = "#A6402F";
-    const attestePar = "ATTESTE PAR LA PRÉSENTE QUE :";
+    const attestePar = "ATTESTONS PAR LA PRÉSENTE QUE :";
     ctx.fillText(attestePar, (ATT.W - _mw(ctx, attestePar)) / 2, posY);
     posY += 76;
 
