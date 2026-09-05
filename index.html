@@ -406,7 +406,6 @@
           <li><a href="#galerie"        class="nav-link">Galerie</a></li>
           <li><a href="#blog"           class="nav-link">Actualités</a></li>
           <li><a href="#contact"        class="nav-link">Contact</a></li>
-           <li><a href="/regularisation"        class="nav-link">Régularisation</a></li>
            <li><a href="/postuler"               class="nav-link">Postuler</a></li>
           <li><a href="#inscription"    class="btn-nav-cta">S'inscrire</a></li>
         </ul>
@@ -421,7 +420,6 @@
         <li><a href="#galerie"       onclick="closeMobileNav()">Galerie</a></li>
         <li><a href="#blog"          onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="#contact"       onclick="closeMobileNav()">Contact</a></li>
-         <li><a href="/regularisation"       onclick="closeMobileNav()">Régualisation</a></li>
          <li><a href="/postuler"              onclick="closeMobileNav()">Postuler</a></li>
         <li><a href="#inscription"   onclick="closeMobileNav()" style="color:var(--teal-600);font-weight:700;">S'inscrire maintenant</a></li>
       </ul>
@@ -751,6 +749,89 @@
               <input type="email" id="email" class="form-control" placeholder="vous@exemple.com" autocomplete="email" />
             </div>
 
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dateNaissance">Date de naissance <span class="req">*</span></label>
+                <input type="date" id="dateNaissance" class="form-control" required />
+              </div>
+              <div class="form-group">
+                <label for="lieuNaissance">Lieu de naissance <span class="req">*</span></label>
+                <input type="text" id="lieuNaissance" class="form-control" placeholder="Ex. Comé, Bénin" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nationalite">Nationalité <span class="req">*</span></label>
+                <input type="text" id="nationalite" class="form-control" placeholder="Béninoise" value="Béninoise" required />
+              </div>
+              <div class="form-group">
+                <label for="adresse">Adresse <span class="req">*</span></label>
+                <input type="text" id="adresse" class="form-control" placeholder="Ex. Comé, Quartier Hongodé" required />
+              </div>
+            </div>
+
+            <div class="formations-check-bloc" style="background:var(--white);">
+              <div class="formations-check-titre">
+                <span class="iconify" data-icon="tabler:users" style="color:var(--teal-600);font-size:16px;"></span>
+                Filiation — parents ou tuteur
+              </div>
+              <p class="hint" style="font-size:12px;color:var(--gray-500);margin:-4px 0 12px;">Mère et père obligatoires ; tuteur facultatif.</p>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="prenomMere">Prénom de la mère <span class="req">*</span></label>
+                  <input type="text" id="prenomMere" class="form-control" placeholder="Prénom" required />
+                </div>
+                <div class="form-group">
+                  <label for="nomMere">Nom de la mère <span class="req">*</span></label>
+                  <input type="text" id="nomMere" class="form-control" placeholder="Nom" required />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="telephoneMere">Téléphone de la mère</label>
+                  <input type="tel" id="telephoneMere" class="form-control" placeholder="+229 01 XX XX XX XX" />
+                </div>
+                <div class="form-group">
+                  <label for="professionMere">Profession de la mère</label>
+                  <input type="text" id="professionMere" class="form-control" placeholder="Ex. Commerçante" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="prenomPere">Prénom du père <span class="req">*</span></label>
+                  <input type="text" id="prenomPere" class="form-control" placeholder="Prénom" required />
+                </div>
+                <div class="form-group">
+                  <label for="nomPere">Nom du père <span class="req">*</span></label>
+                  <input type="text" id="nomPere" class="form-control" placeholder="Nom" required />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="telephonePere">Téléphone du père</label>
+                  <input type="tel" id="telephonePere" class="form-control" placeholder="+229 01 XX XX XX XX" />
+                </div>
+                <div class="form-group">
+                  <label for="professionPere">Profession du père</label>
+                  <input type="text" id="professionPere" class="form-control" placeholder="Ex. Enseignant" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="prenomTuteur">Prénom du tuteur <span class="hint">(si différent des parents)</span></label>
+                  <input type="text" id="prenomTuteur" class="form-control" placeholder="Prénom" />
+                </div>
+                <div class="form-group">
+                  <label for="nomTuteur">Nom du tuteur</label>
+                  <input type="text" id="nomTuteur" class="form-control" placeholder="Nom" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="telephoneTuteur">Téléphone du tuteur</label>
+                <input type="tel" id="telephoneTuteur" class="form-control" placeholder="+229 01 XX XX XX XX" />
+              </div>
+            </div>
+
             <div class="formations-check-bloc">
               <div class="formations-check-titre">
                 <span class="iconify" data-icon="tabler:books" style="color:var(--teal-600);font-size:16px;"></span>
@@ -787,6 +868,24 @@
                   </label>
                 </div>
               </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin:16px 0 12px;">
+                <span style="flex:1;height:1px;background:var(--gray-200);"></span>
+                <span style="font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;">ou</span>
+                <span style="flex:1;height:1px;background:var(--gray-200);"></span>
+              </div>
+              <div class="formations-check-grid">
+                <div class="check-option" id="option-courte">
+                  <input type="checkbox" id="f5" name="formations" value="Initiation rapide (1 mois)" />
+                  <label class="check-label" for="f5">
+                    <div class="check-icon-wrap" style="background:var(--orange-50);"><span class="iconify" data-icon="tabler:bolt" style="color:var(--orange-600);font-size:18px;"></span></div>
+                    <div class="check-label-text"><strong>Initiation rapide</strong><span>1 mois — 30 000 F en un seul versement</span></div>
+                  </label>
+                </div>
+              </div>
+              <p class="hint" id="hint-courte" style="font-size:11px;color:var(--gray-500);margin-top:8px;display:none;">
+                Formule à part : elle ne se combine pas avec les filières longues ci-dessus.
+              </p>
               <div class="formations-check-error" id="formationsError">Veuillez sélectionner au moins une formation.</div>
             </div>
 
@@ -807,6 +906,10 @@
                   <option value="Acte de naissance sécurisé">Acte de naissance sécurisé</option>
                   <option value="CIP (Carte d'Identité Personnelle)">CIP (Carte d'Identité Personnelle)</option>
                 </select>
+              </div>
+              <div class="form-group">
+                <label for="numeroPiece">Numéro de la pièce <span class="req">*</span></label>
+                <input type="text" id="numeroPiece" class="form-control" placeholder="Ex. CIP0123456789" required />
               </div>
 
               <div class="form-group" style="margin-bottom:4px;">
@@ -864,6 +967,37 @@
               <div class="upload-limit">Max 2 Mo</div>
             </div>
 
+            <div class="pieces-bloc">
+              <div class="pieces-bloc-title">
+                <span class="iconify" data-icon="tabler:signature"></span>
+                Engagement &amp; signature
+              </div>
+              <p style="font-size:12.5px;color:var(--gray-600);line-height:1.6;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:14px;margin-bottom:14px;">
+                Je soussigné(e) déclare sur l'honneur que les informations et documents fournis dans ce formulaire sont exacts, complets et conformes à la réalité. Toute fausse déclaration engage ma responsabilité conformément au Code Pénal béninois. Les données collectées sont traitées exclusivement par LES QUALITÉS DE DIEU SERVICE SARL à des fins administratives et pédagogiques, conformément à la Loi n° 2017-20 sur le numérique en République du Bénin.
+              </p>
+              <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;cursor:pointer;font-size:13px;color:var(--gray-700);">
+                <input type="checkbox" id="clause1" style="margin-top:3px;flex-shrink:0;" required />
+                <span>Je certifie que toutes les informations et documents fournis sont <strong>authentiques et exacts</strong>.</span>
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;font-size:13px;color:var(--gray-700);">
+                <input type="checkbox" id="clause2" style="margin-top:3px;flex-shrink:0;" required />
+                <span>J'accepte que mes données personnelles soient enregistrées par LES QUALITÉS DE DIEU SERVICE SARL à des fins administratives.</span>
+              </label>
+              <div class="form-group" style="margin-bottom:4px;">
+                <label>Signature numérique <span class="req">*</span> <span class="hint">(avec le doigt ou la souris)</span></label>
+                <div style="border:1.5px dashed var(--gray-300);border-radius:8px;background:var(--white);overflow:hidden;">
+                  <canvas id="sigCanvas" style="display:block;width:100%;height:150px;cursor:crosshair;touch-action:none;"></canvas>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--gray-50);border-top:1px solid var(--gray-200);">
+                    <span id="sig-hint" style="font-size:11px;color:var(--gray-500);">Signez dans cet espace</span>
+                    <button type="button" onclick="effacerSignature()" style="font-size:11px;color:var(--gray-600);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                      <span class="iconify" data-icon="tabler:trash"></span> Effacer
+                    </button>
+                  </div>
+                </div>
+                <div class="formations-check-error" id="signatureError" style="display:none;">Veuillez apposer votre signature.</div>
+              </div>
+            </div>
+
             <div class="frais-bloc" id="fraisBloc">
               <div class="frais-bloc-title">
                 <span class="iconify" data-icon="tabler:receipt"></span>
@@ -871,12 +1005,12 @@
               </div>
               <table class="frais-table">
                 <tbody>
-                  <tr><td>Frais d'inscription (uniques)</td><td id="fraisInscriptionVal">—</td></tr>
+                  <tr><td>Frais d'inscription</td><td id="fraisInscriptionVal">—</td></tr>
                   <tr><td>Coût total des formations</td><td id="coutTotalVal">—</td></tr>
-                  <tr><td>Tranche 1 — 50% <span class="t1">Immédiat</span></td><td id="tranche1Val">—</td></tr>
-                  <tr><td>Tranche 2 — 25% <span class="t2">Milieu</span></td><td id="tranche2Val">—</td></tr>
-                  <tr><td>Tranche 3 — 25% <span class="t3">Fin</span></td><td id="tranche3Val">—</td></tr>
-                  <tr class="frais-total frais-sep"><td>1er virement à effectuer</td><td id="premierVirementVal">—</td></tr>
+                  <tr id="ligneTranche1"><td id="labelTranche1">Tranche 1 — 50% <span class="t1">Immédiat</span></td><td id="tranche1Val">—</td></tr>
+                  <tr id="ligneTranche2"><td>Tranche 2 — 25% <span class="t2">Milieu</span></td><td id="tranche2Val">—</td></tr>
+                  <tr id="ligneTranche3"><td>Tranche 3 — 25% <span class="t3">Fin</span></td><td id="tranche3Val">—</td></tr>
+                  <tr class="frais-total frais-sep"><td id="labelVirement">1er virement à effectuer</td><td id="premierVirementVal">—</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1212,6 +1346,7 @@
       'Création de sites web':      200000
     };
     const FRAIS_INSCRIPTION = 10000;
+    const FORMATION_COURTE = { NOM: 'Initiation rapide (1 mois)', COUT: 25000, FRAIS_INSCRIPTION: 5000 };
     const MAX_FILE_SIZE     = 2 * 1024 * 1024; // 2 Mo
 
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
@@ -1353,7 +1488,28 @@
       return Array.from(document.querySelectorAll('input[name="formations"]:checked')).map(cb => cb.value);
     }
 
+    // L'offre courte est exclusive : la cocher décoche et désactive les 4
+    // filières longues, et vice-versa — impossible de mélanger paiement
+    // unique et système de tranches dans le même dossier.
+    function gererExclusiviteFormationCourte() {
+      const caseCourte    = document.getElementById('f5');
+      const casesLongues  = Array.from(document.querySelectorAll('input[name="formations"]:not(#f5)'));
+      const hint          = document.getElementById('hint-courte');
+
+      if (caseCourte.checked) {
+        casesLongues.forEach(cb => { cb.checked = false; cb.disabled = true; });
+        hint.style.display = 'block';
+      } else {
+        casesLongues.forEach(cb => cb.disabled = false);
+        hint.style.display = 'none';
+      }
+
+      const uneLongueCochee = casesLongues.some(cb => cb.checked);
+      caseCourte.disabled = uneLongueCochee;
+    }
+
     function mettreAJourFrais() {
+      gererExclusiviteFormationCourte();
       const formations = getFormationsSelectionnees();
       const fraisBloc  = document.getElementById('fraisBloc');
 
@@ -1363,26 +1519,48 @@
         return;
       }
 
-      const coutTotal       = formations.reduce((s, f) => s + (COUTS_FORMATIONS[f] || 0), 0);
-      const tranche1        = Math.round(coutTotal * 0.50);
-      const tranche2        = Math.round(coutTotal * 0.25);
-      const tranche3        = coutTotal - tranche1 - tranche2;
-      const premierVirement = FRAIS_INSCRIPTION + tranche1;
+      const estFormationCourte = formations.includes(FORMATION_COURTE.NOM);
 
-      document.getElementById('fraisInscriptionVal').textContent = formatFCFA(FRAIS_INSCRIPTION);
+      let fraisInscription, coutTotal, tranche1, tranche2, tranche3, premierVirement, paiementUnique;
+
+      if (estFormationCourte) {
+        fraisInscription = FORMATION_COURTE.FRAIS_INSCRIPTION;
+        coutTotal         = FORMATION_COURTE.COUT;
+        tranche1          = coutTotal;
+        tranche2          = 0;
+        tranche3          = 0;
+        premierVirement   = fraisInscription + coutTotal;
+        paiementUnique    = true;
+      } else {
+        fraisInscription = FRAIS_INSCRIPTION;
+        coutTotal         = formations.reduce((s, f) => s + (COUTS_FORMATIONS[f] || 0), 0);
+        tranche1          = Math.round(coutTotal * 0.50);
+        tranche2          = Math.round(coutTotal * 0.25);
+        tranche3          = coutTotal - tranche1 - tranche2;
+        premierVirement   = fraisInscription + tranche1;
+        paiementUnique    = false;
+      }
+
+      document.getElementById('fraisInscriptionVal').textContent = formatFCFA(fraisInscription);
       document.getElementById('coutTotalVal').textContent        = formatFCFA(coutTotal);
       document.getElementById('tranche1Val').textContent         = formatFCFA(tranche1);
       document.getElementById('tranche2Val').textContent         = formatFCFA(tranche2);
       document.getElementById('tranche3Val').textContent         = formatFCFA(tranche3);
       document.getElementById('premierVirementVal').textContent  = formatFCFA(premierVirement);
+
+      document.getElementById('labelTranche1').innerHTML = paiementUnique
+        ? 'Coût de la formation'
+        : 'Tranche 1 — 50% <span class="t1">Immédiat</span>';
+      document.getElementById('ligneTranche2').style.display = paiementUnique ? 'none' : '';
+      document.getElementById('ligneTranche3').style.display = paiementUnique ? 'none' : '';
+      document.getElementById('labelVirement').textContent = paiementUnique
+        ? 'TOTAL — paiement unique'
+        : '1er virement à effectuer';
+
       fraisBloc.classList.add('show');
 
       const btn = document.getElementById('submitBtn');
-      if (premierVirement > 0) {
-        btn.innerHTML = `<span class="iconify" data-icon="tabler:send"></span> Soumettre — virement de ${formatFCFA(premierVirement)}`;
-      } else {
-        btn.innerHTML = `<span class="iconify" data-icon="tabler:send"></span> Soumettre mon dossier`;
-      }
+      btn.innerHTML = `<span class="iconify" data-icon="tabler:send"></span> Soumettre — virement de ${formatFCFA(premierVirement)}`;
 
       updateStep(2, 'done');
       updateStep(3, 'active');
@@ -1512,7 +1690,8 @@
     function validateInscription() {
       let valid = true;
 
-      ['prenom','nom','sexe','telephone','typePiece'].forEach(id => {
+      ['prenom','nom','sexe','telephone','typePiece','dateNaissance','lieuNaissance','nationalite','adresse',
+       'prenomMere','nomMere','prenomPere','nomPere','numeroPiece'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.remove('error');
@@ -1540,7 +1719,81 @@
       if (!fichiers.piece1) { document.getElementById('zone-piece1').classList.add('error'); valid = false; }
       if (!fichiers.photo)  { document.getElementById('zone-photo').classList.add('error');  valid = false; }
 
+      const sigErrEl = document.getElementById('signatureError');
+      if (!signatureApposee) { sigErrEl.style.display = 'block'; valid = false; }
+      else { sigErrEl.style.display = 'none'; }
+
+      if (!document.getElementById('clause1').checked) valid = false;
+      if (!document.getElementById('clause2').checked) valid = false;
+
       return valid;
+    }
+
+    /* ================================================================
+       SIGNATURE NUMÉRIQUE — canvas tactile/souris
+    ================================================================ */
+    let signatureApposee = false;
+
+    (function initSignature() {
+      const canvas = document.getElementById('sigCanvas');
+      const ctx    = canvas.getContext('2d');
+      const hint   = document.getElementById('sig-hint');
+      let dessin   = false;
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = rect.width  * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.strokeStyle = '#1A1A2E';
+        ctx.lineWidth   = 2.2;
+        ctx.lineCap     = 'round';
+        ctx.lineJoin    = 'round';
+      }
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const src  = e.touches ? e.touches[0] : e;
+        return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+      }
+      function debut(e) { e.preventDefault(); dessin = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+      function trace(e) {
+        e.preventDefault();
+        if (!dessin) return;
+        const p = getPos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        if (!signatureApposee) {
+          signatureApposee = true;
+          hint.textContent = 'Signature apposée';
+          document.getElementById('signatureError').style.display = 'none';
+        }
+      }
+      function fin(e) { e.preventDefault(); dessin = false; }
+
+      canvas.addEventListener('mousedown',  debut);
+      canvas.addEventListener('mousemove',  trace);
+      canvas.addEventListener('mouseup',    fin);
+      canvas.addEventListener('mouseleave', fin);
+      canvas.addEventListener('touchstart', debut, { passive: false });
+      canvas.addEventListener('touchmove',  trace, { passive: false });
+      canvas.addEventListener('touchend',   fin,   { passive: false });
+    })();
+
+    function effacerSignature() {
+      const canvas = document.getElementById('sigCanvas');
+      const ctx    = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      signatureApposee = false;
+      document.getElementById('sig-hint').textContent = 'Signez dans cet espace';
+    }
+
+    function obtenirSignatureBase64() {
+      return document.getElementById('sigCanvas').toDataURL('image/png').split(',')[1];
     }
 
     /* ================================================================
@@ -1566,22 +1819,41 @@
       const formations = getFormationsSelectionnees();
 
       const payload = {
-        action:         'inscription',
-        prenom:         document.getElementById('prenom').value.trim(),
-        nom:            document.getElementById('nom').value.trim(),
-        sexe:           document.getElementById('sexe').value,
-        telephone:      document.getElementById('telephone').value.trim(),
-        email:          document.getElementById('email').value.trim(),
+        action:          'inscription',
+        prenom:          document.getElementById('prenom').value.trim(),
+        nom:             document.getElementById('nom').value.trim(),
+        sexe:            document.getElementById('sexe').value,
+        dateNaissance:   document.getElementById('dateNaissance').value,
+        lieuNaissance:   document.getElementById('lieuNaissance').value.trim(),
+        nationalite:     document.getElementById('nationalite').value.trim(),
+        adresse:         document.getElementById('adresse').value.trim(),
+        telephone:       document.getElementById('telephone').value.trim(),
+        email:           document.getElementById('email').value.trim(),
+        prenomMere:      document.getElementById('prenomMere').value.trim(),
+        nomMere:         document.getElementById('nomMere').value.trim(),
+        telephoneMere:   document.getElementById('telephoneMere').value.trim(),
+        professionMere:  document.getElementById('professionMere').value.trim(),
+        prenomPere:      document.getElementById('prenomPere').value.trim(),
+        nomPere:         document.getElementById('nomPere').value.trim(),
+        telephonePere:   document.getElementById('telephonePere').value.trim(),
+        professionPere:  document.getElementById('professionPere').value.trim(),
+        prenomTuteur:    document.getElementById('prenomTuteur').value.trim(),
+        nomTuteur:       document.getElementById('nomTuteur').value.trim(),
+        telephoneTuteur: document.getElementById('telephoneTuteur').value.trim(),
         formations,
-        message:        document.getElementById('message').value.trim(),
-        typePiece:      document.getElementById('typePiece').value,
-        piece1Base64:   fichiers.piece1.base64,
-        piece1MimeType: fichiers.piece1.mimeType,
-        photoBase64:    fichiers.photo.base64,
-        photoMimeType:  fichiers.photo.mimeType,
-        preuveBase64:   fichiers.preuve ? fichiers.preuve.base64   : '',
-        preuveMimeType: fichiers.preuve ? fichiers.preuve.mimeType : '',
-        date:           new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' })
+        message:         document.getElementById('message').value.trim(),
+        typePiece:       document.getElementById('typePiece').value,
+        numeroPiece:     document.getElementById('numeroPiece').value.trim(),
+        piece1Base64:    fichiers.piece1.base64,
+        piece1MimeType:  fichiers.piece1.mimeType,
+        photoBase64:     fichiers.photo.base64,
+        photoMimeType:   fichiers.photo.mimeType,
+        signatureBase64: obtenirSignatureBase64(),
+        clause1:         document.getElementById('clause1').checked,
+        clause2:         document.getElementById('clause2').checked,
+        preuveBase64:    fichiers.preuve ? fichiers.preuve.base64   : '',
+        preuveMimeType:  fichiers.preuve ? fichiers.preuve.mimeType : '',
+        date:            new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' })
       };
 
       const btnOriginal    = submitBtn.innerHTML;
@@ -1608,7 +1880,8 @@
           feedback.style.display = 'block';
           form.reset();
           ['piece1','photo','preuve'].forEach(c => effacerZone(c));
-          document.querySelectorAll('input[name="formations"]').forEach(cb => cb.checked = false);
+          document.querySelectorAll('input[name="formations"]').forEach(cb => { cb.checked = false; cb.disabled = false; });
+          effacerSignature();
           document.getElementById('fraisBloc').classList.remove('show');
           resetBtnLabel();
           showToast(`Dossier ${result.id} enregistré. Virement attendu.`, 'success');
