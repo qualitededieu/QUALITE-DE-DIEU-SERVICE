@@ -44,14 +44,12 @@
   "rewrites": [
     { "source": "/admin",             "destination": "/admin.html" },
     { "source": "/postuler",          "destination": "/postuler.html" },
-    { "source": "/regularisation",    "destination": "/regularisation.html" },
     { "source": "/verifier",          "destination": "/verifier.html" },
     { "source": "/",                  "destination": "/index.html" }
   ],
   "redirects": [
     { "source": "/admin.html",            "destination": "/admin",            "permanent": true },
     { "source": "/postuler.html",         "destination": "/postuler",         "permanent": true },
-    { "source": "/regularisation.html",   "destination": "/regularisation",   "permanent": true },
     { "source": "/verifier.html",         "destination": "/verifier",         "permanent": true }
   ]
 }
