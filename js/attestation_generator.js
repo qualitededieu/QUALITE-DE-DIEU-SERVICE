@@ -31,6 +31,7 @@ const ATT_DESCRIPTIONS = {
   "Graphisme & PAO":            "Publication assistée par ordinateur, conception d'affiches et de supports visuels, maîtrise des logiciels professionnels (Photoshop, Illustrator, CorelDRAW, Canva Pro).",
   "Sérigraphie":                "Techniques d'impression sur tout support (tissu, enseignes, objets promotionnels), préparation des écrans, gestion des couleurs et finitions.",
   "Création de sites web":      "Conception et publication de sites internet, bases HTML/CSS, gestion de contenu avec WordPress et Wix, mise en ligne et hébergement.",
+  "Initiation rapide (1 mois)": "Initiation accélérée aux outils numériques essentiels : prise en main de l'ordinateur, bureautique de base et navigation Internet.",
 };
 
 function _attDescription(filiere) {
@@ -46,6 +47,7 @@ const ATT_CATEGORIES_LONGUE = {
   "Graphisme & PAO":            { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Graphisme & PAO"] },
   "Sérigraphie":                { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Sérigraphie"] },
   "Création de sites web":      { categorie: "Développement Web",     texte: ATT_DESCRIPTIONS["Création de sites web"] },
+  "Initiation rapide (1 mois)": { categorie: "Initiation numérique",  texte: ATT_DESCRIPTIONS["Initiation rapide (1 mois)"] },
 };
 
 const ATT_MODULE_MANAGEMENT = {
