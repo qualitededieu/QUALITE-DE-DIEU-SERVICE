@@ -167,7 +167,8 @@ function _bboxEncre(img, seuilAlpha = 10) {
     return { x: 0, y: 0, w: img.width, h: img.height };
   }
 }
-function _wrapCentre(ctx, txt, cy, maxW, lh) {
+function _wrapCentre(ctx, txt, cy, maxW, lh, centreX) {
+  const cx = centreX !== undefined ? centreX : ATT.W / 2;
   const words = String(txt).split(" ");
   let line = "", lignes = [];
   for (const w of words) {
@@ -177,7 +178,7 @@ function _wrapCentre(ctx, txt, cy, maxW, lh) {
   }
   if (line) lignes.push(line);
   let y = cy;
-  lignes.forEach(l => { ctx.fillText(l, (ATT.W - _mw(ctx, l)) / 2, y); y += lh; });
+  lignes.forEach(l => { ctx.fillText(l, cx - _mw(ctx, l) / 2, y); y += lh; });
   return y;
 }
 function _wrap(ctx, txt, x, y, maxW, lh) {
@@ -425,6 +426,12 @@ async function genererAttestationCanvas(apprenant, token) {
 
   if (estFormationLongue) {
 
+    // Tant que la position verticale reste dans la zone occupée par la
+    // photo d'identité (haut-droite), on réserve sa largeur : le texte
+    // ne doit jamais passer derrière/devant le visage de l'apprenant.
+    const CW_HAUT = (PHOTO_X - 40) - CX;
+    const CENTRE_HAUT = CX + CW_HAUT / 2;
+
     const TITRE_Y = HDR_H + 60;
     _font(ctx, 108, "bold");
     ctx.fillStyle = "#1B3A6B";
@@ -443,19 +450,20 @@ async function genererAttestationCanvas(apprenant, token) {
       `Nous soussignés, Monsieur ${ATT_SIGNATAIRE_PDG.nom.replace(/^M\.\s*/, "")}, Président Directeur Général de la Société ` +
       `${ATT_ENTREPRISE.NOM} SARL, entreprise spécialisée dans l'Informatique & Bureautique, Design & Impression, sise à Comé, ` +
       `Hongodé, et Monsieur ${ATT_SIGNATAIRE_FORMATEUR.nom.replace(/^M\.\s*/, "")}, Formateur Principal,`;
-    posY = _wrap(ctx, preambule, CX, posY, CW, 52) + 16;
+    posY = _wrap(ctx, preambule, CX, posY, CW_HAUT, 52) + 16;
 
     _font(ctx, 44, "bold");
     ctx.fillStyle = "#A6402F";
     const attestePar = "ATTESTONS PAR LA PRÉSENTE QUE :";
-    ctx.fillText(attestePar, (ATT.W - _mw(ctx, attestePar)) / 2, posY);
+    ctx.fillText(attestePar, CENTRE_HAUT - _mw(ctx, attestePar) / 2, posY);
     posY += 76;
 
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
     const civiliteLg = sexeNorm === "F" ? "Madame " : (sexeNorm === "M" ? "Monsieur " : "");
     const nomComplet = `${civiliteLg}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
-    const BANNER_CX  = 1512.5;
-    _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
+    const BANNER_CX  = CX + CW_HAUT / 2;
+    const BANNER_W   = CW_HAUT;
+    _roundRect(ctx, CX, posY - 52, BANNER_W, 158, 24, COULEUR_PRINCIPALE);
     _font(ctx, 82, "bold");
     ctx.fillStyle = ATT.OR_LIGHT;
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
@@ -466,7 +474,7 @@ async function genererAttestationCanvas(apprenant, token) {
       ctx.fillStyle = ATT.TEXTE;
       const lieuTxt = apprenant.lieuNaissance ? ` à ${apprenant.lieuNaissance}` : "";
       const naissanceTxt = `né(e) le ${fmt(apprenant.dateNaissance)}${lieuTxt}.`;
-      ctx.fillText(naissanceTxt, (ATT.W - _mw(ctx, naissanceTxt)) / 2, posY);
+      ctx.fillText(naissanceTxt, CENTRE_HAUT - _mw(ctx, naissanceTxt) / 2, posY);
       posY += 64;
     }
 
@@ -482,10 +490,14 @@ async function genererAttestationCanvas(apprenant, token) {
 
     _font(ctx, 44, "normal");
     ctx.fillStyle = ATT.TEXTE;
-    posY = _wrap(ctx, "une formation professionnelle complète. À l'issue de ce parcours, l'intéressé(e) a validé les compétences suivantes :", CX, posY, CW, 54) + 10;
+    posY = _wrap(ctx, "une formation professionnelle complète. À l'issue de ce parcours, l'intéressé(e) a validé les compétences suivantes :", CX, posY, CW_HAUT, 54) + 10;
 
     const competences = _competencesLongue(apprenant.filiere);
     competences.forEach(bloc => {
+      // Zone photo dépassée (posY sous PHOTO_Y + PHOTO_H) : on repasse
+      // en pleine largeur pour les compétences restantes.
+      const largeurDisponible = (posY < PHOTO_Y + PHOTO_H) ? CW_HAUT : CW;
+
       _font(ctx, 42, "bold");
       ctx.fillStyle = COULEUR_PRINCIPALE;
       const label = bloc.categorie + " : ";
@@ -496,7 +508,7 @@ async function genererAttestationCanvas(apprenant, token) {
       ctx.fillStyle = ATT.TEXTE;
       const words = String(bloc.texte).split(" ");
       let ligne = "", x = CX + labelW, premierMot = true;
-      const finLigneX = CX + CW;
+      const finLigneX = CX + largeurDisponible;
       for (const mot of words) {
         const test = ligne ? ligne + " " + mot : mot;
         const largeurTest = _mw(ctx, test) + (premierMot ? labelW : 0);
@@ -560,11 +572,16 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(intro3, ix, posY);
     posY += 90;
 
+    // Même précaution que pour le format long : réserver la largeur de
+    // la photo tant qu'on reste dans sa zone verticale.
+    const CW_HAUT_COURT    = (PHOTO_X - 40) - CX;
+    const CENTRE_HAUT_COURT = CX + CW_HAUT_COURT / 2;
+
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
     const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
     const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
-    const BANNER_CX  = 1512.5;
-    _roundRect(ctx, 210, posY - 52, 2605, 158, 24, COULEUR_PRINCIPALE);
+    const BANNER_CX  = CENTRE_HAUT_COURT;
+    _roundRect(ctx, CX, posY - 52, CW_HAUT_COURT, 158, 24, COULEUR_PRINCIPALE);
     _font(ctx, 90, "bold");
     ctx.fillStyle = ATT.OR_LIGHT;
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
@@ -587,9 +604,9 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillStyle = COULEUR_PRINCIPALE;
     {
       const iW = _mw(ctx, intitule);
-      ctx.fillText(intitule, (ATT.W - iW) / 2, posY + 20);
+      ctx.fillText(intitule, CENTRE_HAUT_COURT - iW / 2, posY + 20);
       posY += 40;
-      _rect(ctx, (ATT.W - iW) / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
+      _rect(ctx, CENTRE_HAUT_COURT - iW / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
       posY += 70;
     }
 
@@ -598,7 +615,7 @@ async function genererAttestationCanvas(apprenant, token) {
     const descriptionTexte = estStage
       ? _attDescriptionStage(apprenant.missionsStage)
       : _attDescription(apprenant.filiere);
-    posY = _wrapCentre(ctx, descriptionTexte, posY, CW - 120, 48) + 16;
+    posY = _wrapCentre(ctx, descriptionTexte, posY, CW_HAUT_COURT - 120, 48, CENTRE_HAUT_COURT) + 16;
 
     _font(ctx, 52, "normal");
     const p1 = "durant la période du  ", p2 = dateDebut, p3 = "  au  ", p4 = dateFin;
