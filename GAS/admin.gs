@@ -31,13 +31,11 @@ function routerAdmin(data, action) {
 
       case 'admin_update_statut':       return requireAuth(data, adminUpdateStatut);
       case 'admin_update_paiement':     return requireAuth(data, adminUpdatePaiement);
+      case 'admin_update_suivi':        return requireAuth(data, adminUpdateSuivi);
+      case 'admin_apercu_attestation':  return requireAuth(data, adminApercuAttestation);
       case 'admin_send_relance':        return requireAuth(data, adminSendRelance);
       case 'admin_delete_dossier':      return requireAuth(data, adminDeleteDossier);
       case 'admin_export_csv':          return requireAuth(data, adminExportCSV);
-      case 'admin_get_regs':            return requireAuth(data, adminGetRegularisations);
-      case 'admin_get_reg':             return requireAuth(data, adminGetRegularisation);
-      case 'admin_update_reg_statut':   return requireAuth(data, adminUpdateRegStatut);
-      case 'admin_delete_reg':          return requireAuth(data, adminDeleteRegularisation);
 
       case 'carte_get_data':            return getCarte(data);
       case 'carte_verifier':            return verifierCarte(data);
@@ -227,7 +225,7 @@ function adminGetStats(data, email) {
     total: 0, enAttente: 0, confirmes: 0, annules: 0,
     paiementRecu: 0, paiementVerifie: 0, paiementAttente: 0,
     parFormation: {}, renseignements: 0, rensNouveaux: 0,
-    chiffreAffaire: 0, regsEnAttente: 0
+    chiffreAffaire: 0
   };
 
   if (feuilleMaitre) {
@@ -262,16 +260,6 @@ function adminGetStats(data, email) {
       if (!donnees[i][0]) continue;
       stats.renseignements++;
       if (donnees[i][8] === 'Nouveau') stats.rensNouveaux++;
-    }
-  }
-
-  const feuilleRegs = ss.getSheetByName('Régularisations');
-  if (feuilleRegs) {
-    const donneesR = feuilleRegs.getDataRange().getValues();
-    for (let i = 1; i < donneesR.length; i++) {
-      if (!donneesR[i][0]) continue;
-      const st = String(donneesR[i][37] || '').trim();
-      if (st === 'En attente') stats.regsEnAttente++;
     }
   }
 
@@ -385,7 +373,7 @@ function adminUpdateStatut(data, email) {
     const donnees = ss.getSheetByName('Toutes les inscriptions').getDataRange().getValues();
     const row     = donnees.find(r => r[0] === id);
     if (row) {
-      const formations = String(row[6]).split(' | ');
+      const formations = String(row[22]).split(' | ');
       const nomFeuille = formations.length === 1 ? formations[0] : 'Multi-formations';
       mettreAJourColonnePrecise(nomFeuille, id, 'Statut dossier', statut);
     }
@@ -393,6 +381,68 @@ function adminUpdateStatut(data, email) {
 
   console.log(`[Admin:${email}] Statut ${id} → ${statut}`);
   return reponseJSON({ status: 'success', message: `Statut mis à jour : ${statut}` });
+}
+
+// Champs renseignés a posteriori par l'admin, une fois la formation
+// terminée — sans équivalent dans le formulaire public (un nouvel
+// inscrit ne peut pas connaître son niveau atteint avant d'avoir suivi
+// la formation). Alimente aussi l'attestation via carte.gs.
+// Permet à l'admin de générer/tester une attestation directement depuis
+// le panneau, quel que soit l'état du verrou TELECHARGEMENT_BLOQUE — ce
+// verrou ne concerne que l'espace apprenant public (voir getCarte dans
+// carte.gs). Utile pour valider le rendu pendant que le site est encore
+// en construction, sans devoir l'ouvrir au public.
+function adminApercuAttestation(data, email) {
+  const id = String(data.id || '').trim();
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
+
+  const feuille = ss.getSheetByName('Toutes les inscriptions');
+  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
+
+  const donnees = feuille.getDataRange().getValues();
+  const row     = donnees.find(r => String(r[0]).trim() === id);
+  if (!row) return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
+
+  const apprenant = _mapperApprenantInscription(row);
+  const token     = _genererTokenCarte(apprenant);
+
+  console.log(`[Admin:${email}] Aperçu attestation généré pour ${id}`);
+  return reponseJSON({ status: 'success', apprenant, token });
+}
+
+function adminUpdateSuivi(data, email) {
+  const { id, niveauAtteint, dateEntree, dateFin } = data;
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
+
+  const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
+  if (!feuilleMaitre) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
+
+  const donnees = feuilleMaitre.getDataRange().getValues();
+  const row     = donnees.find(r => r[0] === id);
+  if (!row) return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
+
+  const formations  = String(row[22] || '').split(' | ').map(f => f.trim()).filter(Boolean);
+  const nomFeuille  = formations.length === 1 ? formations[0] : 'Multi-formations';
+
+  const champs = [
+    ['Date entrée',    dateEntree],
+    ['Date fin',       dateFin],
+    ['Niveau atteint', niveauAtteint],
+  ];
+  champs.forEach(([colonne, valeur]) => {
+    if (valeur === undefined) return;
+    mettreAJourColonnePrecise('Toutes les inscriptions', id, colonne, nettoyer(valeur));
+    mettreAJourColonnePrecise(nomFeuille, id, colonne, nettoyer(valeur));
+  });
+
+  console.log(`[Admin:${email}] Suivi mis à jour pour ${id}`);
+  return reponseJSON({ status: 'success', message: 'Suivi mis à jour.' });
 }
 
 function adminUpdatePaiement(data, email) {
@@ -411,7 +461,7 @@ function adminUpdatePaiement(data, email) {
     const donnees = ss.getSheetByName('Toutes les inscriptions').getDataRange().getValues();
     const row     = donnees.find(r => r[0] === id);
     if (row) {
-      const formations = String(row[6]).split(' | ');
+      const formations = String(row[22]).split(' | ');
       const nomFeuille = formations.length === 1 ? formations[0] : 'Multi-formations';
       mettreAJourColonnePrecise(nomFeuille, id, 'Statut paiement', statut);
     }
@@ -422,7 +472,7 @@ function adminUpdatePaiement(data, email) {
       const ss      = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
       const donnees = ss.getSheetByName('Toutes les inscriptions').getDataRange().getValues();
       const row     = donnees.find(r => r[0] === id);
-      if (row && row[5]) {
+      if (row && row[10]) {
         const dossier = mapperLigneDossier(row, 0);
         envoyerEmailConfirmationPaiement(dossier);
       }
@@ -444,7 +494,7 @@ function adminSendRelance(data, email) {
   const row     = donnees.find(r => r[0] === id);
 
   if (!row)    return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
-  if (!row[5]) return reponseJSON({ status: 'error', message: 'Pas d\'email pour cet apprenant.' });
+  if (!row[10]) return reponseJSON({ status: 'error', message: 'Pas d\'email pour cet apprenant.' });
 
   const dossier  = mapperLigneDossier(row, 0);
   const montants = calculerMontantsTotal(dossier.formations);
@@ -476,9 +526,9 @@ function adminDeleteDossier(data, email) {
     const donnees = feuille.getDataRange().getValues();
     for (let i = donnees.length - 1; i >= 1; i--) {
       if (donnees[i][0] === id) {
-        if (!supprime && donnees[i][14]) {
+        if (!supprime && donnees[i][35]) {
           try {
-            const idDrive = String(donnees[i][14]).match(/[-\w]{25,}/);
+            const idDrive = String(donnees[i][35]).match(/[-\w]{25,}/);
             if (idDrive) DriveApp.getFolderById(idDrive[0]).setTrashed(true);
           } catch(e) { console.error('[delete Drive]', e); }
         }
@@ -508,162 +558,6 @@ function adminExportCSV(data, email) {
   const csv = '\uFEFF' + lignes.join('\r\n');
   console.log(`[Admin:${email}] Export CSV — ${donnees.length - 1} lignes`);
   return reponseJSON({ status: 'success', csv, total: donnees.length - 1 });
-}
-
-function _mapperLigneRegularisation(row, ligneIndex) {
-  return {
-    ligneIndex,
-    id:                   row[0],
-    dateSoumission:       row[1],
-    prenom:                row[2],
-    nom:                   row[3],
-    sexe:                  row[4],
-    dateNaissance:         row[5],
-    lieuNaissance:         row[6],
-    nationalite:           row[7],
-    telephone:             String(row[8] || ''),
-    email:                 row[9],
-    adresse:               row[10],
-    prenomMere:            row[11],
-    nomMere:               row[12],
-    telephoneMere:         row[13],
-    professionMere:        row[14],
-    prenomPere:            row[15],
-    nomPere:               row[16],
-    telephonePere:         row[17],
-    professionPere:        row[18],
-    prenomTuteur:          row[19],
-    nomTuteur:             row[20],
-    filiere:               row[21],
-    dureeFormation:        row[22],
-    dateEntree:            row[23],
-    dateFin:               row[24],
-    niveauAtteint:         row[25],
-    montantPaye:           row[26],
-    observation:           row[27],
-    typePiece:             row[28],
-    numeroPiece:           row[29],
-    pieceUrl:              row[30],
-    photoUrl:              row[31],
-    signatureUrl:          row[32],
-    dossierUrl:            row[33],
-    clause1:               row[34],
-    clause2:               row[35],
-    dateSignature:         row[36],
-    statutDossier:         row[37] || 'En attente',
-    traitePar:             row[38] || '',
-    dateTraitement:        row[39] || ''
-  };
-}
-
-function adminGetRegularisations(data, email) {
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
-
-  const feuille = ss.getSheetByName('Régularisations');
-  if (!feuille) return reponseJSON({ status: 'success', regs: [], total: 0, page: 1, perPage: 20, pages: 0 });
-
-  const donnees   = feuille.getDataRange().getValues();
-  const page      = Number(data.page    || 1);
-  const perPage   = Number(data.perPage || 20);
-  const filtre    = data.filtre    || '';
-  const recherche = (data.recherche || '').toLowerCase();
-  const MAP_FILTRE = { reg_attente: 'En attente', reg_valide: 'Validé', reg_rejete: 'Rejeté' };
-  let regs = [];
-
-  for (let i = 1; i < donnees.length; i++) {
-    const row = donnees[i];
-    if (!row[0]) continue;
-    const reg = _mapperLigneRegularisation(row, i + 1);
-
-    if (MAP_FILTRE[filtre] && reg.statutDossier !== MAP_FILTRE[filtre]) continue;
-
-    if (recherche) {
-      const haystack = `${reg.id} ${reg.prenom} ${reg.nom} ${reg.telephone} ${reg.filiere}`.toLowerCase();
-      if (!haystack.includes(recherche)) continue;
-    }
-    regs.push(reg);
-  }
-
-  regs.sort((a, b) => b.ligneIndex - a.ligneIndex);
-  const total = regs.length;
-  const debut = (page - 1) * perPage;
-  const page_ = regs.slice(debut, debut + perPage);
-
-  return reponseJSON({ status: 'success', regs: page_, total, page, perPage, pages: Math.ceil(total / perPage) });
-}
-
-function adminGetRegularisation(data, email) {
-  const id = data.id || '';
-  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
-
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
-
-  const feuille = ss.getSheetByName('Régularisations');
-  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
-
-  const donnees = feuille.getDataRange().getValues();
-  for (let i = 1; i < donnees.length; i++) {
-    if (String(donnees[i][0]).trim() === id) {
-      return reponseJSON({ status: 'success', reg: _mapperLigneRegularisation(donnees[i], i + 1) });
-    }
-  }
-  return reponseJSON({ status: 'error', message: `Dossier ${id} introuvable.` });
-}
-
-function adminUpdateRegStatut(data, email) {
-  const id     = data.id || '';
-  const statut = data.statut || '';
-  const valeursValides = ['En attente', 'Validé', 'Rejeté'];
-
-  if (!id || !valeursValides.includes(statut)) {
-    return reponseJSON({ status: 'error', message: 'ID ou statut invalide.' });
-  }
-
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  const feuille = ss && ss.getSheetByName('Régularisations');
-  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
-
-  const donnees = feuille.getDataRange().getValues();
-  for (let i = 1; i < donnees.length; i++) {
-    if (String(donnees[i][0]).trim() !== id) continue;
-    feuille.getRange(i + 1, 38).setValue(statut);
-    feuille.getRange(i + 1, 39).setValue(email);
-    feuille.getRange(i + 1, 40).setValue(new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }));
-    console.log(`[Admin:${email}] Statut régularisation ${id} → ${statut}`);
-    return reponseJSON({ status: 'success', message: `Statut mis à jour : ${statut}` });
-  }
-  return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
-}
-
-function adminDeleteRegularisation(data, email) {
-  const id = data.id || '';
-  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
-
-  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (!ss) return reponseJSON({ status: 'error', message: 'Spreadsheet introuvable.' });
-
-  const feuille = ss.getSheetByName('Régularisations');
-  if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille introuvable.' });
-
-  const donnees = feuille.getDataRange().getValues();
-  for (let i = donnees.length - 1; i >= 1; i--) {
-    if (String(donnees[i][0]).trim() !== id) continue;
-
-    const dossierUrl = donnees[i][33];
-    if (dossierUrl) {
-      try {
-        const idDrive = String(dossierUrl).match(/[-\w]{25,}/);
-        if (idDrive) DriveApp.getFolderById(idDrive[0]).setTrashed(true);
-      } catch (e) { console.error('[adminDeleteRegularisation] Drive', e.toString()); }
-    }
-
-    feuille.deleteRow(i + 1);
-    console.log(`[Admin:${email}] Dossier régularisation supprimé : ${id}`);
-    return reponseJSON({ status: 'success', message: `Dossier ${id} supprimé.` });
-  }
-  return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
 }
 
 function envoyerEmailOTP(email, otp) {
@@ -809,34 +703,57 @@ function genererOTP() {
 }
 
 function mapperLigneDossier(row, ligneIndex) {
-  const formations = String(row[6] || '').split(' | ').map(f => f.trim()).filter(Boolean);
+  const formations = String(row[22] || '').split(' | ').map(f => f.trim()).filter(Boolean);
   const montants   = calculerMontantsTotal(formations);
   return {
     ligneIndex,
-    id:              row[0],
-    date:            row[1],
-    prenom:          row[2],
-    nom:             row[3],
-    telephone:       String(row[4]  || ''),
-    email:           row[5],
-    formationsLabel: row[6],
+    id:               row[0],
+    date:             row[1],
+    prenom:           row[2],
+    nom:              row[3],
+    sexe:             row[4],
+    dateNaissance:    row[5],
+    lieuNaissance:    row[6],
+    nationalite:      row[7],
+    adresse:          row[8],
+    telephone:        String(row[9]  || ''),
+    email:            row[10],
+    prenomMere:       row[11],
+    nomMere:          row[12],
+    telephoneMere:    String(row[13] || ''),
+    professionMere:   row[14],
+    prenomPere:       row[15],
+    nomPere:          row[16],
+    telephonePere:    String(row[17] || ''),
+    professionPere:   row[18],
+    prenomTuteur:     row[19],
+    nomTuteur:        row[20],
+    telephoneTuteur:  String(row[21] || ''),
+    formationsLabel:  row[22],
     formations,
-    nbFormations:    row[7],
-    message:         row[8],
-    statutDossier:   row[9],
-    typePiece:       row[10],
-    pieceUrl:        row[11],
-    photoUrl:        row[12],
-    preuveUrl:       row[13],
-    dossierUrl:      row[14],
-    fraisInscription:row[15],
-    coutTotal:       row[16],
-    tranche1:        row[17],
-    tranche2:        row[18],
-    tranche3:        row[19],
-    premierVirement: row[20],
-    statutPaiement:  row[21],
-    rappelEnvoye:    row[22],
+    nbFormations:     row[23],
+    dateEntree:       row[24],
+    dateFin:          row[25],
+    niveauAtteint:    row[26],
+    message:          row[27],
+    statutDossier:    row[28],
+    typePiece:        row[29],
+    numeroPiece:      row[30],
+    pieceUrl:         row[31],
+    photoUrl:         row[32],
+    signatureUrl:     row[33],
+    preuveUrl:        row[34],
+    dossierUrl:       row[35],
+    fraisInscription: row[36],
+    coutTotal:        row[37],
+    tranche1:         row[38],
+    tranche2:         row[39],
+    tranche3:         row[40],
+    premierVirement:  row[41],
+    paiementUnique:   row[42],
+    statutPaiement:   row[43],
+    rappelEnvoye:     row[44],
+    source:           row[45],
     montants
   };
 }

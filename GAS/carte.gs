@@ -30,6 +30,19 @@ function _telephoneSembleIncomplet(tel) {
 }
 
 function getCarte(data) {
+  // Interrupteur temporaire — le site étant en construction, on peut
+  // couper l'accès public à l'espace apprenant sans toucher au code.
+  // Activer : Propriétés du script → TELECHARGEMENT_BLOQUE = true
+  // (Le bouton "Générer" côté admin n'est PAS concerné par ce verrou —
+  // voir adminApercuAttestation dans admin.gs.)
+  const bloque = PropertiesService.getScriptProperties().getProperty('TELECHARGEMENT_BLOQUE') === 'true';
+  if (bloque) {
+    return reponseJSON({
+      status: 'error',
+      message: "L'espace apprenant est temporairement indisponible — le site est en cours de finalisation. Merci de réessayer bientôt."
+    });
+  }
+
   const id        = String(data.id        || '').trim();
   const telephone = String(data.telephone || '').trim();
 
@@ -40,34 +53,7 @@ function getCarte(data) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
-  let dossierTrouveNonValide = false;
   let idTrouveTelIncorrect = false;
-
-  const feuilleRegs = ss.getSheetByName('Régularisations');
-  if (feuilleRegs) {
-    const donneesR = feuilleRegs.getDataRange().getValues();
-    for (let i = 1; i < donneesR.length; i++) {
-      const row = donneesR[i];
-      if (!row[0]) continue;
-
-      const idRow  = String(row[0]).trim();
-      if (idRow !== id) continue;
-
-      const telRow = String(row[8] || '').trim();
-      if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
-
-      const statut = String(row[37] || '').trim();
-      if (statut !== 'Validé') {
-        dossierTrouveNonValide = true;
-        break;
-      }
-
-      const apprenant = _mapperApprenantReg(row);
-      const token     = _genererTokenCarte(apprenant);
-
-      return reponseJSON({ status: 'success', apprenant, token });
-    }
-  }
 
   const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
   if (feuilleMaitre) {
@@ -79,21 +65,17 @@ function getCarte(data) {
       const idRow  = String(row[0]).trim();
       if (idRow !== id) continue;
 
-      const telRow = String(row[4] || '').trim();
+      const telRow = String(row[9] || '').trim();
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
-      const statut = String(row[9] || '').trim();
-      if (statut !== 'Confirmé') continue;
+      const statut = String(row[28] || '').trim();
+      if (statut !== 'Confirmé' && statut !== 'Migré') continue;
 
       const apprenant = _mapperApprenantInscription(row);
       const token     = _genererTokenCarte(apprenant);
 
       return reponseJSON({ status: 'success', apprenant, token });
     }
-  }
-
-  if (dossierTrouveNonValide) {
-    return reponseJSON({ status: 'error', message: 'Votre dossier de régularisation est en cours de traitement et n\'est pas encore validé.' });
   }
 
   if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
@@ -164,16 +146,6 @@ function envoyerCarteAdmin(data, email) {
 }
 
 function _trouverApprenantParId(ss, id) {
-  const feuilleRegs = ss.getSheetByName('Régularisations');
-  if (feuilleRegs) {
-    const donneesR = feuilleRegs.getDataRange().getValues();
-    for (let i = 1; i < donneesR.length; i++) {
-      if (String(donneesR[i][0]).trim() === id) {
-        return _mapperApprenantReg(donneesR[i]);
-      }
-    }
-  }
-
   const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
   if (feuilleMaitre) {
     const donnees = feuilleMaitre.getDataRange().getValues();
@@ -187,46 +159,40 @@ function _trouverApprenantParId(ss, id) {
   return null;
 }
 
-function _mapperApprenantReg(row) {
-  return {
-    id:           String(row[0]  || ''),
-    prenom:       String(row[2]  || ''),
-    nom:          String(row[3]  || ''),
-    sexe:         String(row[4]  || '').trim(),
-    dateNaissance:String(row[5]  || ''),
-    lieuNaissance:String(row[6]  || ''),
-    telephone:    String(row[8]  || ''),
-    email:        String(row[9]  || ''),
-    filiere:      String(row[21] || ''),
-    dateEntree:   String(row[23] || ''),
-    dateFin:      String(row[24] || ''),
-    photoUrl:     _urlImageDriveDirecte(String(row[31] || '')),
-    source:       'regularisation'
-  };
-}
-
 function _mapperApprenantInscription(row) {
-  let dateFin = '';
-  if (row[1]) {
+  // Dates réelles si présentes (nouveau schéma + dossiers migrés depuis
+  // Régularisation) ; à défaut, estimation depuis la soumission — la durée
+  // de repli dépend de la formation choisie (1 mois pour l'offre courte,
+  // 1 an pour les 4 filières longues, comportement historique conservé).
+  const filiereLigne = String(row[22] || '');
+  const estFormationCourte = filiereLigne.includes('Initiation rapide (1 mois)');
+
+  let dateEntree = String(row[24] || '');
+  let dateFin    = String(row[25] || '');
+
+  if (!dateEntree) dateEntree = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
+  if (!dateFin && row[1]) {
     const d = new Date(row[1]);
-    d.setFullYear(d.getFullYear() + 1);
+    if (estFormationCourte) d.setMonth(d.getMonth() + 1);
+    else d.setFullYear(d.getFullYear() + 1);
     dateFin = d.toISOString().split('T')[0];
   }
 
   return {
-    id:           String(row[0]  || ''),
-    prenom:       String(row[2]  || ''),
-    nom:          String(row[3]  || ''),
-    sexe:         String(row[23] || '').trim(),
-    dateNaissance:'',
-    lieuNaissance:'',
-    telephone:    String(row[4]  || ''),
-    email:        String(row[5]  || ''),
-    filiere:      String(row[6]  || '').replace(/ \| /g, ', '),
-    dateEntree:   row[1] ? new Date(row[1]).toISOString().split('T')[0] : '',
-    dateFin:      dateFin,
-    photoUrl:     _urlImageDriveDirecte(String(row[12] || '')),
-    source:       'inscription'
+    id:            String(row[0]  || ''),
+    prenom:        String(row[2]  || ''),
+    nom:           String(row[3]  || ''),
+    sexe:          String(row[4]  || '').trim(),
+    dateNaissance: String(row[5]  || ''),
+    lieuNaissance: String(row[6]  || ''),
+    telephone:     String(row[9]  || ''),
+    email:         String(row[10] || ''),
+    filiere:       String(row[22] || '').replace(/ \| /g, ', '),
+    dateEntree:    dateEntree,
+    dateFin:       dateFin,
+    niveauAtteint: String(row[26] || ''),
+    photoUrl:      _urlImageDriveDirecte(String(row[32] || '')),
+    source:        String(row[45] || 'inscription')
   };
 }
 
