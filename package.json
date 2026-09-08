@@ -1,0 +1,7 @@
+{
+  "name": "lqd-service-site",
+  "private": true,
+  "dependencies": {
+    "fedapay": "^1.2.5"
+  }
+}

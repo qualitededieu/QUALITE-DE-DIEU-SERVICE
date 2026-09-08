@@ -33,6 +33,7 @@ function routerAdmin(data, action) {
       case 'admin_update_paiement':     return requireAuth(data, adminUpdatePaiement);
       case 'admin_update_suivi':        return requireAuth(data, adminUpdateSuivi);
       case 'admin_apercu_attestation':  return requireAuth(data, adminApercuAttestation);
+      case 'admin_debloquer_telechargement': return requireAuth(data, adminDebloquerTelechargement);
       case 'admin_send_relance':        return requireAuth(data, adminSendRelance);
       case 'admin_delete_dossier':      return requireAuth(data, adminDeleteDossier);
       case 'admin_export_csv':          return requireAuth(data, adminExportCSV);
@@ -392,6 +393,28 @@ function adminUpdateStatut(data, email) {
 // verrou ne concerne que l'espace apprenant public (voir getCarte dans
 // carte.gs). Utile pour valider le rendu pendant que le site est encore
 // en construction, sans devoir l'ouvrir au public.
+// Débloque manuellement 6 téléchargements (1 payant + 5 gratuits) —
+// utilisé quand l'apprenant a payé par transfert Mobile Money direct
+// (MTN/Moov) plutôt que via le widget FedaPay, avec preuve envoyée par
+// WhatsApp et vérifiée à l'œil par l'admin. Réservé à l'offre courte.
+function adminDebloquerTelechargement(data, email) {
+  const id = String(data.id || '').trim();
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  const trouve = _trouverLigneInscription(id);
+  if (!trouve) return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
+
+  const filiere = String(trouve.row[22] || '');
+  if (!filiere.includes(CONFIG.FORMATION_COURTE.NOM)) {
+    return reponseJSON({ status: 'error', message: "Ce déblocage ne concerne que l'offre Initiation rapide (1 mois)." });
+  }
+
+  trouve.feuille.getRange(trouve.ligneIndex, 47).setValue(CONFIG.TELECHARGEMENT.TELECHARGEMENTS_PAR_PALIER);
+
+  console.log(`[Admin:${email}] Déblocage manuel des téléchargements pour ${id} (paiement Mobile Money direct)`);
+  return reponseJSON({ status: 'success', message: '6 téléchargements débloqués.' });
+}
+
 function adminApercuAttestation(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });

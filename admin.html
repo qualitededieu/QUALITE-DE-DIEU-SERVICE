@@ -1388,6 +1388,13 @@ function renderModalDossier(d) {
     <p style="font-size:11px;color:var(--text-3);margin:-12px 0 16px;">
       Génère l'attestation même si le téléchargement public est bloqué (site en construction).
     </p>
+    ${(d.formationsLabel || '').includes('Initiation rapide (1 mois)') ? `
+    <button class="btn btn-ghost btn-sm" onclick="debloquerTelechargement('${d.id}')" style="margin-bottom:16px;margin-left:8px;">
+      <span class="iconify" data-icon="tabler:device-mobile"></span> Débloquer 6 téléchargements (paiement MoMo direct)
+    </button>
+    <p style="font-size:11px;color:var(--text-3);margin:-12px 0 16px;">
+      À utiliser après vérification manuelle d'une preuve de paiement Mobile Money reçue par WhatsApp (hors FedaPay).
+    </p>` : ''}
     <div class="modal-section-title">Gestion du statut</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div>
@@ -2255,6 +2262,20 @@ async function apercuAttestation(id) {
   } catch (e) {
     toast('Erreur réseau.', 'error');
     fermerModal('modal-attestation');
+  }
+}
+
+async function debloquerTelechargement(id) {
+  if (!confirm('Confirmer le paiement Mobile Money reçu et débloquer 6 téléchargements pour ce dossier ?')) return;
+  try {
+    const result = await apiCall('admin_debloquer_telechargement', { id });
+    if (result.status === 'success') {
+      toast(result.message || 'Téléchargements débloqués.', 'success');
+    } else {
+      toast(result.message || 'Erreur.', 'error');
+    }
+  } catch (e) {
+    toast('Erreur réseau.', 'error');
   }
 }
 </script>

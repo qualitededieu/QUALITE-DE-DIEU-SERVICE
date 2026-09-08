@@ -171,7 +171,7 @@ function _ecrireEnTeteInscription(feuille, estMaitre) {
     180, 110, 110, 140, 130, 110, 110, 140, 130, 110,
     110, 140, 200, 90, 110, 110, 160, 220, 130, 160,
     150, 200, 200, 200, 200, 200, 110, 130, 110, 110,
-    110, 130, 110, 160, 110, 160
+    110, 130, 110, 160, 110, 160, 170
   ];
   largeurs.forEach(function(l, i) {
     if (i < ENTETES_INSCRIPTION.length) feuille.setColumnWidth(i + 1, l);
@@ -226,7 +226,7 @@ function creerOngletInscription(ss, nomFeuille, estMaitre) {
       'Informatique & Bureautique', 1, '', '', '',
       'Message exemple', 'En attente',
       'CIP', 'CIP0123456789', '(lien Drive)', '(lien Drive)', '(lien Drive)', '—', '(lien Drive)',
-      10000, 45000, 22500, 11250, 11250, 32500, 'Non', 'En attente', 'Non', 'site'
+      10000, 45000, 22500, 11250, 11250, 32500, 'Non', 'En attente', 'Non', 'site', 0
     ];
     feuille.appendRow(ligneEx);
     feuille.getRange(2, 1, 1, ENTETES_INSCRIPTION.length)
@@ -535,7 +535,8 @@ function migrerRegularisationsVersInscriptions() {
         'Non',                                         // Paiement unique
         'Migré (voir montant payé)',                  // Statut paiement
         'Non',                                         // Rappel J+1 envoyé
-        'migration-regularisation'                     // Source
+        'migration-regularisation',                    // Source
+        0                                               // Téléchargements gratuits restants (n/a hors offre courte)
       ];
 
       ajouterLigneFeuille(ss, 'Toutes les inscriptions', ENTETES_INSCRIPTION, ligne, [10, 14, 18, 22]);

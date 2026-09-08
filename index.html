@@ -54,6 +54,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+  <script src="https://cdn.fedapay.com/checkout.js?v=1.1.7"></script>
 
   <style>
     :root {
@@ -1351,6 +1352,15 @@
 
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
 
+    // Compte FedaPay "Academy Phanos" utilisé temporairement en attendant
+    // la validation du compte propre à LQD Service par l'administration
+    // FedaPay. Le jour venu : remplacer uniquement ces 2 constantes,
+    // rien d'autre à toucher. Clé PUBLIQUE — normal qu'elle soit visible
+    // côté client, ce n'est pas un secret (contrairement à la clé privée,
+    // qui elle ne doit jamais quitter les variables d'environnement Vercel).
+    const FEDAPAY_PUBLIC_KEY    = 'pk_live_HC4iMRlrkg2VM8SWV1N7aVGD';
+    const FEDAPAY_ENVIRONNEMENT = 'live'; // Mettre 'sandbox' + pk_sandbox_... pour tester
+
     /* ================================================================
        BANDEAU D'INFORMATION — chargé au démarrage, masqué si l'admin
        ne l'a pas activé (voir bandeauGetPublic dans GAS/annonces.gs)
@@ -2088,7 +2098,37 @@ async function ouvrirDocument(type) {
 
   if (type === 'attestation') {
     PK.openModal('modal-attestation');
-    afficherAttestationCanvas(apprenant, token);
+    const preview = document.getElementById('attestation-preview');
+    preview.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--gray-500);">Vérification de l\'accès...</div>';
+
+    try {
+      const resp = await fetch(GAS_WEBAPP_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body:    JSON.stringify({ action: 'verifier_acces_telechargement', id: apprenant.id })
+      });
+      const result = await resp.json();
+
+      if (result.status !== 'success') {
+        preview.innerHTML = `<div style="text-align:center;padding:2.5rem;color:#c0392b;">${result.message || 'Erreur.'}</div>`;
+        return;
+      }
+
+      if (result.accesAutorise) {
+        afficherAttestationCanvas(apprenant, token);
+        // Décrément après affichage réussi — ne bloque jamais l'utilisateur
+        // si cet appel échoue, c'est purement du suivi côté serveur.
+        fetch(GAS_WEBAPP_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id })
+        }).catch(() => {});
+      } else {
+        afficherPromptPaiementTelechargement(apprenant, result.montant);
+      }
+    } catch (e) {
+      preview.innerHTML = '<div style="text-align:center;padding:2.5rem;color:#c0392b;">Erreur réseau. Réessayez.</div>';
+    }
   } else if (type === 'fiche') {
     PK.openModal('modal-fiche-apprenant');
     afficherFicheApprenant(apprenant, token);
@@ -2096,6 +2136,64 @@ async function ouvrirDocument(type) {
     PK.openModal('modal-badge-certification');
     afficherBadgeCertification(apprenant, token);
   }
+}
+
+// Écran affiché à la place de l'attestation quand le palier de
+// téléchargements gratuits est épuisé.
+function afficherPromptPaiementTelechargement(apprenant, montant) {
+  const preview = document.getElementById('attestation-preview');
+  preview.innerHTML = `
+    <div style="text-align:center;padding:2.5rem 1.5rem;">
+      <span class="iconify" data-icon="tabler:lock" style="font-size:48px;color:var(--orange-500);"></span>
+      <h3 style="margin:16px 0 8px;">Téléchargements supplémentaires</h3>
+      <p style="color:var(--gray-500);margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.6;">
+        Vos téléchargements gratuits sont épuisés. Débloquez 5 nouveaux téléchargements de votre attestation pour ${formatFCFA(montant)}, à régler via Mobile Money.
+      </p>
+      <button class="btn-primary" id="btn-payer-telechargement" onclick="payerTelechargementAttestation('${apprenant.id}', ${montant})">
+        <span class="iconify" data-icon="tabler:device-mobile"></span> Payer ${formatFCFA(montant)} via Mobile Money
+      </button>
+      <p style="font-size:.78rem;color:var(--gray-400);margin-top:20px;line-height:1.6;max-width:380px;margin-left:auto;margin-right:auto;">
+        Vous pouvez aussi envoyer directement ${formatFCFA(montant)} via Mobile Money au
+        <strong>01 97 95 12 30 (MTN)</strong> ou <strong>01 60 98 90 94 (Moov)</strong>,
+        puis envoyer la capture d'écran du transfert
+        <a href="https://wa.me/22997951230" target="_blank" rel="noopener" style="color:var(--teal-600);font-weight:600;">par WhatsApp</a>
+        pour confirmation.
+      </p>
+    </div>`;
+}
+
+function payerTelechargementAttestation(id, montant) {
+  const btn = document.getElementById('btn-payer-telechargement');
+  const libelleInitial = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Ouverture du paiement...'; }
+
+  const widget = FedaPay.init({
+    public_key:  FEDAPAY_PUBLIC_KEY,
+    environment: FEDAPAY_ENVIRONNEMENT,
+    locale: 'fr',
+    transaction: {
+      amount: montant,
+      description: 'LQD Service — Déblocage téléchargements attestation',
+      custom_metadata: { id }
+    },
+    currency: { iso: 'XOF' },
+    onComplete: function (resultat) {
+      if (btn) { btn.disabled = false; btn.innerHTML = libelleInitial; }
+      if (resultat.reason === FedaPay.DIALOG_DISMISSED) return;
+
+      const preview = document.getElementById('attestation-preview');
+      preview.innerHTML = `
+        <div style="text-align:center;padding:2.5rem;">
+          <span class="iconify" data-icon="tabler:clock" style="font-size:40px;color:var(--teal-600);"></span>
+          <p style="margin-top:16px;color:var(--gray-500);">Paiement reçu — confirmation en cours...</p>
+        </div>`;
+
+      // Le webhook FedaPay confirme côté serveur avec un léger délai —
+      // on retente l'accès automatiquement après quelques secondes.
+      setTimeout(() => ouvrirDocument('attestation'), 4000);
+    }
+  });
+  widget.open();
 }
 
 /* ================================================================

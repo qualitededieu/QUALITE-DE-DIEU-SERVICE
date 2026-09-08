@@ -209,6 +209,103 @@ function _urlImageDriveDirecte(url) {
   return url;
 }
 
+// ================================================================
+// PALIER DE TÉLÉCHARGEMENT PAYANT — uniquement pour l'offre
+// "Initiation rapide (1 mois)". 1er téléchargement payant (3000 F),
+// puis 5 gratuits, puis paiement à nouveau (cycle de 6).
+// ================================================================
+
+// Retrouve la ligne + la feuille d'un apprenant par ID. Renvoyé une
+// seule fois ici pour éviter de dupliquer la recherche dans les 3
+// fonctions ci-dessous.
+function _trouverLigneInscription(id) {
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return null;
+  const feuille = ss.getSheetByName('Toutes les inscriptions');
+  if (!feuille) return null;
+
+  const donnees = feuille.getDataRange().getValues();
+  for (let i = 1; i < donnees.length; i++) {
+    if (String(donnees[i][0]).trim() === id) {
+      return { feuille, ligneIndex: i + 1, row: donnees[i] };
+    }
+  }
+  return null;
+}
+
+function verifierAccesTelechargement(data) {
+  const id = String(data.id || '').trim();
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  const trouve = _trouverLigneInscription(id);
+  if (!trouve) return reponseJSON({ status: 'error', message: 'Dossier introuvable.' });
+
+  const filiere = String(trouve.row[22] || '');
+  if (!filiere.includes(CONFIG.FORMATION_COURTE.NOM)) {
+    // Filières longues : accès illimité, non concernées par ce palier.
+    return reponseJSON({ status: 'success', accesAutorise: true });
+  }
+
+  const restants = Number(trouve.row[46]) || 0;
+  if (restants > 0) {
+    return reponseJSON({ status: 'success', accesAutorise: true, restants });
+  }
+
+  return reponseJSON({
+    status: 'success',
+    accesAutorise: false,
+    montant: CONFIG.TELECHARGEMENT.FRAIS
+  });
+}
+
+// Décrémente le compteur d'un téléchargement — à appeler UNE FOIS,
+// juste après avoir effectivement affiché/servi le document à
+// l'apprenant. Ne bloque jamais l'affichage en cas d'échec d'écriture
+// (mieux vaut un compteur légèrement optimiste qu'un document promis
+// mais jamais délivré après un paiement réel).
+function enregistrerTelechargement(data) {
+  const id = String(data.id || '').trim();
+  if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  try {
+    const trouve = _trouverLigneInscription(id);
+    if (!trouve) return reponseJSON({ status: 'success' });
+
+    const filiere = String(trouve.row[22] || '');
+    if (!filiere.includes(CONFIG.FORMATION_COURTE.NOM)) {
+      return reponseJSON({ status: 'success' }); // Illimité, rien à décrémenter
+    }
+
+    const restants = Math.max(0, (Number(trouve.row[46]) || 0) - 1);
+    trouve.feuille.getRange(trouve.ligneIndex, 47).setValue(restants);
+    return reponseJSON({ status: 'success', restants });
+  } catch (err) {
+    console.error('[Téléchargement] Erreur décrément :', err);
+    return reponseJSON({ status: 'success' });
+  }
+}
+
+// Appelée par le webhook FedaPay (Vercel) après paiement confirmé —
+// authentifiée par secret partagé, pas par session utilisateur.
+function confirmerPaiementTelechargement(data) {
+  const secretAttendu = PropertiesService.getScriptProperties().getProperty('SECRET_PARTAGE');
+  if (!secretAttendu || data.secretPartage !== secretAttendu) {
+    console.warn('[Téléchargement] Tentative de confirmation avec secret invalide.');
+    return reponseJSON({ erreur: 'Non autorisé.' }, 403);
+  }
+
+  const id = String(data.id || '').trim();
+  if (!id) return reponseJSON({ erreur: 'ID manquant.' }, 400);
+
+  const trouve = _trouverLigneInscription(id);
+  if (!trouve) return reponseJSON({ erreur: 'Dossier introuvable.' }, 404);
+
+  trouve.feuille.getRange(trouve.ligneIndex, 47).setValue(CONFIG.TELECHARGEMENT.TELECHARGEMENTS_PAR_PALIER);
+
+  console.log('[Téléchargement] Paiement confirmé pour', id, '— référence FedaPay :', data.referenceFedapay || '—');
+  return reponseJSON({ status: 'success' });
+}
+
 function _genererTokenCarte(apprenant) {
   const payload = {
     id:           apprenant.id,
