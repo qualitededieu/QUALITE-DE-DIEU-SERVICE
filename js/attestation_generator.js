@@ -55,6 +55,19 @@ const ATT_MODULE_MANAGEMENT = {
   texte: "Initiation à la gestion d'entreprise et à l'entrepreneuriat.",
 };
 
+// Intitulé affiché sur l'attestation — peut différer de l'identifiant
+// produit interne (utilisé pour la tarification, l'admin, le Sheet).
+// Ne jamais modifier CONFIG.FORMATION_COURTE.NOM directement : ça
+// casserait la tarification et la logique d'exclusivité du formulaire.
+const ATT_NOMS_AFFICHAGE = {
+  "Initiation rapide (1 mois)": "Bureautique & Internet — Niveau Initiation",
+};
+
+function _intituleAffichage(filiere, estStage) {
+  if (!filiere) return estStage ? "Stage professionnel" : "Formation professionnelle";
+  return ATT_NOMS_AFFICHAGE[filiere] || filiere;
+}
+
 function _competencesLongue(filiereStr) {
   const filieres = String(filiereStr || "").split(",").map(s => s.trim()).filter(Boolean);
   const parCategorie = new Map();
@@ -355,13 +368,17 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillStyle = ATT.BLANC;
     ctx.fillText(ATT_ENTREPRISE.NOM, 406, 158);
 
-    _font(ctx, 40, "normal", "DM Sans");
+    _font(ctx, 34, "normal", "DM Sans");
     ctx.fillStyle = ATT.OR_LIGHT;
-    ctx.fillText(ATT_ENTREPRISE.SUFFIXE, 406, 224);
+    ctx.fillText("Centre de Formation Professionnelle en Informatique", 406, 204);
 
-    _font(ctx, 32, "normal", "DM Sans");
+    _font(ctx, 30, "normal", "DM Sans");
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.fillText("Imprimerie, Graphisme et Sérigraphie Numérique", 406, 240);
+
+    _font(ctx, 28, "normal", "DM Sans");
     ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillText(ATT_ENTREPRISE.ADRESSE, 406, 270);
+    ctx.fillText(ATT_ENTREPRISE.ADRESSE, 406, 278);
 
     _rect(ctx, 2510, 42, 3, 318, "rgba(245,166,35,0.4)");
 
@@ -369,7 +386,7 @@ async function genererAttestationCanvas(apprenant, token) {
     const infos = [
       { txt: ATT_ENTREPRISE.TEL,   bold: true,  color: ATT.BLANC },
       { txt: ATT_ENTREPRISE.EMAIL, bold: false, color: "rgba(255,255,255,0.75)" },
-      { txt: "www." + ATT_ENTREPRISE.SITE, bold: false, color: "rgba(255,255,255,0.55)" },
+      { txt: ATT_ENTREPRISE.SITE, bold: false, color: "rgba(255,255,255,0.55)" },
       { txt: "République du Bénin", bold: false, color: ATT.OR },
     ];
     infos.forEach((info, i) => {
@@ -597,7 +614,7 @@ async function genererAttestationCanvas(apprenant, token) {
     );
     posY += 80;
 
-    const intitule = apprenant.filiere || (estStage ? "Stage professionnel" : "Formation professionnelle");
+    const intitule = _intituleAffichage(apprenant.filiere, estStage);
     ctx.font = document.fonts.check("120px 'Great Vibes'")
       ? "120px 'Great Vibes'"
       : "italic bold 90px 'Times New Roman', Times, serif";
@@ -746,7 +763,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 28, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.4)";
-  const siteTxt = "www." + ATT_ENTREPRISE.SITE + "  —  " + ATT_ENTREPRISE.ADRESSE;
+  const siteTxt = ATT_ENTREPRISE.SITE + "  —  " + ATT_ENTREPRISE.ADRESSE;
   ctx.fillText(siteTxt, (ATT.W - _mw(ctx, siteTxt)) / 2, FTR_Y + 165);
 
   _rect(ctx, 0, ATT.H - 18, ATT.W, 18, ATT.OR);
