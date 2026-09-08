@@ -823,6 +823,26 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-attestation">
+  <div class="modal" style="max-width:820px;">
+    <div class="modal-header">
+      <h3>Aperçu de l'attestation</h3>
+      <button class="modal-close" onclick="fermerModal('modal-attestation')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="attestation-preview"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" id="btn-telecharger-attestation-png">
+        <span class="iconify" data-icon="tabler:photo"></span> PNG
+      </button>
+      <button class="btn btn-primary btn-sm" id="btn-telecharger-attestation-pdf">
+        <span class="iconify" data-icon="tabler:file-type-pdf"></span> Télécharger le PDF
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
     <span class="iconify" data-icon="tabler:alert-triangle"></span>
@@ -1362,6 +1382,12 @@ function renderModalDossier(d) {
         <input type="text" class="modal-select" id="input-niveau-atteint" placeholder="Ex. Niveau 2 — Photoshop avancé" value="${(d.niveauAtteint || '').replace(/"/g, '&quot;')}" />
       </div>
     </div>
+    <button class="btn btn-ghost btn-sm" onclick="apercuAttestation('${d.id}')" style="margin-bottom:16px;">
+      <span class="iconify" data-icon="tabler:certificate"></span> Aperçu de l'attestation
+    </button>
+    <p style="font-size:11px;color:var(--text-3);margin:-12px 0 16px;">
+      Génère l'attestation même si le téléchargement public est bloqué (site en construction).
+    </p>
     <div class="modal-section-title">Gestion du statut</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div>
@@ -2212,6 +2238,26 @@ document.addEventListener('keydown', e => {
     document.getElementById('sidebar').classList.remove('open');
   }
 });
+
+async function apercuAttestation(id) {
+  try {
+    ouvrirModal('modal-attestation');
+    document.getElementById('attestation-preview').innerHTML =
+      '<div style="text-align:center;padding:2.5rem;color:var(--text-3);">Chargement...</div>';
+
+    const result = await apiCall('admin_apercu_attestation', { id });
+    if (result.status !== 'success') {
+      toast(result.message || "Impossible de générer l'aperçu.", 'error');
+      fermerModal('modal-attestation');
+      return;
+    }
+    afficherAttestationCanvas(result.apprenant, result.token);
+  } catch (e) {
+    toast('Erreur réseau.', 'error');
+    fermerModal('modal-attestation');
+  }
+}
 </script>
+<script src="js/attestation_generator.js"></script>
 </body>
 </html>
