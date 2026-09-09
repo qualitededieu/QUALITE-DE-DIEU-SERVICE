@@ -2,7 +2,7 @@
 
 (function () {
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
 
   const FORMATIONS = {
     informatique:   { label: 'Informatique & Bureautique', duree: '3 mois', prix: '45 000 F' },
