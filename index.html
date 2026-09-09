@@ -2123,6 +2123,8 @@ async function ouvrirDocument(type) {
           headers: { 'Content-Type': 'text/plain' },
           body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id })
         }).catch(() => {});
+      } else if (result.formationEnCours) {
+        afficherFormationEnCours(result.dateFin);
       } else {
         afficherPromptPaiementTelechargement(apprenant, result.montant);
       }
@@ -2136,6 +2138,24 @@ async function ouvrirDocument(type) {
     PK.openModal('modal-badge-certification');
     afficherBadgeCertification(apprenant, token);
   }
+}
+
+// Écran affiché quand la formation n'est pas encore terminée — aucun
+// paiement n'est même proposé tant que la date de fin n'est pas atteinte.
+function afficherFormationEnCours(dateFin) {
+  const preview = document.getElementById('attestation-preview');
+  const dateTxt = dateFin
+    ? new Date(dateFin).toLocaleDateString('fr-BJ', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  preview.innerHTML = `
+    <div style="text-align:center;padding:2.5rem 1.5rem;">
+      <span class="iconify" data-icon="tabler:hourglass-high" style="font-size:48px;color:var(--teal-600);"></span>
+      <h3 style="margin:16px 0 8px;">Formation en cours</h3>
+      <p style="color:var(--gray-500);max-width:380px;margin:0 auto;line-height:1.6;">
+        Votre attestation sera disponible au téléchargement à partir du
+        <strong>${dateTxt}</strong>, une fois votre formation terminée.
+      </p>
+    </div>`;
 }
 
 // Écran affiché à la place de l'attestation quand le palier de

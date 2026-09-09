@@ -183,7 +183,7 @@ function _ecrireEnTeteInscription(feuille, estMaitre) {
   feuille.getRange('E2:E1000').setDataValidation(regleSexe);
 
   const regleStatutDossier = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['En attente', 'Confirmé', 'Annulé', 'Migré'], true)
+    .requireValueInList(['En attente', 'Confirmé', 'Terminé', 'Annulé', 'Migré'], true)
     .setAllowInvalid(false).build();
   feuille.getRange('AC2:AC1000').setDataValidation(regleStatutDossier);
 
@@ -564,6 +564,82 @@ function supprimerFeuilleRegularisations() {
 
   ss.deleteSheet(feuille);
   console.log('[Migration] Feuille "Régularisations" supprimée définitivement.');
+}
+
+/* ================================================================
+   PASSAGE AUTOMATIQUE AU STATUT "TERMINÉ"
+   Dès que la Date de fin d'un dossier "Confirmé" est atteinte (1, 2,
+   3 mois ou toute formation longue), le statut bascule automatiquement
+   sur "Terminé" — sans action de l'admin. Fonctionne pour toutes les
+   feuilles (master + par filière).
+
+   MISE EN PLACE — à faire UNE SEULE FOIS :
+   1. Exécuter configurerDeclencheurQuotidien() depuis l'éditeur.
+   2. Vérifier dans Déclencheurs (icône ⏰ à gauche) qu'une entrée
+      "marquerFormationsTerminees" tourne bien chaque jour.
+================================================================ */
+function marquerFormationsTerminees() {
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) { console.error('[Auto-Terminé] Classeur introuvable.'); return; }
+
+  const feuilles = ['Toutes les inscriptions']
+    .concat(CONFIG.FORMATIONS_VALIDES)
+    .concat(['Multi-formations']);
+
+  const aujourdHui = new Date();
+  aujourdHui.setHours(0, 0, 0, 0);
+
+  let total = 0;
+
+  feuilles.forEach(nomFeuille => {
+    const feuille = ss.getSheetByName(nomFeuille);
+    if (!feuille || feuille.getLastRow() < 2) return;
+
+    const donnees = feuille.getDataRange().getValues();
+    let compteur = 0;
+
+    for (let i = 1; i < donnees.length; i++) {
+      const row = donnees[i];
+      if (!row[0]) continue;
+
+      const statut = String(row[28] || '').trim();
+      if (statut !== 'Confirmé') continue; // Seuls les dossiers confirmés basculent
+
+      const dateFinBrute = String(row[25] || '').trim();
+      if (!dateFinBrute) continue;
+
+      const dateFin = new Date(dateFinBrute);
+      if (isNaN(dateFin.getTime())) continue;
+      dateFin.setHours(0, 0, 0, 0);
+
+      if (aujourdHui >= dateFin) {
+        feuille.getRange(i + 1, 29).setValue('Terminé'); // Colonne 29 = Statut dossier
+        compteur++;
+      }
+    }
+
+    if (compteur > 0) console.log(`[Auto-Terminé] ${nomFeuille} : ${compteur} dossier(s) passé(s) à "Terminé".`);
+    total += compteur;
+  });
+
+  console.log(`[Auto-Terminé] Terminé : ${total} dossier(s) au total.`);
+}
+
+// À exécuter UNE SEULE FOIS pour installer le déclencheur quotidien.
+// Sans risque de doublon : supprime d'abord tout déclencheur existant
+// pour cette fonction avant d'en recréer un.
+function configurerDeclencheurQuotidien() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'marquerFormationsTerminees') ScriptApp.deleteTrigger(t);
+  });
+
+  ScriptApp.newTrigger('marquerFormationsTerminees')
+    .timeBased()
+    .everyDays(1)
+    .atHour(1) // Entre 1h et 2h du matin, heure du fuseau du projet
+    .create();
+
+  console.log('[Auto-Terminé] Déclencheur quotidien installé (tous les jours vers 1h).');
 }
 
 function verifierInit() {

@@ -1500,7 +1500,7 @@ function renderModalDossier(d) {
       <div>
         <label class="auth-label" style="margin-bottom:6px;">Statut dossier</label>
         <select class="modal-select" id="select-statut-dossier">
-          ${['En attente','Confirmé','Annulé','Migré'].map(s => `<option value="${s}" ${d.statutDossier === s ? 'selected' : ''}>${s}</option>`).join('')}
+          ${['En attente','Confirmé','Terminé','Annulé','Migré'].map(s => `<option value="${s}" ${d.statutDossier === s ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
       </div>
       <div>

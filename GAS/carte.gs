@@ -69,7 +69,7 @@ function getCarte(data) {
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
       const statut = String(row[28] || '').trim();
-      if (statut !== 'Confirmé' && statut !== 'Migré') continue;
+      if (statut !== 'Confirmé' && statut !== 'Migré' && statut !== 'Terminé') continue;
 
       const apprenant = _mapperApprenantInscription(row);
       const token     = _genererTokenCarte(apprenant);
@@ -239,6 +239,27 @@ function verifierAccesTelechargement(data) {
 
   const trouve = _trouverLigneInscription(id);
   if (!trouve) return reponseJSON({ status: 'error', message: 'Dossier introuvable.' });
+
+  // L'attestation ne se télécharge qu'après la fin réelle de la formation
+  // — pas avant, même si le dossier est déjà marqué "Confirmé" (ce qui
+  // n'atteste que l'inscription/le paiement initial, pas l'assiduité).
+  const dateFinBrute = String(trouve.row[25] || '').trim();
+  if (dateFinBrute) {
+    const dateFin = new Date(dateFinBrute);
+    if (!isNaN(dateFin.getTime())) {
+      const aujourdHui = new Date();
+      aujourdHui.setHours(0, 0, 0, 0);
+      dateFin.setHours(0, 0, 0, 0);
+      if (aujourdHui < dateFin) {
+        return reponseJSON({
+          status: 'success',
+          accesAutorise: false,
+          formationEnCours: true,
+          dateFin: dateFinBrute
+        });
+      }
+    }
+  }
 
   const filiere = String(trouve.row[22] || '');
   if (!filiere.includes(CONFIG.FORMATION_COURTE.NOM)) {
