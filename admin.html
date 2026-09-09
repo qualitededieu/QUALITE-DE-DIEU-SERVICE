@@ -855,6 +855,19 @@
   </div>
 </div>
 
+<div class="confirm-overlay" id="inactivite-overlay">
+  <div class="confirm-box">
+    <span class="iconify" data-icon="tabler:clock-alert" style="color:var(--orange, #E8901A);"></span>
+    <h4>Session sur le point d'expirer</h4>
+    <p>Vous serez déconnecté(e) par inactivité dans <strong id="inactivite-compteur">15</strong> secondes.</p>
+    <div class="confirm-box-btns">
+      <button class="btn btn-primary" id="btn-rester-connecte">
+        <span class="iconify" data-icon="tabler:refresh"></span> Rester connecté
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script>
@@ -882,8 +895,92 @@ async function apiCall(action, extra = {}) {
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload)
   });
-  return await resp.json();
+  const result = await resp.json();
+  if (result.status === 'auth_error') {
+    gererSessionExpiree();
+    throw new Error(result.message || 'Session expirée.');
+  }
+  return result;
 }
+
+/* ================================================================
+   EXPIRATION DE SESSION — déconnexion propre + retour direct à /admin
+   (côté serveur, via requireAuth) et inactivité côté client (voir
+   plus bas : compte à rebours de 15s après 3 min sans interaction).
+================================================================ */
+function gererSessionExpiree() {
+  arreterSurveillanceInactivite();
+  sessionStorage.clear();
+  toast('Session expirée. Reconnexion nécessaire.', 'error');
+  setTimeout(() => { window.location.href = '/admin'; }, 800);
+}
+
+/* ================================================================
+   INACTIVITÉ — avertissement 15s avant déconnexion automatique
+   après 3 minutes sans interaction (souris, clavier, tactile).
+   Le minuteur d'inactivité se réinitialise à chaque geste tant que
+   l'avertissement n'est pas déclenché ; une fois affiché, seul le
+   bouton "Rester connecté" (ou une nouvelle interaction) l'annule.
+================================================================ */
+const INACTIVITE_AVANT_ALERTE_MS = 3 * 60 * 1000 - 15 * 1000; // 2 min 45 s
+const INACTIVITE_COMPTE_A_REBOURS_S = 15;
+
+let _minuteurInactivite   = null;
+let _intervalleCompteARebours = null;
+let _alerteInactiviteVisible  = false;
+
+function demarrerSurveillanceInactivite() {
+  arreterSurveillanceInactivite();
+  ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(evt => {
+    document.addEventListener(evt, _surReactionUtilisateur, { passive: true });
+  });
+  _reprogrammerAlerteInactivite();
+}
+
+function arreterSurveillanceInactivite() {
+  ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(evt => {
+    document.removeEventListener(evt, _surReactionUtilisateur);
+  });
+  clearTimeout(_minuteurInactivite);
+  clearInterval(_intervalleCompteARebours);
+  _minuteurInactivite = null;
+  _intervalleCompteARebours = null;
+  _alerteInactiviteVisible = false;
+  document.getElementById('inactivite-overlay').classList.remove('open');
+}
+
+function _surReactionUtilisateur() {
+  if (_alerteInactiviteVisible) return; // L'alerte affichée exige une action explicite
+  _reprogrammerAlerteInactivite();
+}
+
+function _reprogrammerAlerteInactivite() {
+  clearTimeout(_minuteurInactivite);
+  _minuteurInactivite = setTimeout(_afficherAlerteInactivite, INACTIVITE_AVANT_ALERTE_MS);
+}
+
+function _afficherAlerteInactivite() {
+  _alerteInactiviteVisible = true;
+  let secondesRestantes = INACTIVITE_COMPTE_A_REBOURS_S;
+  document.getElementById('inactivite-compteur').textContent = secondesRestantes;
+  document.getElementById('inactivite-overlay').classList.add('open');
+
+  _intervalleCompteARebours = setInterval(() => {
+    secondesRestantes--;
+    document.getElementById('inactivite-compteur').textContent = Math.max(0, secondesRestantes);
+    if (secondesRestantes <= 0) {
+      clearInterval(_intervalleCompteARebours);
+      gererSessionExpiree();
+    }
+  }, 1000);
+}
+
+document.getElementById('btn-rester-connecte').addEventListener('click', () => {
+  _alerteInactiviteVisible = false;
+  clearInterval(_intervalleCompteARebours);
+  document.getElementById('inactivite-overlay').classList.remove('open');
+  _reprogrammerAlerteInactivite();
+});
 
 /* ================================================================
    AUTH
@@ -1061,11 +1158,13 @@ function ouvrirSession(token, email) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
   document.getElementById('sidebar-email').textContent = email;
+  demarrerSurveillanceInactivite();
   chargerDashboard();
 }
 
 function deconnecter() {
   confirmer('Déconnexion', 'Êtes-vous sûr de vouloir vous déconnecter ?', () => {
+    arreterSurveillanceInactivite();
     sessionStorage.clear(); location.reload();
   });
 }
@@ -1078,6 +1177,7 @@ function deconnecter() {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     document.getElementById('sidebar-email').textContent = email;
+    demarrerSurveillanceInactivite();
     chargerDashboard();
   }
 })();
