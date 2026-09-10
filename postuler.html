@@ -153,12 +153,16 @@
       EN DIRECT
     </div>
     <div style="display:inline-block;overflow:hidden;vertical-align:middle;width:calc(100% - 100px);">
-      <div id="bandeau-texte" style="width:100%;text-align:center;padding:6px 0;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:1;transition:opacity .5s ease;">
+      <div id="bandeau-texte" style="width:100%;text-align:center;padding:6px 0;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:1;">
       </div>
     </div>
   </div>
   <style>
     @keyframes bandeau-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    @keyframes bandeau-sortie { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(-10px); } }
+    @keyframes bandeau-entree { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    #bandeau-texte.sortant { animation: bandeau-sortie .35s ease forwards; }
+    #bandeau-texte.entrant { animation: bandeau-entree .35s ease forwards; }
   </style>
 
 
@@ -863,12 +867,14 @@
 
             if (messages.length > 1) {
               setInterval(function () {
-                el.style.opacity = '0';
+                el.classList.add('sortant');
                 setTimeout(function () {
                   index = (index + 1) % messages.length;
                   el.textContent = messages[index];
-                  el.style.opacity = '1';
-                }, 500);
+                  el.classList.remove('sortant');
+                  el.classList.add('entrant');
+                  setTimeout(function () { el.classList.remove('entrant'); }, 350);
+                }, 350);
               }, dureeMs);
             }
           }
