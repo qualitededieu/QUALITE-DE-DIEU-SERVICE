@@ -323,9 +323,21 @@
             body: JSON.stringify({ action: 'bandeau_get_public' })
           });
           const result = await resp.json();
-          if (result.status === 'success' && result.actif && result.texte) {
-            document.getElementById('bandeau-texte').textContent = result.texte;
+          if (result.status === 'success' && result.actif && result.messages && result.messages.length > 0) {
+            const el = document.getElementById('bandeau-texte');
+            const messages = result.messages;
+            const dureeMs  = (result.dureeRotationSec || 8) * 1000;
+            let index = 0;
+
+            el.textContent = messages[0];
             document.getElementById('bandeau-info').style.display = 'block';
+
+            if (messages.length > 1) {
+              setInterval(() => {
+                index = (index + 1) % messages.length;
+                el.textContent = messages[index];
+              }, dureeMs);
+            }
           }
         } catch (e) {}
       }

@@ -642,6 +642,52 @@ function configurerDeclencheurQuotidien() {
   console.log('[Auto-Terminé] Déclencheur quotidien installé (tous les jours vers 1h).');
 }
 
+// Contrairement à repararEnTetesInscription (qui ne touche à rien si le
+// TEXTE des en-têtes est déjà correct), cette fonction réapplique les
+// validations de données sur TOUTES les feuilles, inconditionnellement.
+// À exécuter chaque fois que la LISTE des valeurs valides change (ex. :
+// ajout de "Terminé") sans que les noms de colonnes changent — sinon
+// repararEnTetesInscription ne voit aucune raison de rien réécrire.
+function rafraichirValidationsToutesFeuilles() {
+  Logger.log('=== RAFRAÎCHISSEMENT DES VALIDATIONS — Démarrage ===');
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) { Logger.log('[ERREUR] Spreadsheet introuvable.'); return; }
+
+  const feuilles = ['Toutes les inscriptions']
+    .concat(CONFIG.FORMATIONS_VALIDES)
+    .concat(['Multi-formations']);
+
+  feuilles.forEach(function (nomFeuille) {
+    const feuille = ss.getSheetByName(nomFeuille);
+    if (!feuille) { Logger.log('[IGNORÉ] Onglet introuvable : ' + nomFeuille); return; }
+
+    feuille.getRange(1, 1, feuille.getMaxRows(), feuille.getMaxColumns()).clearDataValidations();
+
+    const regleSexe = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['M', 'F'], true).setAllowInvalid(false).build();
+    feuille.getRange('E2:E1000').setDataValidation(regleSexe);
+
+    const regleStatutDossier = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['En attente', 'Confirmé', 'Terminé', 'Annulé', 'Migré'], true)
+      .setAllowInvalid(false).build();
+    feuille.getRange('AC2:AC1000').setDataValidation(regleStatutDossier);
+
+    const reglePaiementUnique = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Oui', 'Non'], true).setAllowInvalid(false).build();
+    feuille.getRange('AQ2:AQ1000').setDataValidation(reglePaiementUnique);
+
+    const reglePaiement = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['En attente', 'Reçu', 'Vérifié', 'Migré (voir montant payé)'], true)
+      .setAllowInvalid(false).build();
+    feuille.getRange('AR2:AR1000').setDataValidation(reglePaiement);
+
+    Logger.log('[OK] Validations rafraîchies : ' + nomFeuille);
+  });
+
+  Logger.log('=== RAFRAÎCHISSEMENT DES VALIDATIONS — Terminé ===');
+}
+
 function verifierInit() {
   Logger.log('=== VÉRIFICATION INIT ===');
   Logger.log('');

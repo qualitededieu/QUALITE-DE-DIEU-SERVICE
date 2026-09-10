@@ -259,6 +259,17 @@ function _parseMissionsStageJSON(valeurCellule) {
 }
 
 function candidatureAttestationGetData(data) {
+  // Même interrupteur temporaire que l'espace apprenant (voir getCarte
+  // dans carte.gs) — le site étant en construction, on peut couper
+  // l'accès aux deux sans toucher au code.
+  const bloque = PropertiesService.getScriptProperties().getProperty('TELECHARGEMENT_BLOQUE') === 'true';
+  if (bloque) {
+    return reponseJSON({
+      status: 'error',
+      message: "L'espace candidat est temporairement indisponible — le site est en cours de finalisation. Merci de réessayer bientôt."
+    });
+  }
+
   const id        = String(data.id        || '').trim();
   const telephone = String(data.telephone || '').trim();
 

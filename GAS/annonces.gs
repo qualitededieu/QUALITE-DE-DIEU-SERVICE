@@ -369,11 +369,21 @@ function adminAnnonceSupprimer(data, email) {
 
 function _getBandeauConfig() {
   const brut = PropertiesService.getScriptProperties().getProperty('BANDEAU_CONFIG');
-  if (!brut) return { actif: false, texte: '' };
+  const parDefaut = { actif: false, messages: [], dureeRotationSec: 8 };
+  if (!brut) return parDefaut;
   try {
-    return JSON.parse(brut);
+    const config = JSON.parse(brut);
+    // Rétrocompatibilité : ancien format { actif, texte } à un seul message.
+    if (config.texte !== undefined && !Array.isArray(config.messages)) {
+      return { actif: !!config.actif, messages: config.texte ? [{ texte: config.texte, actif: true }] : [], dureeRotationSec: 8 };
+    }
+    return {
+      actif: !!config.actif,
+      messages: Array.isArray(config.messages) ? config.messages : [],
+      dureeRotationSec: Number(config.dureeRotationSec) || 8
+    };
   } catch (e) {
-    return { actif: false, texte: '' };
+    return parDefaut;
   }
 }
 
@@ -382,19 +392,34 @@ function adminBandeauGet(data, email) {
 }
 
 function adminBandeauSet(data, email) {
-  const texte = nettoyer(data.texte || '');
+  const messages = Array.isArray(data.messages)
+    ? data.messages.map(m => ({ texte: nettoyer(m.texte || ''), actif: !!m.actif })).filter(m => m.texte)
+    : [];
   const actif = !!data.actif;
+  const dureeRotationSec = Math.max(3, Math.min(60, Number(data.dureeRotationSec) || 8));
 
-  if (actif && !texte) {
-    return reponseJSON({ status: 'error', message: 'Un bandeau actif doit avoir un texte.' });
+  if (actif && messages.filter(m => m.actif).length === 0) {
+    return reponseJSON({ status: 'error', message: 'Au moins un message actif est requis.' });
   }
 
-  PropertiesService.getScriptProperties().setProperty('BANDEAU_CONFIG', JSON.stringify({ actif, texte }));
+  PropertiesService.getScriptProperties().setProperty(
+    'BANDEAU_CONFIG',
+    JSON.stringify({ actif, messages, dureeRotationSec })
+  );
   return reponseJSON({ status: 'success', message: 'Bandeau mis à jour.' });
 }
 
 function bandeauGetPublic(data) {
   const config = _getBandeauConfig();
-  if (!config.actif) return reponseJSON({ status: 'success', actif: false, texte: '' });
-  return reponseJSON({ status: 'success', actif: true, texte: config.texte });
+  if (!config.actif) return reponseJSON({ status: 'success', actif: false, messages: [] });
+
+  const messagesActifs = config.messages.filter(m => m.actif).map(m => m.texte);
+  if (messagesActifs.length === 0) return reponseJSON({ status: 'success', actif: false, messages: [] });
+
+  return reponseJSON({
+    status: 'success',
+    actif: true,
+    messages: messagesActifs,
+    dureeRotationSec: config.dureeRotationSec
+  });
 }

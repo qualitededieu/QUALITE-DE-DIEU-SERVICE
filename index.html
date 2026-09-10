@@ -1362,8 +1362,9 @@
     const FEDAPAY_ENVIRONNEMENT = 'live'; // Mettre 'sandbox' + pk_sandbox_... pour tester
 
     /* ================================================================
-       BANDEAU D'INFORMATION — chargé au démarrage, masqué si l'admin
-       ne l'a pas activé (voir bandeauGetPublic dans GAS/annonces.gs)
+       BANDEAU D'INFORMATION — plusieurs messages possibles côté admin,
+       affichés un par un en rotation (voir bandeauGetPublic dans
+       GAS/annonces.gs). Masqué si l'admin ne l'a pas activé.
     ================================================================ */
     async function chargerBandeau() {
       try {
@@ -1373,10 +1374,22 @@
           body: JSON.stringify({ action: 'bandeau_get_public' })
         });
         const result = await resp.json();
-        if (result.status === 'success' && result.actif && result.texte) {
-          document.getElementById('bandeau-texte').textContent = result.texte;
+        if (result.status === 'success' && result.actif && result.messages && result.messages.length > 0) {
+          const el = document.getElementById('bandeau-texte');
+          const messages = result.messages;
+          const dureeMs  = (result.dureeRotationSec || 8) * 1000;
+          let index = 0;
+
+          el.textContent = messages[0];
           document.getElementById('bandeau-info').style.display = 'flex';
           document.body.classList.add('bandeau-visible');
+
+          if (messages.length > 1) {
+            setInterval(() => {
+              index = (index + 1) % messages.length;
+              el.textContent = messages[index];
+            }, dureeMs);
+          }
         }
       } catch (e) {
         // Silencieux : l'absence de bandeau n'est jamais bloquante pour le reste du site

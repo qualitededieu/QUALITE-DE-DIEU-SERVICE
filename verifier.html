@@ -667,9 +667,21 @@
             body: JSON.stringify({ action: 'bandeau_get_public' })
           });
           var result = await resp.json();
-          if (result.status === 'success' && result.actif && result.texte) {
-            document.getElementById('bandeau-texte').textContent = result.texte;
+          if (result.status === 'success' && result.actif && result.messages && result.messages.length > 0) {
+            var el = document.getElementById('bandeau-texte');
+            var messages = result.messages;
+            var dureeMs  = (result.dureeRotationSec || 8) * 1000;
+            var index = 0;
+
+            el.textContent = messages[0];
             document.getElementById('bandeau-info').style.display = 'block';
+
+            if (messages.length > 1) {
+              setInterval(function () {
+                index = (index + 1) % messages.length;
+                el.textContent = messages[index];
+              }, dureeMs);
+            }
           }
         } catch (e) {}
       }
