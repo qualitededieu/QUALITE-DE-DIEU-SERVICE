@@ -2187,9 +2187,9 @@ function afficherPromptPaiementTelechargement(apprenant, montant) {
   preview.innerHTML = `
     <div style="text-align:center;padding:2.5rem 1.5rem;">
       <span class="iconify" data-icon="tabler:lock" style="font-size:48px;color:var(--orange-500);"></span>
-      <h3 style="margin:16px 0 8px;">Téléchargements supplémentaires</h3>
+      <h3 style="margin:16px 0 8px;">Débloquer votre attestation</h3>
       <p style="color:var(--gray-500);margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.6;">
-        Vos téléchargements gratuits sont épuisés. Débloquez 5 nouveaux téléchargements de votre attestation pour ${formatFCFA(montant)}, à régler via Mobile Money.
+        Le téléchargement de votre attestation nécessite un paiement unique de ${formatFCFA(montant)} via Mobile Money. Ce paiement débloque 6 téléchargements, celui-ci inclus.
       </p>
       <button class="btn-primary" id="btn-payer-telechargement" onclick="payerTelechargementAttestation('${apprenant.id}', ${montant})">
         <span class="iconify" data-icon="tabler:device-mobile"></span> Payer ${formatFCFA(montant)} via Mobile Money
