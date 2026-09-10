@@ -369,18 +369,18 @@ function adminAnnonceSupprimer(data, email) {
 
 function _getBandeauConfig() {
   const brut = PropertiesService.getScriptProperties().getProperty('BANDEAU_CONFIG');
-  const parDefaut = { actif: false, messages: [], dureeRotationSec: 8 };
+  const parDefaut = { actif: false, messages: [], dureeRotationSec: 12 };
   if (!brut) return parDefaut;
   try {
     const config = JSON.parse(brut);
     // Rétrocompatibilité : ancien format { actif, texte } à un seul message.
     if (config.texte !== undefined && !Array.isArray(config.messages)) {
-      return { actif: !!config.actif, messages: config.texte ? [{ texte: config.texte, actif: true }] : [], dureeRotationSec: 8 };
+      return { actif: !!config.actif, messages: config.texte ? [{ texte: config.texte, actif: true }] : [], dureeRotationSec: 12 };
     }
     return {
       actif: !!config.actif,
       messages: Array.isArray(config.messages) ? config.messages : [],
-      dureeRotationSec: Number(config.dureeRotationSec) || 8
+      dureeRotationSec: Number(config.dureeRotationSec) || 12
     };
   } catch (e) {
     return parDefaut;
@@ -396,7 +396,7 @@ function adminBandeauSet(data, email) {
     ? data.messages.map(m => ({ texte: nettoyer(m.texte || ''), actif: !!m.actif })).filter(m => m.texte)
     : [];
   const actif = !!data.actif;
-  const dureeRotationSec = Math.max(3, Math.min(60, Number(data.dureeRotationSec) || 8));
+  const dureeRotationSec = Math.max(3, Math.min(60, Number(data.dureeRotationSec) || 12));
 
   if (actif && messages.filter(m => m.actif).length === 0) {
     return reponseJSON({ status: 'error', message: 'Au moins un message actif est requis.' });

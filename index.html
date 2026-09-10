@@ -382,7 +382,7 @@
       EN DIRECT
     </div>
     <div style="flex:1;overflow:hidden;height:100%;display:flex;align-items:center;">
-      <div id="bandeau-texte" style="display:inline-block;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 22s linear infinite;">
+      <div id="bandeau-texte" style="display:inline-block;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 12s linear infinite;">
       </div>
     </div>
   </div>
@@ -1377,7 +1377,7 @@
         if (result.status === 'success' && result.actif && result.messages && result.messages.length > 0) {
           const el = document.getElementById('bandeau-texte');
           const messages = result.messages;
-          const dureeMs  = (result.dureeRotationSec || 8) * 1000;
+          const dureeMs  = (result.dureeRotationSec || 12) * 1000;
           let index = 0;
 
           el.textContent = messages[0];

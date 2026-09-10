@@ -676,7 +676,7 @@
 
           <label class="auth-label" for="bandeau-duree-input">Durée d'affichage par message</label>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
-            <input type="number" id="bandeau-duree-input" class="auth-input" style="max-width:100px;" min="3" max="60" value="8" />
+            <input type="number" id="bandeau-duree-input" class="auth-input" style="max-width:100px;" min="3" max="60" value="12" />
             <span style="font-size:13px;color:var(--text-3);">secondes</span>
           </div>
 
@@ -2270,9 +2270,9 @@ let _messagesBandeau = [];
 async function chargerBandeauAdmin() {
   try {
     const result = await apiCall('admin_bandeau_get');
-    const bandeau = result.bandeau || { actif: false, messages: [], dureeRotationSec: 8 };
+    const bandeau = result.bandeau || { actif: false, messages: [], dureeRotationSec: 12 };
     document.getElementById('bandeau-actif').checked = !!bandeau.actif;
-    document.getElementById('bandeau-duree-input').value = bandeau.dureeRotationSec || 8;
+    document.getElementById('bandeau-duree-input').value = bandeau.dureeRotationSec || 12;
     _messagesBandeau = Array.isArray(bandeau.messages) ? bandeau.messages : [];
     if (_messagesBandeau.length === 0) _messagesBandeau.push({ texte: '', actif: true });
     _rendreListeMessagesBandeau();
@@ -2309,7 +2309,7 @@ function retirerMessageBandeau(i) {
 
 async function enregistrerBandeau() {
   const actif = document.getElementById('bandeau-actif').checked;
-  const dureeRotationSec = Math.max(3, Math.min(60, Number(document.getElementById('bandeau-duree-input').value) || 8));
+  const dureeRotationSec = Math.max(3, Math.min(60, Number(document.getElementById('bandeau-duree-input').value) || 12));
   const statusEl = document.getElementById('bandeau-save-status');
   const btn      = document.getElementById('btn-bandeau-save');
 
