@@ -382,13 +382,12 @@
       EN DIRECT
     </div>
     <div style="flex:1;overflow:hidden;height:100%;display:flex;align-items:center;">
-      <div id="bandeau-texte" style="display:inline-block;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;padding-left:100%;animation:bandeau-scroll 12s linear infinite;">
+      <div id="bandeau-texte" style="width:100%;text-align:center;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:1;transition:opacity .5s ease;">
       </div>
     </div>
   </div>
   <style>
     @keyframes bandeau-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
-    @keyframes bandeau-scroll { from{transform:translateX(0);} to{transform:translateX(-100%);} }
     body.bandeau-visible #navbar{ top:36px; }
     body.bandeau-visible #hero{ padding-top:104px; }
   </style>
@@ -1386,8 +1385,12 @@
 
           if (messages.length > 1) {
             setInterval(() => {
-              index = (index + 1) % messages.length;
-              el.textContent = messages[index];
+              el.style.opacity = '0';
+              setTimeout(() => {
+                index = (index + 1) % messages.length;
+                el.textContent = messages[index];
+                el.style.opacity = '1';
+              }, 500);
             }, dureeMs);
           }
         }
