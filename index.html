@@ -1355,14 +1355,18 @@
 
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
 
-    // Compte FedaPay "Academy Phanos" utilisé temporairement en attendant
+       // Compte FedaPay "Academy Phanos" utilisé temporairement en attendant
     // la validation du compte propre à LQD Service par l'administration
-    // FedaPay. Le jour venu : remplacer uniquement ces 2 constantes,
-    // rien d'autre à toucher. Clé PUBLIQUE — normal qu'elle soit visible
-    // côté client, ce n'est pas un secret (contrairement à la clé privée,
-    // qui elle ne doit jamais quitter les variables d'environnement Vercel).
-    const FEDAPAY_PUBLIC_KEY    = 'pk_live_HC4iMRlrkg2VM8SWV1N7aVGD';
-    const FEDAPAY_ENVIRONNEMENT = 'live'; // Mettre 'sandbox' + pk_sandbox_... pour tester
+    // FedaPay. Le jour venu : remplacer les 2 clés ci-dessous par celles
+    // de LQD, rien d'autre à toucher. Clés PUBLIQUES — normal qu'elles
+    // soient visibles côté client, ce n'est pas un secret (contrairement
+    // à la clé privée, qui elle ne doit jamais quitter Vercel).
+    const FEDAPAY_CLES_PUBLIQUES = {
+      live:    'pk_live_HC4iMRlrkg2VM8SWV1N7aVGD',
+      sandbox: 'pk_sandbox_dw3YfWGfx4i1ykzZZ8EeO9lY'
+    };
+    const FEDAPAY_ENVIRONNEMENT = 'sandbox'; // Seule ligne à changer : 'live' ou 'sandbox'
+    const FEDAPAY_PUBLIC_KEY    = FEDAPAY_CLES_PUBLIQUES[FEDAPAY_ENVIRONNEMENT];
 
     /* ================================================================
        BANDEAU D'INFORMATION — plusieurs messages possibles côté admin,
