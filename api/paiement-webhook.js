@@ -1,17 +1,29 @@
 const { Webhook } = require("fedapay");
 
+// Deux jeux de secrets distincts dans Vercel (FEDAPAY_WEBHOOK_SECRET pour
+// le live, FEDAPAY_WEBHOOK_SECRET_MODE_SANDBOX pour les tests) — on choisit
+// lequel utiliser via FEDAPAY_MODE, sans jamais copier de valeur d'une
+// variable à l'autre. Doit rester synchronisé avec FEDAPAY_ENVIRONNEMENT
+// dans index.html (même bascule, deux endroits).
+function _obtenirSecretWebhook() {
+  const mode = (process.env.FEDAPAY_MODE || "live").toLowerCase();
+  return mode === "sandbox"
+    ? process.env.FEDAPAY_WEBHOOK_SECRET_MODE_SANDBOX
+    : process.env.FEDAPAY_WEBHOOK_SECRET;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).end();
     return;
   }
 
-  const secretWebhook = process.env.FEDAPAY_WEBHOOK_SECRET;
+  const secretWebhook = _obtenirSecretWebhook();
   const urlGas         = process.env.GAS_URL;
   const secretGas       = process.env.GAS_SHARED_SECRET;
 
   if (!secretWebhook || !urlGas || !secretGas) {
-    console.error("Configuration serveur incomplète (FEDAPAY_WEBHOOK_SECRET, GAS_URL ou GAS_SHARED_SECRET absent).");
+    console.error("Configuration serveur incomplète (secret webhook selon FEDAPAY_MODE, GAS_URL ou GAS_SHARED_SECRET absent).");
     res.status(500).end();
     return;
   }
@@ -55,10 +67,9 @@ function lireCorpsBrut(req) {
 }
 
 // L'ID de l'apprenant LQD est transmis à la création de la transaction
-// (voir js/telechargement-paiement.js, champ custom_metadata.id) et
-// revient tel quel dans le webhook — c'est ce qui relie le paiement au
-// bon dossier, sans jamais faire confiance à une confirmation
-// uniquement côté navigateur.
+// (voir index.html, champ custom_metadata.id) et revient tel quel dans
+// le webhook — c'est ce qui relie le paiement au bon dossier, sans
+// jamais faire confiance à une confirmation uniquement côté navigateur.
 async function confirmerAupresDeGas(urlGas, secretGas, transaction) {
   const id = transaction.custom_metadata && transaction.custom_metadata.id;
   if (!id) {
