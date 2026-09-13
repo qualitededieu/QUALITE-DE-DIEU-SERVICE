@@ -21,6 +21,21 @@ const CONFIG = {
     'Création de sites web':      200000
   },
 
+  // Offre autonome à paiement unique — distincte des 4 filières longues
+  // ci-dessus qui restent sur le système de tranches (50/25/25%).
+  FORMATION_COURTE: {
+    NOM:               'Initiation rapide (1 mois)',
+    COUT:              25000,
+    FRAIS_INSCRIPTION: 5000
+  },
+
+  // Palier de téléchargement payant — uniquement pour FORMATION_COURTE.
+  // 1er téléchargement payant, puis 5 gratuits, puis paiement à nouveau.
+  TELECHARGEMENT: {
+    FRAIS:               3000,
+    TELECHARGEMENTS_PAR_PALIER: 6   // le payant + les 5 gratuits qui suivent
+  },
+
   BANQUE: {
     TITULAIRE:     'LES QUALITÉS DE DIEU SERVICE SARL',
     NOM_BANQUE:    'UBA Bénin',
@@ -33,7 +48,8 @@ const CONFIG = {
     'Informatique & Bureautique',
     'Graphisme & PAO',
     'Sérigraphie',
-    'Création de sites web'
+    'Création de sites web',
+    'Initiation rapide (1 mois)'
   ]
 };
 
@@ -42,26 +58,49 @@ const ENTETES_INSCRIPTION = [
   'Date',
   'Prénom',
   'Nom',
+  'Sexe',
+  'Date de naissance',
+  'Lieu de naissance',
+  'Nationalité',
+  'Adresse',
   'Téléphone',
   'Email',
+  'Prénom mère',
+  'Nom mère',
+  'Téléphone mère',
+  'Profession mère',
+  'Prénom père',
+  'Nom père',
+  'Téléphone père',
+  'Profession père',
+  'Prénom tuteur',
+  'Nom tuteur',
+  'Téléphone tuteur',
   'Formations',
   'Nombre de formations',
+  'Date entrée',
+  'Date fin',
+  'Niveau atteint',
   'Message',
   'Statut dossier',
   'Type pièce identité',
+  'Numéro pièce identité',
   'Pièce identité (Drive URL)',
   'Photo identité (Drive URL)',
+  'Signature (Drive URL)',
   'Preuve paiement (Drive URL)',
   'Dossier Drive (URL)',
   'Frais inscription (F)',
   'Coût formations total (F)',
-  'Tranche 1 — 50% (F)',
-  'Tranche 2 — 25% (F)',
-  'Tranche 3 — 25% (F)',
+  'Tranche 1 (F)',
+  'Tranche 2 (F)',
+  'Tranche 3 (F)',
   '1er versement attendu (F)',
+  'Paiement unique',
   'Statut paiement',
   'Rappel J+1 envoyé',
-  'Sexe'
+  'Source',
+  'Téléchargements gratuits restants'
 ];
 
 const ENTETES_RENSEIGNEMENT = [
@@ -92,9 +131,12 @@ function doPost(e) {
     const data   = JSON.parse(raw);
     const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
   if (action === 'bandeau_get_public') return bandeauGetPublic(data);
+  if (action === 'annonce_get_publique') return annonceGetPublique(data);
   if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
+  if (action === 'verifier_acces_telechargement') return verifierAccesTelechargement(data);
+  if (action === 'enregistrer_telechargement')    return enregistrerTelechargement(data);
+  if (action === 'confirmer_paiement_telechargement') return confirmerPaiementTelechargement(data);
   if (action === 'renseignement') return traiterRenseignement(data);
-  if (action === 'regularisation') return traiterRegularisation(data);
   if (action === 'chat_rdv') return enregistrerRdvChat(data);
   if (action === 'chat_lead') return enregistrerLeadChat(data);
   if (action === 'candidature') return enregistrerCandidature(data);
@@ -171,44 +213,72 @@ function traiterInscription(data) {
     return reponseJSON({ status: 'error', message: erreursFichiers.join(' ') });
   }
 
-  const formations = Array.isArray(data.formations)
+  const formationsBrutes = Array.isArray(data.formations)
     ? data.formations.filter(f => CONFIG.FORMATIONS_VALIDES.includes(f))
     : [data.formations].filter(f => CONFIG.FORMATIONS_VALIDES.includes(f));
 
-  if (formations.length === 0) {
+  if (formationsBrutes.length === 0) {
     return reponseJSON({ status: 'error', message: 'Aucune formation valide sélectionnée.' });
   }
+
+  // L'offre courte est exclusive : si elle est cochée, elle prime seule
+  // sur toute autre sélection (impossible de mélanger paiement unique
+  // et système de tranches dans le même dossier).
+  const estFormationCourte = formationsBrutes.includes(CONFIG.FORMATION_COURTE.NOM);
+  const formations = estFormationCourte ? [CONFIG.FORMATION_COURTE.NOM] : formationsBrutes;
 
   const montants = calculerMontantsTotal(formations);
 
   const inscription = {
-    id:              genererID(),
-    date:            new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }),
-    prenom:          nettoyer(data.prenom),
-    nom:             nettoyer(data.nom),
-    sexe:            nettoyer(data.sexe || ''),
-    telephone:       nettoyer(data.telephone),
-    email:           nettoyer(data.email || ''),
+    id:               genererID(),
+    date:             new Date().toLocaleString('fr-BJ', { timeZone: 'Africa/Porto-Novo' }),
+    prenom:           nettoyer(data.prenom),
+    nom:              nettoyer(data.nom),
+    sexe:             nettoyer(data.sexe || ''),
+    dateNaissance:    nettoyer(data.dateNaissance || ''),
+    lieuNaissance:    nettoyer(data.lieuNaissance || ''),
+    nationalite:      nettoyer(data.nationalite || 'Béninoise'),
+    adresse:          nettoyer(data.adresse || ''),
+    telephone:        nettoyer(data.telephone),
+    email:            nettoyer(data.email || ''),
+    prenomMere:       nettoyer(data.prenomMere || ''),
+    nomMere:          nettoyer(data.nomMere || ''),
+    telephoneMere:    nettoyer(data.telephoneMere || ''),
+    professionMere:   nettoyer(data.professionMere || ''),
+    prenomPere:       nettoyer(data.prenomPere || ''),
+    nomPere:          nettoyer(data.nomPere || ''),
+    telephonePere:    nettoyer(data.telephonePere || ''),
+    professionPere:   nettoyer(data.professionPere || ''),
+    prenomTuteur:     nettoyer(data.prenomTuteur || ''),
+    nomTuteur:        nettoyer(data.nomTuteur || ''),
+    telephoneTuteur:  nettoyer(data.telephoneTuteur || ''),
     formations,
-    formationsLabel: formations.join(' | '),
-    nbFormations:    formations.length,
-    message:         nettoyer(data.message || ''),
-    statut:          'En attente',
-    typePiece:       nettoyer(data.typePiece || 'Non spécifié'),
-    pieceUrl:        '',
-    photoUrl:        '',
-    preuveUrl:       '',
-    dossierUrl:      '',
-    statutPaiement:  'En attente',
-    rappelEnvoye:    'Non'
+    formationsLabel:  formations.join(' | '),
+    nbFormations:     formations.length,
+    dateEntree:       nettoyer(data.dateEntree || ''),
+    dateFin:          '',
+    niveauAtteint:    '',
+    message:          nettoyer(data.message || ''),
+    statut:           'En attente',
+    typePiece:        nettoyer(data.typePiece || 'Non spécifié'),
+    numeroPiece:      nettoyer(data.numeroPiece || ''),
+    pieceUrl:         '',
+    photoUrl:         '',
+    signatureUrl:     '',
+    preuveUrl:        '',
+    dossierUrl:       '',
+    statutPaiement:   'En attente',
+    rappelEnvoye:     'Non',
+    source:           'site'
   };
 
   try {
-    const driveResult    = creerStructureDrive(inscription, data);
-    inscription.pieceUrl  = driveResult.pieceUrl;
-    inscription.photoUrl  = driveResult.photoUrl;
-    inscription.preuveUrl = driveResult.preuveUrl;
-    inscription.dossierUrl= driveResult.dossierUrl;
+    const driveResult      = creerStructureDrive(inscription, data);
+    inscription.pieceUrl     = driveResult.pieceUrl;
+    inscription.photoUrl     = driveResult.photoUrl;
+    inscription.signatureUrl = driveResult.signatureUrl;
+    inscription.preuveUrl    = driveResult.preuveUrl;
+    inscription.dossierUrl   = driveResult.dossierUrl;
   } catch (errDrive) {
     console.error('[Drive]', errDrive.toString());
     inscription.pieceUrl  = 'Erreur upload Drive';
@@ -269,26 +339,56 @@ function traiterRenseignement(data) {
 }
 
 function calculerMontantsTotal(formations) {
+  // Offre courte : 25 000 F + 5 000 F de frais = 30 000 F en un seul versement.
+  // Exclusive — jamais combinée avec les filières longues (voir traiterInscription).
+  if (formations.length === 1 && formations[0] === CONFIG.FORMATION_COURTE.NOM) {
+    const fraisInscription = CONFIG.FORMATION_COURTE.FRAIS_INSCRIPTION;
+    const coutTotal        = CONFIG.FORMATION_COURTE.COUT;
+    const premierVirement  = fraisInscription + coutTotal;
+    return {
+      fraisInscription, coutTotal,
+      tranche1: coutTotal, tranche2: 0, tranche3: 0,
+      premierVirement,
+      paiementUnique: true
+    };
+  }
+
   const fraisInscription = CONFIG.FRAIS_INSCRIPTION;
   const coutTotal        = formations.reduce((s, f) => s + (CONFIG.COUTS_FORMATIONS[f] || 0), 0);
   const tranche1         = Math.round(coutTotal * 0.50);
   const tranche2         = Math.round(coutTotal * 0.25);
   const tranche3         = coutTotal - tranche1 - tranche2;
   const premierVirement  = fraisInscription + tranche1;
-  return { fraisInscription, coutTotal, tranche1, tranche2, tranche3, premierVirement };
+  return { fraisInscription, coutTotal, tranche1, tranche2, tranche3, premierVirement, paiementUnique: false };
 }
 
 function validerDonneesInscription(data) {
   const erreurs = [];
-  if (!data.prenom    || data.prenom.trim().length < 2)    erreurs.push('prénom');
-  if (!data.nom       || data.nom.trim().length < 2)       erreurs.push('nom');
-  if (!data.telephone || data.telephone.trim().length < 8)  erreurs.push('téléphone');
+  if (!data.prenom       || data.prenom.trim().length < 2)        erreurs.push('prénom');
+  if (!data.nom          || data.nom.trim().length < 2)           erreurs.push('nom');
+  if (!data.sexe)                                                  erreurs.push('sexe');
+  if (!data.dateNaissance)                                         erreurs.push('date de naissance');
+  if (!data.lieuNaissance || data.lieuNaissance.trim().length < 2) erreurs.push('lieu de naissance');
+  if (!data.nationalite   || data.nationalite.trim().length < 2)  erreurs.push('nationalité');
+  if (!data.adresse       || data.adresse.trim().length < 4)      erreurs.push('adresse');
+  if (!data.telephone     || data.telephone.trim().length < 8)    erreurs.push('téléphone');
   if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) erreurs.push('email');
-  if (!data.typePiece || data.typePiece.trim().length < 2) erreurs.push('type de pièce');
+
+  if (!data.prenomMere || data.prenomMere.trim().length < 2) erreurs.push('prénom de la mère');
+  if (!data.nomMere    || data.nomMere.trim().length < 2)    erreurs.push('nom de la mère');
+  if (!data.prenomPere || data.prenomPere.trim().length < 2) erreurs.push('prénom du père');
+  if (!data.nomPere    || data.nomPere.trim().length < 2)    erreurs.push('nom du père');
+
+  if (!data.typePiece  || data.typePiece.trim().length < 2)  erreurs.push('type de pièce');
+  if (!data.numeroPiece|| data.numeroPiece.trim().length < 4) erreurs.push('numéro de pièce');
 
   const formations = Array.isArray(data.formations) ? data.formations : [data.formations];
   if (!formations || !formations.some(f => CONFIG.FORMATIONS_VALIDES.includes(f)))
     erreurs.push('formation(s)');
+
+  if (!data.signatureBase64 || data.signatureBase64.length < 100) erreurs.push('signature');
+  if (!data.clause1) erreurs.push('acceptation de la déclaration sur l\'honneur');
+  if (!data.clause2) erreurs.push('acceptation du traitement des données');
 
   return erreurs;
 }
@@ -342,6 +442,13 @@ function creerStructureDrive(inscription, data) {
     phMime
   );
 
+  const signatureUrl = sauvegarderFichierDrive(
+    dossierApprenant,
+    data.signatureBase64,
+    `signature_${inscription.id}.png`,
+    'image/png'
+  );
+
   let preuveUrl = '';
   if (data.preuveBase64 && data.preuveBase64.length > 10) {
     const prMime = data.preuveMimeType || 'image/jpeg';
@@ -353,7 +460,7 @@ function creerStructureDrive(inscription, data) {
     );
   }
 
-  return { pieceUrl, photoUrl, preuveUrl, dossierUrl: dossierApprenant.getUrl() };
+  return { pieceUrl, photoUrl, signatureUrl, preuveUrl, dossierUrl: dossierApprenant.getUrl() };
 }
 
 function sauvegarderFichierDrive(dossier, base64, nom, mimeType) {
@@ -388,15 +495,36 @@ function enregistrerInscription(inscription, montants, formations) {
     inscription.date,
     inscription.prenom,
     inscription.nom,
+    inscription.sexe,
+    inscription.dateNaissance,
+    inscription.lieuNaissance,
+    inscription.nationalite,
+    inscription.adresse,
     inscription.telephone,
     inscription.email,
+    inscription.prenomMere,
+    inscription.nomMere,
+    inscription.telephoneMere,
+    inscription.professionMere,
+    inscription.prenomPere,
+    inscription.nomPere,
+    inscription.telephonePere,
+    inscription.professionPere,
+    inscription.prenomTuteur,
+    inscription.nomTuteur,
+    inscription.telephoneTuteur,
     inscription.formationsLabel,
     inscription.nbFormations,
+    inscription.dateEntree,
+    inscription.dateFin,
+    inscription.niveauAtteint,
     inscription.message,
     inscription.statut,
     inscription.typePiece,
+    inscription.numeroPiece,
     inscription.pieceUrl,
     inscription.photoUrl,
+    inscription.signatureUrl,
     inscription.preuveUrl || '—',
     inscription.dossierUrl,
     montants.fraisInscription,
@@ -405,15 +533,17 @@ function enregistrerInscription(inscription, montants, formations) {
     montants.tranche2,
     montants.tranche3,
     montants.premierVirement,
+    montants.paiementUnique ? 'Oui' : 'Non',
     inscription.statutPaiement,
     inscription.rappelEnvoye,
-    inscription.sexe
+    inscription.source,
+    0   // Téléchargements gratuits restants — 0 : le premier est toujours payant
   ];
 
-  ajouterLigneFeuille(ss, 'Toutes les inscriptions', ENTETES_INSCRIPTION, ligne, 5);
+  ajouterLigneFeuille(ss, 'Toutes les inscriptions', ENTETES_INSCRIPTION, ligne, [10, 14, 18, 22]);
 
   const nomFeuille = formations.length === 1 ? formations[0] : 'Multi-formations';
-  ajouterLigneFeuille(ss, nomFeuille, ENTETES_INSCRIPTION, ligne, 5);
+  ajouterLigneFeuille(ss, nomFeuille, ENTETES_INSCRIPTION, ligne, [10, 14, 18, 22]);
 }
 
 function enregistrerRenseignement(renseignement) {
@@ -440,7 +570,9 @@ function enregistrerRenseignement(renseignement) {
   ajouterLigneFeuille(ss, 'Renseignements', ENTETES_RENSEIGNEMENT, ligne, 5);
 }
 
-function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colTelephone) {
+function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colsTelephone) {
+
+  const colonnesTel = Array.isArray(colsTelephone) ? colsTelephone : [colsTelephone];
 
   let feuille = ss.getSheetByName(nomFeuille);
 
@@ -455,10 +587,12 @@ function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colTelephone) {
     rangeEntete.setFontSize(11);
     feuille.setFrozenRows(1);
 
-    const largeurs = [120,160,110,110,140,180,260,80,200,120,140,200,200,200,200,110,110,110,110,110,140,120,140];
+    const largeurs = [120,160,110,110,90,120,160,120,220,140,200,140,140,140,140,140,140,140,140,140,140,140,220,80,120,120,180,260,120,180,140,200,200,200,200,200,120,140,120,120,120,140,120,140,120,120];
     largeurs.forEach((l, i) => { if (i < entetes.length) feuille.setColumnWidth(i + 1, l); });
 
-    if (colTelephone) feuille.getRange(2, colTelephone, feuille.getMaxRows() - 1).setNumberFormat('@');
+    colonnesTel.forEach(col => {
+      if (col) feuille.getRange(2, col, feuille.getMaxRows() - 1).setNumberFormat('@');
+    });
   }
 
   feuille.appendRow(ligne);
@@ -468,11 +602,12 @@ function ajouterLigneFeuille(ss, nomFeuille, entetes, ligne, colTelephone) {
     feuille.getRange(derniereLigne, 1, 1, entetes.length).setBackground('#F0F9FA');
   }
 
-  if (colTelephone) {
-    const celluleTel = feuille.getRange(derniereLigne, colTelephone);
-    celluleTel.setNumberFormat('@');
-    celluleTel.setValue(String(ligne[colTelephone - 1] || ''));
-  }
+  colonnesTel.forEach(col => {
+    if (!col) return;
+    const cellule = feuille.getRange(derniereLigne, col);
+    cellule.setNumberFormat('@');
+    cellule.setValue(String(ligne[col - 1] || ''));
+  });
 }
 
 function forcerTelephoneTexte(feuille, colTelephone, telephone) {
@@ -638,12 +773,7 @@ function construireEmailAdmin(inscription, montants) {
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:20px;">
       <tr style="background:#FFF6E5;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:${CONFIG.COULEUR_ORANGE};font-size:12px;text-transform:uppercase;">Montants</td></tr>
-      ${ligneInfoEmail('Frais d\'inscription',    formatFCFA(montants.fraisInscription))}
-      ${ligneInfoEmail('Coût total formations',   formatFCFA(montants.coutTotal))}
-      ${ligneInfoEmail('Tranche 1 — 50%',         formatFCFA(montants.tranche1))}
-      ${ligneInfoEmail('Tranche 2 — 25%',         formatFCFA(montants.tranche2))}
-      ${ligneInfoEmail('Tranche 3 — 25%',         formatFCFA(montants.tranche3))}
-      ${ligneInfoEmailAccent('1er versement dû',  formatFCFA(montants.premierVirement))}
+      ${_tableauMontantsEmail(montants)}
     </table>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">
@@ -721,11 +851,7 @@ function construireEmailApprenant(inscription, montants, estRappel) {
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">
       <tr style="background:#FFF6E5;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:${CONFIG.COULEUR_ORANGE};font-size:12px;text-transform:uppercase;">Plan de paiement</td></tr>
-      ${ligneInfoEmail('Frais d\'inscription (immédiat)',  formatFCFA(montants.fraisInscription))}
-      ${ligneInfoEmail('Tranche 1 — 50% (immédiat)',      formatFCFA(montants.tranche1))}
-      ${ligneInfoEmail('Tranche 2 — 25% (milieu)',        formatFCFA(montants.tranche2))}
-      ${ligneInfoEmail('Tranche 3 — 25% (fin)',           formatFCFA(montants.tranche3))}
-      ${ligneInfoEmailAccent('1er virement dû',           formatFCFA(montants.premierVirement))}
+      ${_tableauMontantsEmail(montants)}
     </table>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F9FA;border-left:4px solid ${CONFIG.COULEUR_TEAL};border-radius:0 10px 10px 0;margin-bottom:28px;">
@@ -801,9 +927,9 @@ function construireEmailVirement(inscription, montants) {
     </table>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">
-      <tr style="background:#FFF6E5;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:${CONFIG.COULEUR_ORANGE};font-size:12px;text-transform:uppercase;">Montant du 1er virement</td></tr>
+      <tr style="background:#FFF6E5;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:${CONFIG.COULEUR_ORANGE};font-size:12px;text-transform:uppercase;">${montants.paiementUnique ? 'Montant du virement' : 'Montant du 1er virement'}</td></tr>
       ${ligneInfoEmail('Frais d\'inscription', formatFCFA(montants.fraisInscription))}
-      ${ligneInfoEmail('Tranche 1 — 50%',     formatFCFA(montants.tranche1))}
+      ${ligneInfoEmail(montants.paiementUnique ? 'Coût de la formation' : 'Tranche 1 — 50%', formatFCFA(montants.tranche1))}
       ${ligneInfoEmailAccent('TOTAL À VIRER', formatFCFA(montants.premierVirement))}
     </table>
 
@@ -935,6 +1061,22 @@ function construireEmailAutoReponseRenseignement(renseignement) {
 </body></html>`;
 }
 
+function _tableauMontantsEmail(montants) {
+  if (montants.paiementUnique) {
+    return `
+      ${ligneInfoEmail('Frais d\'inscription',  formatFCFA(montants.fraisInscription))}
+      ${ligneInfoEmail('Coût de la formation',   formatFCFA(montants.coutTotal))}
+      ${ligneInfoEmailAccent('TOTAL — paiement unique', formatFCFA(montants.premierVirement))}`;
+  }
+  return `
+      ${ligneInfoEmail('Frais d\'inscription',    formatFCFA(montants.fraisInscription))}
+      ${ligneInfoEmail('Coût total formations',   formatFCFA(montants.coutTotal))}
+      ${ligneInfoEmail('Tranche 1 — 50%',         formatFCFA(montants.tranche1))}
+      ${ligneInfoEmail('Tranche 2 — 25%',         formatFCFA(montants.tranche2))}
+      ${ligneInfoEmail('Tranche 3 — 25%',         formatFCFA(montants.tranche3))}
+      ${ligneInfoEmailAccent('1er versement dû',  formatFCFA(montants.premierVirement))}`;
+}
+
 function ligneInfoEmail(label, valeur) {
   return `<tr style="border-top:1px solid #F3F4F6;">
     <td style="padding:11px 18px;color:#6B7280;font-size:13px;width:40%;vertical-align:top;">${label}</td>
@@ -1002,4 +1144,11 @@ function nettoyerTriggers(nomFonction) {
   ScriptApp.getProjectTriggers().forEach(t => {
     if (t.getHandlerFunction() === nomFonction) ScriptApp.deleteTrigger(t);
   });
+}
+
+
+function reinitialiserCompteurTest() {
+  const trouve = _trouverLigneInscription('LQD-260905-W9RA');
+  trouve.feuille.getRange(trouve.ligneIndex, 47).setValue(0);
+  Logger.log('Compteur remis à 0.');
 }
