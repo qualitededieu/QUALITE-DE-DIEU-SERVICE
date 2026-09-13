@@ -360,7 +360,7 @@ function adminGetDossier(data, email) {
 
 function adminUpdateStatut(data, email) {
   const { id, statut } = data;
-  const valeursValides  = ['En attente', 'Confirmé', 'Terminé', 'Annulé', 'Migré'];
+  const valeursValides  = ['En attente', 'Confirmé', 'Annulé'];
 
   if (!id || !valeursValides.includes(statut)) {
     return reponseJSON({ status: 'error', message: 'ID ou statut invalide.' });
