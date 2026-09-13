@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
   const secretGas       = process.env.GAS_SHARED_SECRET;
 
   if (!secretWebhook || !urlGas || !secretGas) {
-    console.error("Configuration serveur incomplète (secret webhook selon FEDAPAY_MODE, GAS_URL ou GAS_SHARED_SECRET absent).");
+    console.error("[Webhook] Configuration serveur incomplète (secret webhook selon FEDAPAY_MODE, GAS_URL ou GAS_SHARED_SECRET absent).");
     res.status(500).end();
     return;
   }
@@ -42,15 +42,18 @@ module.exports = async (req, res) => {
   try {
     evenement = Webhook.constructEvent(corpsBrut, signature, secretWebhook);
   } catch (erreur) {
+    console.error("[Webhook] Signature invalide :", erreur.message);
     res.status(400).send("Signature invalide.");
     return;
   }
+
+  console.log("[Webhook] Événement reçu :", evenement.name, "— transaction", evenement.entity && evenement.entity.id);
 
   if (evenement.name === "transaction.approved") {
     try {
       await confirmerAupresDeGas(urlGas, secretGas, evenement.entity);
     } catch (erreur) {
-      console.error("Échec de transmission à GAS :", erreur.message);
+      console.error("[Webhook] Échec de transmission à GAS :", erreur.message);
     }
   }
 
@@ -70,10 +73,16 @@ function lireCorpsBrut(req) {
 // (voir index.html, champ custom_metadata.id) et revient tel quel dans
 // le webhook — c'est ce qui relie le paiement au bon dossier, sans
 // jamais faire confiance à une confirmation uniquement côté navigateur.
+//
+// IMPORTANT : GAS (Apps Script) renvoie TOUJOURS un code HTTP 200, même
+// en cas d'erreur métier (secret invalide, dossier introuvable...) — ce
+// n'est jamais visible dans le code de statut. Il faut donc lire le
+// CONTENU JSON de la réponse pour savoir si GAS a réellement accepté
+// la confirmation, sinon un rejet silencieux passe totalement inaperçu.
 async function confirmerAupresDeGas(urlGas, secretGas, transaction) {
   const id = transaction.custom_metadata && transaction.custom_metadata.id;
   if (!id) {
-    console.error("Transaction FedaPay approuvée sans ID apprenant dans custom_metadata :", transaction.id);
+    console.error("[Webhook] Transaction FedaPay approuvée sans ID apprenant dans custom_metadata :", transaction.id);
     return;
   }
 
@@ -84,9 +93,24 @@ async function confirmerAupresDeGas(urlGas, secretGas, transaction) {
     referenceFedapay: String(transaction.id)
   };
 
-  await fetch(urlGas, {
+  const reponseGas = await fetch(urlGas, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(corps)
   });
+
+  const texteBrut = await reponseGas.text();
+  let resultat;
+  try {
+    resultat = JSON.parse(texteBrut);
+  } catch (e) {
+    console.error("[Webhook] Réponse GAS illisible (pas du JSON) pour", id, ":", texteBrut.slice(0, 300));
+    return;
+  }
+
+  if (resultat.status === "success") {
+    console.log("[Webhook] Déblocage confirmé côté GAS pour", id);
+  } else {
+    console.error("[Webhook] GAS a REFUSÉ la confirmation pour", id, "— raison :", resultat.erreur || resultat.message || "inconnue");
+  }
 }
