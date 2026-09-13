@@ -1503,6 +1503,12 @@ function renderModalDossier(d) {
       Génère l'attestation même si le téléchargement public est bloqué (site en construction).
     </p>
     ${(d.formationsLabel || '').includes('Initiation rapide (1 mois)') ? `
+    <div class="info-field" style="margin-bottom:12px;">
+      <label>Téléchargements gratuits restants</label>
+      <span style="font-weight:700;${Number(d.telechargementsRestants) > 0 ? 'color:var(--green-600,#1e7a4a);' : 'color:var(--orange-600,#c0392b);'}">
+        ${d.telechargementsRestants !== undefined && d.telechargementsRestants !== '' ? d.telechargementsRestants : 0}
+      </span>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="debloquerTelechargement('${d.id}')" style="margin-bottom:16px;margin-left:8px;">
       <span class="iconify" data-icon="tabler:device-mobile"></span> Débloquer 6 téléchargements (paiement MoMo direct)
     </button>
@@ -2421,6 +2427,7 @@ async function debloquerTelechargement(id) {
     const result = await apiCall('admin_debloquer_telechargement', { id });
     if (result.status === 'success') {
       toast(result.message || 'Téléchargements débloqués.', 'success');
+      ouvrirDossier(id); // Rafraîchit l'affichage — le compteur mis à jour doit être visible immédiatement
     } else {
       toast(result.message || 'Erreur.', 'error');
     }

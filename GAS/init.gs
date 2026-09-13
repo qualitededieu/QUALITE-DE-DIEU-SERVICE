@@ -1,19 +1,3 @@
-const ENTETES_REG_INIT = [
-  'ID Apprenant', 'Date soumission',
-  'Prénom(s)', 'Nom', 'Sexe', 'Date de naissance', 'Lieu de naissance',
-  'Nationalité', 'Téléphone', 'Email', 'Adresse',
-  'Prénom mère', 'Nom mère', 'Téléphone mère', 'Profession mère',
-  'Prénom père', 'Nom père', 'Téléphone père', 'Profession père',
-  'Prénom tuteur', 'Nom tuteur',
-  'Filière', 'Durée formation', "Date d'entrée", 'Date de fin',
-  'Niveau atteint', 'Montant payé (F CFA)', 'Observations formation',
-  'Type pièce identité', 'N° pièce identité',
-  'Pièce identité (Drive)', 'Photo identité (Drive)',
-  'Signature (Drive)', 'Dossier Drive',
-  'Clause 1 acceptée', 'Clause 2 acceptée', 'Date signature',
-  'Statut dossier', 'Traité par', 'Date traitement'
-];
-
 function initDrive() {
   Logger.log('=== INIT DRIVE — Démarrage ===');
 

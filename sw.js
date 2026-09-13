@@ -8,7 +8,7 @@ const CACHE_DYNAMIC = "pk-v1.0.2-dynamic";
 // Assets vraiment statiques : images, icones, manifest
 // NE PAS inclure les fichiers JS/CSS ici (servis en networkFirst)
 const STATIC_ASSETS = [
-  "/icons/logo.jpg",
+  "/icons/logoqds.jpg",
   "/manifest.json"
 ];
 

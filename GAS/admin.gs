@@ -777,6 +777,7 @@ function mapperLigneDossier(row, ligneIndex) {
     statutPaiement:   row[43],
     rappelEnvoye:     row[44],
     source:           row[45],
+    telechargementsRestants: row[46],
     montants
   };
 }
