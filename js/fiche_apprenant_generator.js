@@ -67,6 +67,19 @@ function _fWrap(ctx, texte, x, y, maxW, lh) {
   if (ligne) { ctx.fillText(ligne, x, curY); curY += lh; }
   return curY;
 }
+function _fWrapCentre(ctx, texte, cx, y, maxW, lh) {
+  const mots = String(texte).split(" ");
+  let ligne = "", lignes = [];
+  for (const mot of mots) {
+    const test = ligne ? ligne + " " + mot : mot;
+    if (_fMw(ctx, test) > maxW && ligne) { lignes.push(ligne); ligne = mot; }
+    else ligne = test;
+  }
+  if (ligne) lignes.push(ligne);
+  let curY = y;
+  lignes.forEach(l => { ctx.fillText(l, cx - _fMw(ctx, l) / 2, curY); curY += lh; });
+  return curY;
+}
 function _fIconUrl(nom, couleur, taille = 70) {
   return `https://api.iconify.design/${nom}.svg?color=${encodeURIComponent(couleur)}&width=${taille}&height=${taille}`;
 }
@@ -90,9 +103,10 @@ async function genererFicheApprenant(apprenant, token) {
   const LOGO_URL = FICHE_ENTREPRISE.LOGO_URL;
   const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=2";
   const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png?v=2";
+  const FICHE_VERIF_URL = `https://${FICHE_ENTREPRISE.SITE}/verifier-document`;
   const lienVerif = token
-    ? `https://${FICHE_ENTREPRISE.SITE}/verifier.html?t=${encodeURIComponent(token)}`
-    : `https://${FICHE_ENTREPRISE.SITE}/verifier.html`;
+    ? `${FICHE_VERIF_URL}?t=${encodeURIComponent(token)}`
+    : FICHE_VERIF_URL;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=1&data=" + encodeURIComponent(lienVerif);
 
   const icones = await _fChargerIcones([
@@ -280,13 +294,20 @@ async function genererFicheApprenant(apprenant, token) {
   const titreTxt = "Président Directeur Général";
   ctx.fillText(titreTxt, blocSigCentreX - _fMw(ctx, titreTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, titreTxt) / 2, SIG_Y + 220);
 
-  const FOOTER_Y = H - 70;
-  _fRectFill(ctx, 0, FOOTER_Y, W, 70, FICHE.MARINE);
+  // Bande agrandie (70 → 116px) pour loger la ligne d'authentification
+  // manuelle en plus des infos existantes — nécessaire pour toute personne
+  // qui ne peut pas scanner le QR code (photocopie, impression N&B, etc.).
+  const FOOTER_H = 116;
+  const FOOTER_Y = H - FOOTER_H;
+  _fRectFill(ctx, 0, FOOTER_Y, W, FOOTER_H, FICHE.MARINE);
   _fFont(ctx, 18, "500"); ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.fillText("Comé, Bénin  —  " + FICHE_ENTREPRISE.SITE, M, FOOTER_Y + 42);
+  ctx.fillText("Comé, Bénin  —  " + FICHE_ENTREPRISE.SITE, M, FOOTER_Y + 32);
   _fFont(ctx, 16, "500"); ctx.fillStyle = "rgba(255,255,255,0.55)";
   const refTxt = "Réf : " + apprenant.id;
-  ctx.fillText(refTxt, W - M - _fMw(ctx, refTxt), FOOTER_Y + 42);
+  ctx.fillText(refTxt, W - M - _fMw(ctx, refTxt), FOOTER_Y + 32);
+
+  _fFont(ctx, 15, "400"); ctx.fillStyle = "rgba(255,255,255,0.55)";
+  _fWrapCentre(ctx, "Pour authentifier cet acte, veuillez utiliser le site sur n'importe quel navigateur ou via : " + FICHE_VERIF_URL, W / 2, FOOTER_Y + 58, W - M * 2, 19);
 
   return canvas;
 }

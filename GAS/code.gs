@@ -133,6 +133,7 @@ function doPost(e) {
   if (action === 'bandeau_get_public') return bandeauGetPublic(data);
   if (action === 'annonce_get_publique') return annonceGetPublique(data);
   if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
+  if (action === 'verifier_document_par_id') return verifierDocumentParId(data);
   if (action === 'verifier_acces_telechargement') return verifierAccesTelechargement(data);
   if (action === 'enregistrer_telechargement')    return enregistrerTelechargement(data);
   if (action === 'confirmer_paiement_telechargement') return confirmerPaiementTelechargement(data);

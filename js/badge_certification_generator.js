@@ -3,7 +3,12 @@
 const BADGE_C = {
   MARINE: "#04342C", MARINE_2: "#0F6E56", OR: "#F5A623", OR_LIGHT: "#FABD50",
   BLANC: "#FFFFFF", CREME: "#F8F7F2", GRIS: "#6B7280", TEXTE: "#1A1A2E",
-  W: 1080, H: 1080,
+  // Hauteur augmentée (1080 → 1150) pour loger la ligne d'authentification
+  // manuelle sous le QR code, sans resserrer le reste de la mise en page —
+  // tout le contenu du haut est positionné en pixels absolus depuis le
+  // haut, seule la zone décorative centrée (cercle du logo, dégradé) se
+  // recale légèrement plus bas, ce qui reste purement cosmétique.
+  W: 1080, H: 1150,
 };
 
 const BADGE_ENTREPRISE = {
@@ -19,6 +24,19 @@ function _bMw(ctx, txt) { return ctx.measureText(txt).width; }
 function _bCenterText(ctx, txt, cx, y, color) {
   ctx.fillStyle = color;
   ctx.fillText(txt, cx - _bMw(ctx, txt) / 2, y);
+}
+function _bWrapCentre(ctx, texte, cx, y, maxW, lh) {
+  const mots = String(texte).split(" ");
+  let ligne = "", lignes = [];
+  for (const mot of mots) {
+    const test = ligne ? ligne + " " + mot : mot;
+    if (_bMw(ctx, test) > maxW && ligne) { lignes.push(ligne); ligne = mot; }
+    else ligne = test;
+  }
+  if (ligne) lignes.push(ligne);
+  let curY = y;
+  lignes.forEach(l => { _bCenterText(ctx, l, cx, curY, ctx.fillStyle); curY += lh; });
+  return curY;
 }
 function _bLoadImg(src) {
   return new Promise(resolve => {
@@ -77,9 +95,10 @@ async function genererBadgeCertification(apprenant, token) {
   const ctx = canvas.getContext("2d");
 
   const LOGO_URL = BADGE_ENTREPRISE.LOGO_URL;
+  const BADGE_VERIF_URL = `https://${BADGE_ENTREPRISE.SITE}/verifier-document`;
   const lienVerif = token
-    ? `https://${BADGE_ENTREPRISE.SITE}/verifier.html?t=${encodeURIComponent(token)}`
-    : `https://${BADGE_ENTREPRISE.SITE}/verifier.html`;
+    ? `${BADGE_VERIF_URL}?t=${encodeURIComponent(token)}`
+    : BADGE_VERIF_URL;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=1&data=" + encodeURIComponent(lienVerif);
 
   const [logo, photo, qr] = await Promise.all([
@@ -208,7 +227,11 @@ async function genererBadgeCertification(apprenant, token) {
   ctx.restore();
   _bCenterText(ctx, pillTxt, CX, pillY + 39, "#FFFFFF");
 
-  const QR_S = 108, QR_Y = BADGE_C.H - 234;
+  // Position du QR fixée en absolu (et non plus "BADGE_C.H - 234") pour
+  // rester identique à la mise en page d'origine : c'est bien BADGE_C.H
+  // qu'on a agrandi (1080 → 1150) pour gagner de la place en dessous,
+  // pas la position du QR qui doit se décaler avec.
+  const QR_S = 108, QR_Y = 846;
   if (qr) {
     ctx.save();
     ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 10;
@@ -229,7 +252,15 @@ async function genererBadgeCertification(apprenant, token) {
   _bCenterText(ctx, apprenant.id, CX, QR_Y + QR_S + 66, "rgba(255,255,255,0.4)");
 
   _bFont(ctx, 14, "500");
-  _bCenterText(ctx, BADGE_ENTREPRISE.SITE + " — Comé, Bénin", CX, BADGE_C.H - 24, "rgba(255,255,255,0.4)");
+  _bCenterText(ctx, BADGE_ENTREPRISE.SITE + " — Comé, Bénin", CX, QR_Y + QR_S + 96, "rgba(255,255,255,0.4)");
+
+  _bFont(ctx, 12, "400");
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  _bWrapCentre(
+    ctx,
+    "Pour authentifier cet acte, veuillez utiliser le site sur n'importe quel navigateur ou via : " + BADGE_VERIF_URL,
+    CX, QR_Y + QR_S + 121, BADGE_C.W - 140, 17
+  );
 
   ctx.save();
   ctx.strokeStyle = "rgba(245,166,35,0.35)";

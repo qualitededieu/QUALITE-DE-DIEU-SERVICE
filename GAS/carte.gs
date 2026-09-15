@@ -116,6 +116,42 @@ function verifierCarte(data) {
   return reponseJSON({ status: 'success', apprenant: payload, valide: true });
 }
 
+// Vérification publique d'un document par son numéro de référence — imprimé
+// en clair en bas de chaque attestation/fiche/badge, pour authentifier le
+// document quand le QR code n'est pas scannable (photocopie, impression
+// noir et blanc, appareil sans caméra). Contrairement à verifierCarte
+// (token signé HMAC, connu uniquement du détenteur de la carte), l'ID est
+// visible sur le document lui-même et donc devinable/énumérable : on ne
+// renvoie ici QUE les champs déjà imprimés en clair sur le document —
+// jamais le téléphone, la date de naissance ou la photo.
+function verifierDocumentParId(data) {
+  const id = String(data.id || '').trim();
+  if (!id) return reponseJSON({ status: 'error', message: 'Numéro de référence manquant.' });
+
+  const trouve = _trouverLigneInscription(id);
+  if (!trouve) return reponseJSON({ status: 'error', message: "Aucun document ne correspond à ce numéro de référence." });
+
+  const statut = String(trouve.row[28] || '').trim();
+  if (statut !== 'Confirmé' && statut !== 'Migré' && statut !== 'Terminé') {
+    return reponseJSON({ status: 'error', message: "Ce dossier n'est pas encore confirmé — ce document ne peut pas être authentifié pour l'instant." });
+  }
+
+  const apprenant = _mapperApprenantInscription(trouve.row);
+  return reponseJSON({
+    status: 'success',
+    document: {
+      id:            apprenant.id,
+      prenom:        apprenant.prenom,
+      nom:           apprenant.nom,
+      filiere:       apprenant.filiere,
+      dateEntree:    apprenant.dateEntree,
+      dateFin:       apprenant.dateFin,
+      niveauAtteint: apprenant.niveauAtteint,
+      source:        apprenant.source
+    }
+  });
+}
+
 function envoyerCarteAdmin(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });

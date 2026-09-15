@@ -265,9 +265,10 @@ async function genererAttestationCanvas(apprenant, token) {
   const dateDebut = fmt(apprenant.dateEntree);
   const dateFin   = fmt(apprenant.dateFin);
 
+  const ATT_VERIF_URL = `https://${ATT_ENTREPRISE.SITE}/verifier-document`;
   const lienVerif = token
-    ? `https://${ATT_ENTREPRISE.SITE}/verifier.html?t=${encodeURIComponent(token)}`
-    : `https://${ATT_ENTREPRISE.SITE}/verifier.html`;
+    ? `${ATT_VERIF_URL}?t=${encodeURIComponent(token)}`
+    : ATT_VERIF_URL;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=2&data=" + encodeURIComponent(lienVerif);
 
   const [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
@@ -745,6 +746,19 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillStyle = ATT.GRIS;
     const lblQr = "Scanner pour vérifier";
     ctx.fillText(lblQr, (ATT.W - _mw(ctx, lblQr)) / 2, qrY + QR_CENTRE_S + 38);
+
+    // Ligne d'authentification manuelle — pour toute personne sans lecteur
+    // QR (vérification papier, dossier RH, etc.) : le texte complet doit
+    // rester lisible même imprimé en noir et blanc.
+    _font(ctx, 22, "normal", "DM Sans");
+    ctx.fillStyle = ATT.GRIS;
+    _wrapCentre(
+      ctx,
+      "Pour authentifier cet acte, veuillez utiliser le site sur n'importe quel navigateur ou via : " + ATT_VERIF_URL,
+      qrY + QR_CENTRE_S + 74,
+      760,
+      30
+    );
   }
 
   const FTR_Y = ATT.H - 210;

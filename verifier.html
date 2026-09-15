@@ -395,6 +395,113 @@
     .btn-pdf iconify-icon { font-size: 18px; }
 
     /* ===============================================================
+       ÉTAT : FORMULAIRE DE VÉRIFICATION MANUELLE
+       (arrivée sans QR — via l'URL /verifier-document tapée à la main)
+    =============================================================== */
+    .state-form {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 40px 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .state-form .icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(4,52,44,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+
+    .state-form .icon-wrap iconify-icon { font-size: 30px; color: var(--teal); }
+
+    .state-form h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 21px;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .state-form p.intro {
+      font-size: 13px;
+      color: var(--text-2);
+      text-align: center;
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-2);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+      text-transform: uppercase;
+    }
+
+    .form-input:focus { border-color: var(--teal-light); background: var(--white); }
+
+    .form-hint {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .form-erreur {
+      display: none;
+      font-size: 13px;
+      color: var(--red);
+      background: rgba(224,92,42,0.08);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+
+    .btn-verifier {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px 24px;
+      background: var(--teal);
+      color: #FFF;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-verifier:hover  { background: var(--teal-mid); }
+    .btn-verifier:active { transform: scale(0.98); }
+    .btn-verifier:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ===============================================================
        RESPONSIVE
     =============================================================== */
     @media (max-width: 480px) {
@@ -484,15 +591,100 @@
     /* ================================================================
        RENDU — ERREUR
     ================================================================ */
-    function renderErreur(message) {
+    function renderErreur(message, options = {}) {
+      const retour = options.avecRetour === false ? '' : `
+          <button class="btn-verifier" style="margin-top:24px;" onclick="renderFormulaire()">
+            <iconify-icon icon="tabler:arrow-left"></iconify-icon> Vérifier un autre document
+          </button>`;
       document.getElementById('app').innerHTML = `
         <div class="state-error">
           <div class="icon-wrap">
             <iconify-icon icon="tabler:shield-x"></iconify-icon>
           </div>
-          <h2>Carte invalide</h2>
+          <h2>${esc(options.titre || 'Document invalide')}</h2>
           <p>${esc(message)}</p>
+          ${retour}
         </div>`;
+    }
+
+    /* ================================================================
+       RENDU — FORMULAIRE DE VÉRIFICATION MANUELLE
+       (arrivée sans QR, via /verifier-document tapé à la main)
+    ================================================================ */
+    function renderFormulaire(messageErreur) {
+      // Nettoie l'URL — si on revient ici après un ?t= invalide ou après
+      // "Vérifier un autre document", pas de raison de garder le token
+      // dans la barre d'adresse.
+      if (window.location.search) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      document.getElementById('app').innerHTML = `
+        <div class="state-form">
+          <div class="icon-wrap">
+            <iconify-icon icon="tabler:certificate"></iconify-icon>
+          </div>
+          <h2>Authentifier un document LQD Service</h2>
+          <p class="intro">
+            Entrez le numéro de référence imprimé en bas de l'attestation,
+            de la fiche apprenant ou du badge de certification.
+          </p>
+
+          <label class="form-label" for="input-ref">Numéro de référence</label>
+          <input type="text" class="form-input" id="input-ref" placeholder="Ex. LQD-260905-W9RA" autocomplete="off" autocapitalize="characters" />
+          <p class="form-hint">Format « Réf : ... » — visible en bas du document, à côté ou en dessous du QR code.</p>
+
+          <div class="form-erreur" id="form-erreur"></div>
+
+          <button class="btn-verifier" id="btn-verifier-id" onclick="verifierParId()">
+            <iconify-icon icon="tabler:search"></iconify-icon> Vérifier ce document
+          </button>
+        </div>`;
+
+      const input = document.getElementById('input-ref');
+      if (messageErreur) {
+        const err = document.getElementById('form-erreur');
+        err.textContent = messageErreur;
+        err.style.display = 'block';
+      }
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') verifierParId(); });
+      input.focus();
+    }
+
+    async function verifierParId() {
+      const input = document.getElementById('input-ref');
+      const btn   = document.getElementById('btn-verifier-id');
+      const err   = document.getElementById('form-erreur');
+      const id    = input.value.trim().toUpperCase();
+
+      err.style.display = 'none';
+
+      if (!id) {
+        err.textContent = 'Entrez le numéro de référence du document.';
+        err.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<iconify-icon icon="tabler:loader-2" style="animation:spin 0.8s linear infinite"></iconify-icon> Vérification…';
+
+      try {
+        const resp = await fetch(GAS_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body:    JSON.stringify({ action: 'verifier_document_par_id', id })
+        });
+        const result = await resp.json();
+
+        if (result.status === 'success') {
+          renderCarte(result.document, null, { simplifie: true });
+        } else {
+          renderFormulaire(result.message || "Aucun document ne correspond à ce numéro de référence.");
+        }
+      } catch (e) {
+        renderFormulaire('Impossible de contacter le serveur de vérification. Vérifiez votre connexion et réessayez.');
+        console.error('[verifierParId]', e);
+      }
     }
 
     /* ================================================================
@@ -509,14 +701,22 @@
             La carte de <strong>${esc(apprenant.prenom)} ${esc(apprenant.nom)}</strong>
             (${esc(apprenant.id)}) a expiré le <strong>${formatDate(apprenant.dateFin)}</strong>.
           </p>
+          <button class="btn-verifier" style="margin-top:24px;" onclick="renderFormulaire()">
+            <iconify-icon icon="tabler:arrow-left"></iconify-icon> Vérifier un autre document
+          </button>
         </div>`;
     }
 
     /* ================================================================
        RENDU — CARTE VALIDE
+       options.simplifie = true : vérification par numéro de référence
+       (sans QR) — l'apprenant ne fournit ni photo ni date de naissance
+       dans ce cas, on n'affiche que ce qui est déjà imprimé en clair sur
+       le document (voir verifierDocumentParId côté GAS).
     ================================================================ */
-    function renderCarte(a, tokenBrut) {
-      const estStage = a.source === 'candidature-stage';
+    function renderCarte(a, tokenBrut, options = {}) {
+      const simplifie = !!options.simplifie;
+      const estStage  = a.source === 'candidature-stage';
 
       const photoHtml = a.photoUrl
         ? `<img src="${esc(a.photoUrl)}" alt="Photo" onerror="this.parentElement.innerHTML='<iconify-icon icon=\\'tabler:user\\' class=\\"no-photo\\"></iconify-icon>'"/>`
@@ -524,6 +724,27 @@
 
       const maintenant  = new Date();
       const dateEmission = maintenant.toLocaleDateString('fr-BJ', { day: '2-digit', month: 'long', year: 'numeric' });
+
+      const ligneSexeNaissance = simplifie ? '' : `
+              <div class="info-cell">
+                <div class="info-label">Sexe</div>
+                <div class="info-value ${a.sexe ? '' : 'empty'}">${esc(a.sexe) || 'Non renseigné'}</div>
+              </div>
+              <div class="info-cell">
+                <div class="info-label">Date de naissance</div>
+                <div class="info-value ${a.dateNaissance ? '' : 'empty'}">${a.dateNaissance ? formatDate(a.dateNaissance) : 'Non renseignée'}</div>
+              </div>`;
+
+      const ligneNiveau = (simplifie && a.niveauAtteint) ? `
+              <div class="info-cell" style="grid-column: 1 / -1;">
+                <div class="info-label">Niveau atteint</div>
+                <div class="info-value">${esc(a.niveauAtteint)}</div>
+              </div>` : '';
+
+      const boutonRetour = simplifie ? `
+          <button class="btn-verifier" style="background:var(--white);color:var(--teal);border:1.5px solid var(--border);margin-top:12px;" onclick="renderFormulaire()">
+            <iconify-icon icon="tabler:arrow-left"></iconify-icon> Vérifier un autre document
+          </button>` : '';
 
       document.getElementById('app').innerHTML = `
         <div class="carte-wrap" id="carte-wrap">
@@ -537,7 +758,7 @@
           <div class="carte-body" id="carte-body">
 
             <div class="identite">
-              <div class="photo-wrap">${photoHtml}</div>
+              ${simplifie ? '' : `<div class="photo-wrap">${photoHtml}</div>`}
               <div class="identite-info">
                 <div class="apprenant-nom">${esc(a.prenom)} ${esc(a.nom)}</div>
                 <div class="apprenant-id">${esc(a.id)}</div>
@@ -549,14 +770,7 @@
             </div>
 
             <div class="infos-grid">
-              <div class="info-cell">
-                <div class="info-label">Sexe</div>
-                <div class="info-value ${a.sexe ? '' : 'empty'}">${esc(a.sexe) || 'Non renseigné'}</div>
-              </div>
-              <div class="info-cell">
-                <div class="info-label">Date de naissance</div>
-                <div class="info-value ${a.dateNaissance ? '' : 'empty'}">${a.dateNaissance ? formatDate(a.dateNaissance) : 'Non renseignée'}</div>
-              </div>
+              ${ligneSexeNaissance}
               <div class="info-cell">
                 <div class="info-label">${estStage ? 'Début de stage' : 'Début de formation'}</div>
                 <div class="info-value">${formatDate(a.dateEntree)}</div>
@@ -565,6 +779,7 @@
                 <div class="info-label">${estStage ? 'Fin de stage' : 'Fin de validité'}</div>
                 <div class="info-value accent">${formatDate(a.dateFin)}</div>
               </div>
+              ${ligneNiveau}
               <div class="info-cell" style="grid-column: 1 / -1;">
                 <div class="info-label">Établissement</div>
                 <div class="info-value">Les Qualités de Dieu Service SARL — Comé, Bénin</div>
@@ -585,6 +800,7 @@
             <iconify-icon icon="tabler:file-type-pdf"></iconify-icon>
             Télécharger en PDF
           </button>
+          ${boutonRetour}
 
         </div>`;
     }
@@ -637,7 +853,10 @@
       const token  = params.get('t');
 
       if (!token) {
-        renderErreur('Aucun token de vérification trouvé dans l\'URL. Scannez le QR code de la carte.');
+        // Arrivée via /verifier-document tapé à la main (pas de QR scanné,
+        // donc pas de token signé dans l'URL) — on propose la vérification
+        // manuelle par numéro de référence plutôt qu'un message d'erreur.
+        renderFormulaire();
         return;
       }
 

@@ -283,7 +283,11 @@
     .modal-close { background: var(--dark-700); border: 1px solid var(--border); color: var(--text-2); width: 32px; height: 32px; border-radius: 8px; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s, color .15s; }
     .modal-close:hover { background: var(--red-dim); color: var(--red); }
     .modal-body { padding: 24px; }
-    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--border); }
+    /* flex-wrap ajouté — avec 4-5 boutons (Envoyer carte / Relance email /
+       Supprimer / Sauvegarder), la rangée dépassait la largeur de la modale
+       sans jamais passer à la ligne (les .btn ont white-space:nowrap), ce
+       qui coupait "Envoyer carte" et "Sauvegarder" hors champ. */
+    .modal-footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--border); }
 
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
     .info-field label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
@@ -339,7 +343,16 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .info-grid { grid-template-columns: 1fr; }
     }
-    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } .page { padding: 16px; } }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .page { padding: 16px; }
+      /* Boutons du footer modal empilés en pleine largeur — évite le
+         chevauchement/débordement observé sur petit écran (4-5 boutons
+         d'action sur une seule ligne ne rentrent jamais en dessous de
+         480px, même avec le flex-wrap ci-dessus). */
+      .modal-footer { flex-direction: column-reverse; }
+      .modal-footer .btn { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
