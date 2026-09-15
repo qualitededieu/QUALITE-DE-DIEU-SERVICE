@@ -360,7 +360,12 @@ function adminGetDossier(data, email) {
 
 function adminUpdateStatut(data, email) {
   const { id, statut } = data;
-  const valeursValides  = ['En attente', 'Confirmé', 'Annulé'];
+  // Doit rester synchronisé avec les options du <select> "Statut dossier"
+  // dans admin.html ET avec les statuts acceptés par getCarte (carte.gs)
+  // pour l'accès à l'espace apprenant/attestation — 'Terminé' et 'Migré'
+  // manquaient ici, ce qui bloquait la sauvegarde ("ID ou statut invalide")
+  // dès qu'un admin les sélectionnait pour clôturer une formation.
+  const valeursValides  = ['En attente', 'Confirmé', 'Terminé', 'Annulé', 'Migré'];
 
   if (!id || !valeursValides.includes(statut)) {
     return reponseJSON({ status: 'error', message: 'ID ou statut invalide.' });
