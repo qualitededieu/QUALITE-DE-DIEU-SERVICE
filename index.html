@@ -2233,19 +2233,77 @@ function payerTelechargementAttestation(id, montant) {
       if (btn) { btn.disabled = false; btn.innerHTML = libelleInitial; }
       if (resultat.reason === FedaPay.DIALOG_DISMISSED) return;
 
-      const preview = document.getElementById('attestation-preview');
-      preview.innerHTML = `
-        <div style="text-align:center;padding:2.5rem;">
-          <span class="iconify" data-icon="tabler:clock" style="font-size:40px;color:var(--teal-600);"></span>
-          <p style="margin-top:16px;color:var(--gray-500);">Paiement reçu — confirmation en cours...</p>
-        </div>`;
-
-      // Le webhook FedaPay confirme côté serveur avec un léger délai —
-      // on retente l'accès automatiquement après quelques secondes.
-      setTimeout(() => ouvrirDocument('attestation'), 4000);
+      attendreConfirmationPaiement(id);
     }
   });
   widget.open();
+}
+
+// Le widget FedaPay confirme côté client immédiatement, mais le
+// déblocage réel (compteur de téléchargements dans le Sheet) ne se
+// fait que via le webhook serveur (FedaPay → Vercel → GAS), qui peut
+// prendre quelques secondes, voire échouer silencieusement en cas de
+// mauvaise config (secret webhook, secret partagé GAS, mode live/sandbox
+// désynchronisés — voir LISEZ-MOI / api/paiement-webhook.js).
+//
+// IMPORTANT : on ne doit JAMAIS réafficher automatiquement le bouton
+// "Payer" après un paiement déjà effectué — l'apprenant risquerait de
+// payer une seconde fois pour le même blocage. On retente l'accès
+// plusieurs fois avec un délai croissant, puis on bascule sur un écran
+// de contact support (jamais un nouveau bouton de paiement) si le
+// déblocage n'est toujours pas arrivé.
+async function attendreConfirmationPaiement(id, tentative = 1) {
+  const MAX_TENTATIVES = 5;
+  const preview = document.getElementById('attestation-preview');
+  preview.innerHTML = `
+    <div style="text-align:center;padding:2.5rem;">
+      <span class="iconify" data-icon="tabler:clock" style="font-size:40px;color:var(--teal-600);"></span>
+      <p style="margin-top:16px;color:var(--gray-500);">Paiement reçu — confirmation en cours${'.'.repeat(tentative)}</p>
+    </div>`;
+
+  await new Promise(r => setTimeout(r, 3000 + (tentative - 1) * 2000));
+
+  try {
+    const resp = await fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'verifier_acces_telechargement', id })
+    });
+    const result = await resp.json();
+
+    if (result.status === 'success' && result.accesAutorise) {
+      // Débloqué — on relance le flux normal d'ouverture du document.
+      ouvrirDocument('attestation');
+      return;
+    }
+  } catch (e) {
+    console.error('[attendreConfirmationPaiement]', e);
+  }
+
+  if (tentative < MAX_TENTATIVES) {
+    attendreConfirmationPaiement(id, tentative + 1);
+    return;
+  }
+
+  // Toujours pas débloqué après plusieurs tentatives : on informe
+  // l'apprenant sans jamais lui repropose de payer à nouveau — le
+  // paiement a bien été effectué côté FedaPay, le souci est une
+  // confirmation serveur en retard ou en échec, à régler côté LQD.
+  preview.innerHTML = `
+    <div style="text-align:center;padding:2.5rem 1.5rem;">
+      <span class="iconify" data-icon="tabler:alert-triangle" style="font-size:48px;color:var(--orange-500);"></span>
+      <h3 style="margin:16px 0 8px;">Confirmation en retard</h3>
+      <p style="color:var(--gray-500);max-width:380px;margin:0 auto 20px;line-height:1.6;">
+        Votre paiement a bien été reçu par FedaPay, mais la confirmation
+        automatique met plus de temps que prévu. Contactez-nous avec votre
+        numéro de dossier <strong>${id}</strong>, nous débloquons votre
+        attestation manuellement.
+      </p>
+      <a href="https://wa.me/22997951230?text=${encodeURIComponent('Bonjour, mon paiement pour débloquer mon attestation (dossier ' + id + ') ne s\'est pas confirmé automatiquement.')}"
+         target="_blank" rel="noopener" class="btn-primary" style="display:inline-flex;">
+        <span class="iconify" data-icon="tabler:brand-whatsapp"></span> Contacter le support WhatsApp
+      </a>
+    </div>`;
 }
 
 /* ================================================================

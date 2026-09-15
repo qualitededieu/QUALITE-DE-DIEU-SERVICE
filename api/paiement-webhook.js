@@ -18,12 +18,20 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const mode            = (process.env.FEDAPAY_MODE || "live").toLowerCase();
   const secretWebhook = _obtenirSecretWebhook();
   const urlGas         = process.env.GAS_URL;
   const secretGas       = process.env.GAS_SHARED_SECRET;
 
+  // Le mode retenu ici DOIT correspondre à FEDAPAY_ENVIRONNEMENT dans
+  // index.html (voir commentaire là-bas). S'ils divergent, la signature
+  // du webhook est vérifiée avec le mauvais secret et échoue TOUJOURS,
+  // silencieusement pour l'apprenant (il voit juste "confirmation en
+  // cours" qui n'aboutit jamais) — d'où ce log explicite à chaque appel.
+  console.log("[Webhook] FEDAPAY_MODE effectif :", mode, "(doit correspondre à FEDAPAY_ENVIRONNEMENT dans index.html)");
+
   if (!secretWebhook || !urlGas || !secretGas) {
-    console.error("[Webhook] Configuration serveur incomplète (secret webhook selon FEDAPAY_MODE, GAS_URL ou GAS_SHARED_SECRET absent).");
+    console.error(`[Webhook] Configuration serveur incomplète pour le mode "${mode}" — vérifier sur Vercel : ${mode === "sandbox" ? "FEDAPAY_WEBHOOK_SECRET_MODE_SANDBOX" : "FEDAPAY_WEBHOOK_SECRET"}, GAS_URL, GAS_SHARED_SECRET.`);
     res.status(500).end();
     return;
   }
@@ -42,7 +50,7 @@ module.exports = async (req, res) => {
   try {
     evenement = Webhook.constructEvent(corpsBrut, signature, secretWebhook);
   } catch (erreur) {
-    console.error("[Webhook] Signature invalide :", erreur.message);
+    console.error(`[Webhook] Signature invalide (mode "${mode}") :`, erreur.message, "— si ce mode ne correspond pas à FEDAPAY_ENVIRONNEMENT dans index.html, c'est la cause la plus probable : le secret utilisé ici ne correspond pas à celui du compte/mode ayant réellement signé l'événement.");
     res.status(400).send("Signature invalide.");
     return;
   }

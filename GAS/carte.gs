@@ -310,16 +310,31 @@ function enregistrerTelechargement(data) {
 // authentifiée par secret partagé, pas par session utilisateur.
 function confirmerPaiementTelechargement(data) {
   const secretAttendu = PropertiesService.getScriptProperties().getProperty('SECRET_PARTAGE');
-  if (!secretAttendu || data.secretPartage !== secretAttendu) {
-    console.warn('[Téléchargement] Tentative de confirmation avec secret invalide.');
-    return reponseJSON({ erreur: 'Non autorisé.' }, 403);
+
+  // Distinction volontaire des deux cas d'échec — un secret absent ici
+  // (jamais configuré dans Propriétés du script) est une erreur de
+  // déploiement à corriger côté GAS, alors qu'un secret présent mais
+  // qui ne correspond pas signale plutôt une désynchro avec la valeur
+  // GAS_SHARED_SECRET côté Vercel. Sans cette distinction, les deux
+  // ressemblent au même "Non autorisé" générique dans les logs, ce qui
+  // rend le diagnostic d'un blocage de paiement bien plus long.
+  if (!secretAttendu) {
+    console.error('[Téléchargement] SECRET_PARTAGE non configuré dans les Propriétés du script (Extensions > Propriétés du projet > Propriétés du script). Toute confirmation de paiement est rejetée tant que ce n\'est pas fait.');
+    return reponseJSON({ status: 'error', erreur: 'Non autorisé (secret serveur non configuré).' }, 403);
+  }
+  if (data.secretPartage !== secretAttendu) {
+    console.warn('[Téléchargement] Tentative de confirmation avec un secret partagé qui ne correspond pas à SECRET_PARTAGE — vérifier GAS_SHARED_SECRET côté Vercel.');
+    return reponseJSON({ status: 'error', erreur: 'Non autorisé (secret invalide).' }, 403);
   }
 
   const id = String(data.id || '').trim();
-  if (!id) return reponseJSON({ erreur: 'ID manquant.' }, 400);
+  if (!id) return reponseJSON({ status: 'error', erreur: 'ID manquant.' }, 400);
 
   const trouve = _trouverLigneInscription(id);
-  if (!trouve) return reponseJSON({ erreur: 'Dossier introuvable.' }, 404);
+  if (!trouve) {
+    console.error('[Téléchargement] Confirmation de paiement reçue pour un dossier introuvable :', id, '— référence FedaPay :', data.referenceFedapay || '—');
+    return reponseJSON({ status: 'error', erreur: 'Dossier introuvable.' }, 404);
+  }
 
   trouve.feuille.getRange(trouve.ligneIndex, 47).setValue(CONFIG.TELECHARGEMENT.TELECHARGEMENTS_PAR_PALIER);
 
