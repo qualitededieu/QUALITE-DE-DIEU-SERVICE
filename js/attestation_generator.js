@@ -24,6 +24,12 @@ const ATT_ENTREPRISE = {
   EMAIL:    "papablaise1993@gmail.com",
   SITE:     "www.qualitededieuservice.com",
   LOGO_URL: "icons/logoqds.jpg",
+  // Mentions légales — la même entité (LQD Service SARL) délivre TOUTE
+  // attestation quelle que soit la durée de la formation ; ces mentions
+  // doivent donc apparaître sur les deux gabarits (long ET court), pas
+  // uniquement sur celui des formations longues comme c'était le cas.
+  RCCM:     "RB/ABC/23 B 7078",
+  IFU:      "3202357917037",
 };
 
 const ATT_DESCRIPTIONS = {
@@ -333,7 +339,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
     _font(ctx, 26, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
-    const ligneLegale = `RCCM RB/ABC/23 B 7078  —  IFU 3202357917037  —  Tél : ${ATT_ENTREPRISE.TEL}  —  ${ATT_ENTREPRISE.EMAIL}`;
+    const ligneLegale = `RCCM ${ATT_ENTREPRISE.RCCM}  —  IFU ${ATT_ENTREPRISE.IFU}  —  Tél : ${ATT_ENTREPRISE.TEL}  —  ${ATT_ENTREPRISE.EMAIL}`;
     ctx.fillText(ligneLegale, (ATT.W - _mw(ctx, ligneLegale)) / 2, 428);
 
     _font(ctx, 32, "normal");
@@ -380,6 +386,12 @@ async function genererAttestationCanvas(apprenant, token) {
     _font(ctx, 28, "normal", "DM Sans");
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.fillText(ATT_ENTREPRISE.ADRESSE, 406, 278);
+
+    // Mentions légales — absentes ici auparavant, ajoutées pour que le
+    // document soit tout aussi officiel qu'une formation longue.
+    _font(ctx, 24, "normal", "DM Sans");
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillText(`RCCM ${ATT_ENTREPRISE.RCCM}  —  IFU ${ATT_ENTREPRISE.IFU}`, 406, 312);
 
     _rect(ctx, 2510, 42, 3, 318, "rgba(245,166,35,0.4)");
 

@@ -17,6 +17,11 @@ const FICHE_ENTREPRISE = {
   ADRESSE: "Comé, Hongodé — Bénin",
   SITE: "www.qualitededieuservice.com",
   LOGO_URL: "icons/logoqds.jpg",
+  // Mêmes mentions légales que sur l'attestation (voir ATT_ENTREPRISE dans
+  // attestation_generator.js) — la fiche apprenant est aussi un document
+  // administratif qui peut sortir du centre, elle doit donc les porter.
+  RCCM: "RB/ABC/23 B 7078",
+  IFU:  "3202357917037",
 };
 
 function _fFont(ctx, size, style = "normal", family = "DM Sans, Arial") {
@@ -294,20 +299,26 @@ async function genererFicheApprenant(apprenant, token) {
   const titreTxt = "Président Directeur Général";
   ctx.fillText(titreTxt, blocSigCentreX - _fMw(ctx, titreTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, titreTxt) / 2, SIG_Y + 220);
 
-  // Bande agrandie (70 → 116px) pour loger la ligne d'authentification
-  // manuelle en plus des infos existantes — nécessaire pour toute personne
-  // qui ne peut pas scanner le QR code (photocopie, impression N&B, etc.).
-  const FOOTER_H = 116;
+  // Bande agrandie (70 → 128px) pour loger la ligne d'authentification
+  // manuelle et les mentions légales en plus des infos existantes —
+  // nécessaire pour toute personne qui ne peut pas scanner le QR code
+  // (photocopie, impression N&B, etc.). +12px par rapport à la version
+  // précédente (116px) : gain minimal pour limiter le risque de
+  // chevauchement avec le bloc signature au-dessus.
+  const FOOTER_H = 128;
   const FOOTER_Y = H - FOOTER_H;
   _fRectFill(ctx, 0, FOOTER_Y, W, FOOTER_H, FICHE.MARINE);
   _fFont(ctx, 18, "500"); ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.fillText("Comé, Bénin  —  " + FICHE_ENTREPRISE.SITE, M, FOOTER_Y + 32);
+  ctx.fillText("Comé, Bénin  —  " + FICHE_ENTREPRISE.SITE, M, FOOTER_Y + 28);
   _fFont(ctx, 16, "500"); ctx.fillStyle = "rgba(255,255,255,0.55)";
   const refTxt = "Réf : " + apprenant.id;
-  ctx.fillText(refTxt, W - M - _fMw(ctx, refTxt), FOOTER_Y + 32);
+  ctx.fillText(refTxt, W - M - _fMw(ctx, refTxt), FOOTER_Y + 28);
+
+  _fFont(ctx, 14, "400"); ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.fillText(`RCCM ${FICHE_ENTREPRISE.RCCM}  —  IFU ${FICHE_ENTREPRISE.IFU}`, M, FOOTER_Y + 50);
 
   _fFont(ctx, 15, "400"); ctx.fillStyle = "rgba(255,255,255,0.55)";
-  _fWrapCentre(ctx, "Pour authentifier cet acte, veuillez utiliser le site sur n'importe quel navigateur ou via : " + FICHE_VERIF_URL, W / 2, FOOTER_Y + 58, W - M * 2, 19);
+  _fWrapCentre(ctx, "Pour authentifier cet acte, veuillez utiliser le site sur n'importe quel navigateur ou via : " + FICHE_VERIF_URL, W / 2, FOOTER_Y + 74, W - M * 2, 19);
 
   return canvas;
 }
