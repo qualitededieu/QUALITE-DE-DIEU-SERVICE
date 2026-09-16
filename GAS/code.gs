@@ -38,10 +38,13 @@ const CONFIG = {
 
   BANQUE: {
     TITULAIRE:     'LES QUALITÉS DE DIEU SERVICE SARL',
-    NOM_BANQUE:    'UBA Bénin',
-    NUMERO_COMPTE: 'BJ66 XXXX XXX XXX XX',
-    CODE_BANQUE:   'IBAN',
-    CODE_AGENCE:   'BJ0COBJ'
+    NOM_BANQUE:    'Bank Of Africa Bénin (agence Comé)',
+    NUMERO_COMPTE: '005098760007',
+    CLE_RIB:       '77',
+    CODE_BANQUE:   'BJ061',
+    CODE_AGENCE:   '13001',
+    IBAN:          'BJ66 BJ06 1130 0100 5098 7600 0777',
+    BIC:           'AFRIBJBJXXX'
   },
 
   FORMATIONS_VALIDES: [
@@ -203,10 +206,32 @@ function testerRenseignement() {
   Logger.log('[testerRenseignement] Réponse : ' + resultat.getContent());
 }
 
+// Normalise data.formations en tableau exploitable, quelle que soit sa
+// forme d'arrivée (tableau réel, valeur unique, ou chaîne JSON mal
+// sérialisée par un intermédiaire) — utilisé à la fois par la validation
+// et par le traitement, pour ne jamais avoir deux lectures divergentes
+// de la même donnée brute.
+function _normaliserFormations(data) {
+  let brut = data.formations;
+  if (typeof brut === 'string' && brut.trim().startsWith('[')) {
+    try { brut = JSON.parse(brut); } catch (e) { /* laissé tel quel */ }
+  }
+  return Array.isArray(brut) ? brut : [brut];
+}
+
 function traiterInscription(data) {
 
   const erreursChamps = validerDonneesInscription(data);
   if (erreursChamps.length > 0) {
+    // Trace complète dans le Journal d'exécution (Apps Script → Exécutions)
+    // à chaque rejet — sans elle, un rejet en production est invisible tant
+    // que l'apprenant ne se plaint pas, et on ne sait jamais QUELLE valeur
+    // exacte a été reçue (undefined ? chaîne vide ? tableau vide ? valeur
+    // qui ne correspond à aucune formation valide ?).
+    console.error('[Inscription] Rejetée — champs :', erreursChamps.join(', '),
+      '— formations reçues :', JSON.stringify(data.formations),
+      '— clause1 :', data.clause1, '(' + typeof data.clause1 + ')',
+      '— clause2 :', data.clause2, '(' + typeof data.clause2 + ')');
     return reponseJSON({ status: 'error', message: 'Champs invalides : ' + erreursChamps.join(', ') });
   }
 
@@ -215,9 +240,7 @@ function traiterInscription(data) {
     return reponseJSON({ status: 'error', message: erreursFichiers.join(' ') });
   }
 
-  const formationsBrutes = Array.isArray(data.formations)
-    ? data.formations.filter(f => CONFIG.FORMATIONS_VALIDES.includes(f))
-    : [data.formations].filter(f => CONFIG.FORMATIONS_VALIDES.includes(f));
+  const formationsBrutes = _normaliserFormations(data).filter(f => CONFIG.FORMATIONS_VALIDES.includes(f));
 
   if (formationsBrutes.length === 0) {
     return reponseJSON({ status: 'error', message: 'Aucune formation valide sélectionnée.' });
@@ -384,13 +407,20 @@ function validerDonneesInscription(data) {
   if (!data.typePiece  || data.typePiece.trim().length < 2)  erreurs.push('type de pièce');
   if (!data.numeroPiece|| data.numeroPiece.trim().length < 4) erreurs.push('numéro de pièce');
 
-  const formations = Array.isArray(data.formations) ? data.formations : [data.formations];
+  const formations = _normaliserFormations(data);
   if (!formations || !formations.some(f => CONFIG.FORMATIONS_VALIDES.includes(f)))
     erreurs.push('formation(s)');
 
   if (!data.signatureBase64 || data.signatureBase64.length < 100) erreurs.push('signature');
-  if (!data.clause1) erreurs.push('acceptation de la déclaration sur l\'honneur');
-  if (!data.clause2) erreurs.push('acceptation du traitement des données');
+
+  // Blindage : accepte aussi bool "true"/"false" envoyé en chaîne (au cas
+  // où un ancien cache navigateur ou un intermédiaire sérialise les
+  // booléens en texte) — sans jamais entériner un simple "présence de
+  // champ" qui ne prouve pas un consentement explicite.
+  const clause1Ok = data.clause1 === true || data.clause1 === 'true';
+  const clause2Ok = data.clause2 === true || data.clause2 === 'true';
+  if (!clause1Ok) erreurs.push('acceptation de la déclaration sur l\'honneur');
+  if (!clause2Ok) erreurs.push('acceptation du traitement des données');
 
   return erreurs;
 }
@@ -921,8 +951,10 @@ function construireEmailVirement(inscription, montants) {
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:20px;">
       <tr style="background:#F0F9FA;"><td colspan="2" style="padding:12px 18px;font-weight:700;color:${CONFIG.COULEUR_TEAL};font-size:12px;text-transform:uppercase;">Coordonnées bancaires</td></tr>
       ${ligneInfoEmailAccent('Titulaire',      CONFIG.BANQUE.TITULAIRE)}
-      ${ligneInfoEmail('Banque',               CONFIG.BANQUE.NOM_BANQUE    || '— UBA Bénin')}
-      ${ligneInfoEmail('N° de compte',         CONFIG.BANQUE.NUMERO_COMPTE || '— 541 4114 xxxx xxxx xxxx')}
+      ${ligneInfoEmail('Banque',               CONFIG.BANQUE.NOM_BANQUE)}
+      ${ligneInfoEmailAccent('IBAN',           CONFIG.BANQUE.IBAN)}
+      ${ligneInfoEmail('BIC / SWIFT',          CONFIG.BANQUE.BIC)}
+      ${ligneInfoEmail('N° de compte',         CONFIG.BANQUE.NUMERO_COMPTE + (CONFIG.BANQUE.CLE_RIB ? ' (clé ' + CONFIG.BANQUE.CLE_RIB + ')' : ''))}
       ${CONFIG.BANQUE.CODE_BANQUE  ? ligneInfoEmail('Code banque',  CONFIG.BANQUE.CODE_BANQUE)  : ''}
       ${CONFIG.BANQUE.CODE_AGENCE  ? ligneInfoEmail('Code agence',  CONFIG.BANQUE.CODE_AGENCE)  : ''}
       ${ligneInfoEmailAccent('Motif du virement', `${inscription.id} — ${inscription.formationsLabel}`)}

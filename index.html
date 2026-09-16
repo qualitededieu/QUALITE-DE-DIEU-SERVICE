@@ -1958,13 +1958,23 @@
           resetBtnLabel();
           showToast(`Dossier ${result.id} enregistré. Virement attendu.`, 'success');
         } else {
-          throw new Error(result.message || 'Erreur serveur');
+          // AVANT : on affichait un message générique qui masquait la vraie
+          // raison du rejet (ex. "Champs invalides : formation(s), ...") —
+          // l'apprenant ne savait jamais quoi corriger et abandonnait, ou
+          // ré-essayait à l'identique en pensant que "le site ne marche pas".
+          // On affiche maintenant le message précis renvoyé par GAS, tout
+          // en gardant une trace console pour le diagnostic technique.
+          console.error('[Inscription] Rejet serveur — formations:', formations, 'clause1:', payload.clause1, 'clause2:', payload.clause2, '— message:', result.message);
+          feedback.className     = 'form-feedback error-msg';
+          feedback.textContent   = result.message || 'Votre dossier n\'a pas pu être enregistré. Vérifiez les champs signalés puis réessayez.';
+          feedback.style.display = 'block';
+          showToast(result.message || 'Dossier rejeté — vérifiez le formulaire.', 'error');
         }
 
       } catch (err) {
         console.error('[Inscription]', err);
         feedback.className     = 'form-feedback error-msg';
-        feedback.textContent   = 'Une erreur est survenue. Veuillez réessayer ou nous appeler au +229 01 97 95 12 30.';
+        feedback.textContent   = 'Une erreur de connexion est survenue. Vérifiez votre connexion internet et réessayez, ou appelez-nous au +229 01 97 95 12 30.';
         feedback.style.display = 'block';
         showToast('Erreur d\'envoi. Réessayez.', 'error');
       } finally {
