@@ -235,10 +235,17 @@ function adminGetStats(data, email) {
       const row = donnees[i];
       if (!row[0] || row[0] === 'LQD-EXEMPLE') continue;
       stats.total++;
-      const statutDossier  = row[9]  || '';
-      const statutPaiement = row[21] || '';
-      const formations     = String(row[6] || '').split(' | ');
-      const premierVirement= Number(row[20]) || 0;
+      // Index corrigés — alignés sur ENTETES_INSCRIPTION / mapperLigneDossier
+      // (statutDossier=28, formations=22, statutPaiement=43, premierVirement=41).
+      // Les anciens index (9, 21, 6, 20) pointaient sur Téléphone, Téléphone
+      // tuteur, Lieu de naissance et Nom tuteur — jamais sur les vraies
+      // colonnes de statut. Résultat concret : "Confirmés" et "Chiffre
+      // d'affaires" affichaient toujours 0, et "En attente" comptait tout
+      // le monde, quel que soit le vrai statut du dossier.
+      const statutDossier  = row[28] || '';
+      const statutPaiement = row[43] || '';
+      const formations     = String(row[22] || '').split(' | ');
+      const premierVirement= Number(row[41]) || 0;
 
       if (statutDossier === 'Confirmé')       stats.confirmes++;
       else if (statutDossier === 'Annulé')    stats.annules++;
