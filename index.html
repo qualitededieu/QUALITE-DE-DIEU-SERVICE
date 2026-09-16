@@ -55,6 +55,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
   <script src="https://cdn.fedapay.com/checkout.js?v=1.1.7"></script>
+  <!-- Détection de visage côté navigateur pour la photo d'identité — tout
+       se passe dans le navigateur de l'apprenant, aucune photo n'est
+       envoyée à un service tiers pour cette vérification. "defer" pour
+       ne pas ralentir l'affichage initial de la page. -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" defer></script>
 
   <style>
     :root {
@@ -1704,8 +1709,26 @@
       document.getElementById('zone-' + cle).classList.remove('error');
 
       const reader = new FileReader();
-      reader.onload = e => {
-        fichiers[cle] = { base64: e.target.result.split(',')[1], mimeType: file.type, nom: file.name };
+      reader.onload = async e => {
+        const dataURL = e.target.result;
+
+        // Contrôle qualité spécifique à la photo d'identité : on refuse
+        // toute image sans visage net et bien cadré (selfie de loin,
+        // photo de groupe, paysage envoyé par erreur...). Voir
+        // verifierVisagePhoto() plus bas — tout se passe dans le
+        // navigateur, aucune donnée envoyée à un tiers.
+        if (cle === 'photo') {
+          majUIUpload('photo', 'Vérification du visage...', true);
+          const verif = await verifierVisagePhoto(dataURL);
+          if (verif.rejet) {
+            showToast(verif.message, 'error');
+            effacerZone(cle);
+            input.value = '';
+            return;
+          }
+        }
+
+        fichiers[cle] = { base64: dataURL.split(',')[1], mimeType: file.type, nom: file.name };
         majUIUpload(cle, file.name, true);
         if (cle === 'piece1' || cle === 'photo') {
           const piece1ok = !!fichiers.piece1;
@@ -1716,6 +1739,70 @@
       };
       reader.onerror = () => showToast('Erreur de lecture du fichier. Réessayez.', 'error');
       reader.readAsDataURL(file);
+    }
+
+    /* ================================================================
+       CONTRÔLE QUALITÉ PHOTO D'IDENTITÉ — détection de visage
+       Bibliothèque face-api.js (tourne entièrement dans le navigateur,
+       modèle léger "TinyFaceDetector" ~190 Ko). Objectif : refuser les
+       photos qui ne sont manifestement pas des photos d'identité
+       (aucun visage, plusieurs visages, visage minuscule dans le cadre).
+
+       IMPORTANT — principe de tolérance : si le modèle ne charge pas
+       (CDN bloqué chez l'apprenant, connexion instable...), on laisse
+       passer la photo plutôt que de bloquer toute l'inscription à cause
+       d'un problème d'infrastructure tiers qui n'a rien à voir avec la
+       qualité réelle de la photo. Le blocage strict ne s'applique QUE
+       quand la détection a bien fonctionné et a trouvé un problème.
+    ================================================================ */
+    let _faceApiChargement = null;
+    function _chargerFaceApi() {
+      if (_faceApiChargement) return _faceApiChargement;
+      _faceApiChargement = (async () => {
+        if (typeof faceapi === 'undefined') throw new Error('face-api.js non chargé');
+        const MODELS_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
+      })();
+      return _faceApiChargement;
+    }
+
+    async function verifierVisagePhoto(dataURL) {
+      try {
+        await _chargerFaceApi();
+      } catch (e) {
+        console.warn('[Photo] Détection de visage indisponible (CDN/réseau) — photo acceptée sans vérification :', e.message);
+        return { rejet: false };
+      }
+
+      const img = new Image();
+      const chargee = new Promise((resolve, reject) => {
+        img.onload  = resolve;
+        img.onerror = reject;
+      });
+      img.src = dataURL;
+
+      try {
+        await chargee;
+        const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }));
+
+        if (detections.length === 0) {
+          return { rejet: true, message: "Aucun visage détecté sur cette photo. Utilisez une photo d'identité récente, de face, visage bien visible." };
+        }
+        if (detections.length > 1) {
+          return { rejet: true, message: 'Plusieurs visages détectés. La photo doit contenir uniquement votre visage, seul(e).' };
+        }
+
+        const boite      = detections[0].box;
+        const aireVisage = (boite.width * boite.height) / (img.width * img.height);
+        if (aireVisage < 0.04) {
+          return { rejet: true, message: 'Le visage est trop petit sur cette photo. Rapprochez-vous ou recadrez avant de renvoyer.' };
+        }
+
+        return { rejet: false };
+      } catch (e) {
+        console.warn('[Photo] Erreur pendant la détection — photo acceptée sans vérification :', e.message);
+        return { rejet: false };
+      }
     }
 
     function majUIUpload(cle, nomFichier, ok) {
