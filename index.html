@@ -1371,8 +1371,38 @@
       live:    'pk_live_HC4iMRlrkg2VM8SWV1N7aVGD',
       sandbox: 'pk_sandbox_dw3YfWGfx4i1ykzZZ8EeO9lY'
     };
-    const FEDAPAY_ENVIRONNEMENT = 'sandbox'; // Seule ligne à changer : 'live' ou 'sandbox'
-    const FEDAPAY_PUBLIC_KEY    = FEDAPAY_CLES_PUBLIQUES[FEDAPAY_ENVIRONNEMENT];
+    // Le mode (sandbox/live) n'est PLUS codé en dur ici : il est piloté
+    // depuis l'admin (onglet Actualités → Mode de paiement FedaPay),
+    // stocké côté GAS et lu dynamiquement via obtenir_mode_paiement.
+    // Objectif : après livraison du site, passer en production réelle
+    // ne demande AUCUNE modification de code ni de config Vercel — un
+    // seul interrupteur dans l'admin suffit. 'sandbox' ci-dessous n'est
+    // qu'une valeur de secours tant que l'appel réseau n'a pas répondu.
+    let FEDAPAY_ENVIRONNEMENT = 'sandbox';
+    let FEDAPAY_PUBLIC_KEY    = FEDAPAY_CLES_PUBLIQUES[FEDAPAY_ENVIRONNEMENT];
+
+    async function _rafraichirModePaiement() {
+      try {
+        const resp = await fetch(GAS_WEBAPP_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body:    JSON.stringify({ action: 'obtenir_mode_paiement' })
+        });
+        const result = await resp.json();
+        if (result.status === 'success' && FEDAPAY_CLES_PUBLIQUES[result.mode]) {
+          FEDAPAY_ENVIRONNEMENT = result.mode;
+          FEDAPAY_PUBLIC_KEY    = FEDAPAY_CLES_PUBLIQUES[result.mode];
+        }
+      } catch (e) {
+        console.warn('[FedaPay] Mode de paiement non récupéré, valeur de secours "sandbox" conservée :', e.message);
+      }
+      return FEDAPAY_ENVIRONNEMENT;
+    }
+    // On lance la récupération dès le chargement de la page (le paiement
+    // n'intervenant que plus tard dans le parcours de l'apprenant, le
+    // temps de réponse GAS est totalement absorbé) — voir aussi le
+    // second appel défensif dans payerTelechargementAttestation.
+    _rafraichirModePaiement();
 
     /* ================================================================
        BANDEAU D'INFORMATION — plusieurs messages possibles côté admin,
@@ -2214,10 +2244,16 @@ function afficherPromptPaiementTelechargement(apprenant, montant) {
     </div>`;
 }
 
-function payerTelechargementAttestation(id, montant) {
+async function payerTelechargementAttestation(id, montant) {
   const btn = document.getElementById('btn-payer-telechargement');
   const libelleInitial = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = 'Ouverture du paiement...'; }
+
+  // Vérification défensive juste avant le paiement : si l'admin a
+  // basculé le mode entre le chargement de la page et ce clic (session
+  // longue restée ouverte), on veut la valeur la plus fraîche possible
+  // avant d'ouvrir le widget FedaPay avec la bonne clé publique.
+  await _rafraichirModePaiement();
 
   const widget = FedaPay.init({
     public_key:  FEDAPAY_PUBLIC_KEY,

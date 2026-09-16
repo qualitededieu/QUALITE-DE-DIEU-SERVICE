@@ -344,6 +344,27 @@ function enregistrerTelechargement(data) {
 
 // Appelée par le webhook FedaPay (Vercel) après paiement confirmé —
 // authentifiée par secret partagé, pas par session utilisateur.
+// Source unique de vérité pour le mode FedaPay (sandbox / live).
+// Stocké dans les Propriétés du script (modifiable UNIQUEMENT depuis
+// l'onglet Paiement de l'admin — voir admin.gs adminGetModePaiement /
+// adminSetModePaiement) au lieu d'être codé en dur dans index.html ou
+// dans une variable d'environnement Vercel. Ainsi, après livraison du
+// site, basculer entre sandbox et live se fait en un clic dans l'admin,
+// sans toucher au code ni à la configuration Vercel.
+//
+// Sécurité : ceci ne renvoie qu'un simple mot ('sandbox' ou 'live'),
+// jamais une clé secrète — cette route reste donc volontairement
+// publique (pas de token requis), car index.html, verifier.html et les
+// fonctions Vercel (api/paiement-webhook.js, api/paiement-verifier.js)
+// en ont besoin AVANT toute authentification.
+//
+// Par sécurité, si la propriété n'est pas encore définie, on part du
+// principe le plus prudent : 'sandbox' (jamais 'live' par défaut).
+function obtenirModePaiementPublic(data) {
+  const mode = PropertiesService.getScriptProperties().getProperty('FEDAPAY_MODE') || 'sandbox';
+  return reponseJSON({ status: 'success', mode: mode });
+}
+
 function confirmerPaiementTelechargement(data) {
   const secretAttendu = PropertiesService.getScriptProperties().getProperty('SECRET_PARTAGE');
 

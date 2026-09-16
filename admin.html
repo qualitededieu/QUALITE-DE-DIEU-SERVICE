@@ -677,6 +677,32 @@
 
     <div class="page" id="page-actualites">
 
+      <div class="table-card" style="margin-bottom:20px;border:1px solid var(--orange-500,#F97316);">
+        <div class="table-card-header">
+          <span class="table-card-title">
+            <span class="iconify" data-icon="tabler:credit-card" style="color:var(--orange-500,#F97316);"></span>
+            Mode de paiement FedaPay
+          </span>
+          <span id="mode-paiement-badge" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;">—</span>
+        </div>
+        <div style="padding:20px;">
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px;line-height:1.6;">
+            Contrôle unique du mode de paiement pour tout le site (formulaire de paiement, vérification FedaPay,
+            webhook). Aucune modification de code ni de configuration Vercel n'est nécessaire pour basculer :
+            ce réglage seul suffit.
+          </p>
+          <label class="auth-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:4px;">
+            <input type="checkbox" id="mode-paiement-toggle" style="width:18px;height:18px;cursor:pointer;" onchange="basculerModePaiement(this)" />
+            Mode LIVE actif (paiements réels — décoché = Sandbox / test)
+          </label>
+          <p style="font-size:12px;color:var(--red,#EF4444);margin-top:8px;">
+            <span class="iconify" data-icon="tabler:alert-triangle"></span>
+            En mode LIVE, les paiements débitent réellement l'argent des apprenants. Les clés secrètes
+            correspondantes (FEDAPAY_SECRET_KEY, FEDAPAY_WEBHOOK_SECRET) doivent déjà être configurées sur Vercel.
+          </p>
+        </div>
+      </div>
+
       <div class="table-card" style="margin-bottom:20px;">
         <div class="table-card-header">
           <span class="table-card-title">Bandeau d'information (haut de page)</span>
@@ -1224,7 +1250,7 @@ function naviguer(page, filtre = '') {
   if (page === 'dossiers')        chargerDossiers();
   if (page === 'renseignements')  chargerRenseignements();
   if (page === 'candidatures')    chargerCandidatures();
-  if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); }
+  if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); chargerModePaiementAdmin(); }
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -2271,6 +2297,61 @@ function supprimerAnnonce(id) {
       if (result.status === 'success') {
         toast('Annonce supprimée.', 'success');
         chargerActualitesAdmin();
+      } else {
+        toast(result.message || 'Erreur.', 'error');
+      }
+    } catch (e) {
+      toast('Erreur réseau.', 'error');
+    }
+  });
+}
+
+/* ================================================================
+   MODE DE PAIEMENT FEDAPAY (sandbox / live) — un seul réglage,
+   stocké côté GAS (Propriétés du script), qui pilote tout le site :
+   index.html (widget de paiement), api/paiement-webhook.js et
+   api/paiement-verifier.js (choix des clés/secrets FedaPay). Après
+   livraison du site, c'est l'UNIQUE geste à faire pour passer en
+   production réelle — aucun accès au code ni à Vercel requis.
+================================================================ */
+function _rendreBadgeModePaiement(mode) {
+  const badge = document.getElementById('mode-paiement-badge');
+  const toggle = document.getElementById('mode-paiement-toggle');
+  const estLive = mode === 'live';
+  toggle.checked = estLive;
+  badge.textContent = estLive ? 'LIVE — paiements réels' : 'SANDBOX — mode test';
+  badge.style.background = estLive ? 'var(--red,#EF4444)' : 'var(--teal-l,#0D9488)';
+  badge.style.color = '#fff';
+}
+
+async function chargerModePaiementAdmin() {
+  try {
+    const result = await apiCall('admin_get_mode_paiement');
+    if (result.status === 'success') _rendreBadgeModePaiement(result.mode);
+  } catch (e) {
+    console.warn('Chargement mode de paiement impossible :', e.message);
+  }
+}
+
+function basculerModePaiement(checkbox) {
+  const nouveauMode = checkbox.checked ? 'live' : 'sandbox';
+  const titre = nouveauMode === 'live'
+    ? 'Passer en mode LIVE ?'
+    : 'Repasser en mode Sandbox ?';
+  const message = nouveauMode === 'live'
+    ? "À partir de maintenant, TOUS les paiements sur le site débiteront réellement l'argent des apprenants. Assurez-vous que les clés FedaPay Live (FEDAPAY_SECRET_KEY, FEDAPAY_WEBHOOK_SECRET) sont bien configurées sur Vercel avant de confirmer."
+    : "Le site repassera en mode test (Sandbox) — aucun paiement réel ne sera débité.";
+
+  // On annule visuellement le changement tant que l'admin n'a pas confirmé,
+  // pour éviter un basculement accidentel en un clic.
+  checkbox.checked = !checkbox.checked;
+
+  confirmer(titre, message, async () => {
+    try {
+      const result = await apiCall('admin_set_mode_paiement', { mode: nouveauMode });
+      if (result.status === 'success') {
+        _rendreBadgeModePaiement(result.mode);
+        toast(`Mode de paiement : ${result.mode.toUpperCase()}.`, 'success');
       } else {
         toast(result.message || 'Erreur.', 'error');
       }

@@ -23,8 +23,30 @@ const { FedaPay, Transaction } = require("fedapay");
 //   (confirmer_paiement_telechargement), donc aucune divergence de
 //   logique métier entre les deux chemins (passif et actif).
 
-function _obtenirCleSecrete() {
-  const mode = (process.env.FEDAPAY_MODE || "live").toLowerCase();
+// Le mode (sandbox/live) n'est plus lu depuis une variable Vercel : il
+// vient de GAS (source unique de vérité, pilotée depuis l'admin — voir
+// GAS/carte.gs obtenirModePaiementPublic). Ainsi, basculer le site en
+// production réelle ne demande de toucher NI le code NI Vercel : un seul
+// interrupteur dans l'admin suffit, et cette fonction s'aligne dessus
+// automatiquement à chaque appel.
+async function _obtenirModeActuel(urlGas) {
+  try {
+    const reponse = await fetch(urlGas, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "obtenir_mode_paiement" })
+    });
+    const resultat = await reponse.json();
+    if (resultat.status === "success" && (resultat.mode === "sandbox" || resultat.mode === "live")) {
+      return resultat.mode;
+    }
+  } catch (erreur) {
+    console.error("[Vérif active] Impossible de récupérer le mode de paiement depuis GAS, repli sur 'sandbox' :", erreur.message);
+  }
+  return "sandbox";
+}
+
+function _obtenirCleSecrete(mode) {
   return mode === "sandbox"
     ? process.env.FEDAPAY_SECRET_KEY_MODE_SANDBOX
     : process.env.FEDAPAY_SECRET_KEY;
@@ -36,13 +58,20 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const mode        = (process.env.FEDAPAY_MODE || "live").toLowerCase();
-  const cleSecrete  = _obtenirCleSecrete();
-  const urlGas      = process.env.GAS_URL;
-  const secretGas   = process.env.GAS_SHARED_SECRET;
+  const urlGas    = process.env.GAS_URL;
+  const secretGas = process.env.GAS_SHARED_SECRET;
 
-  if (!cleSecrete || !urlGas || !secretGas) {
-    console.error(`[Vérif active] Configuration serveur incomplète pour le mode "${mode}" — vérifier sur Vercel : ${mode === "sandbox" ? "FEDAPAY_SECRET_KEY_MODE_SANDBOX" : "FEDAPAY_SECRET_KEY"}, GAS_URL, GAS_SHARED_SECRET.`);
+  if (!urlGas || !secretGas) {
+    console.error("[Vérif active] Configuration serveur incomplète — vérifier sur Vercel : GAS_URL, GAS_SHARED_SECRET.");
+    res.status(500).json({ status: "error", erreur: "Configuration serveur incomplète." });
+    return;
+  }
+
+  const mode       = await _obtenirModeActuel(urlGas);
+  const cleSecrete = _obtenirCleSecrete(mode);
+
+  if (!cleSecrete) {
+    console.error(`[Vérif active] Configuration serveur incomplète pour le mode "${mode}" (piloté depuis l'admin) — vérifier sur Vercel : ${mode === "sandbox" ? "FEDAPAY_SECRET_KEY_MODE_SANDBOX" : "FEDAPAY_SECRET_KEY"}.`);
     res.status(500).json({ status: "error", erreur: "Configuration serveur incomplète." });
     return;
   }

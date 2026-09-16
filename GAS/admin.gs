@@ -58,6 +58,9 @@ function routerAdmin(data, action) {
       case 'admin_bandeau_set':         return requireAuth(data, adminBandeauSet);
       case 'bandeau_get_public':        return bandeauGetPublic(data);
 
+      case 'admin_get_mode_paiement':   return requireAuth(data, adminGetModePaiement);
+      case 'admin_set_mode_paiement':   return requireAuth(data, adminSetModePaiement);
+
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
     }
@@ -425,6 +428,24 @@ function adminDebloquerTelechargement(data, email) {
 
   console.log(`[Admin:${email}] Déblocage manuel des téléchargements pour ${id} (paiement Mobile Money direct)`);
   return reponseJSON({ status: 'success', message: '6 téléchargements débloqués.' });
+}
+
+// Mode de paiement FedaPay (sandbox/live) — voir obtenirModePaiementPublic
+// dans carte.gs pour le fonctionnement complet et la justification. Ici,
+// côté admin authentifié uniquement, on peut LIRE et MODIFIER ce mode.
+function adminGetModePaiement(data, email) {
+  const mode = PropertiesService.getScriptProperties().getProperty('FEDAPAY_MODE') || 'sandbox';
+  return reponseJSON({ status: 'success', mode: mode });
+}
+
+function adminSetModePaiement(data, email) {
+  const mode = String(data.mode || '').trim().toLowerCase();
+  if (mode !== 'sandbox' && mode !== 'live') {
+    return reponseJSON({ status: 'error', message: "Mode invalide — 'sandbox' ou 'live' attendu." });
+  }
+  PropertiesService.getScriptProperties().setProperty('FEDAPAY_MODE', mode);
+  console.log(`[Admin:${email}] Mode de paiement FedaPay changé vers : ${mode.toUpperCase()}`);
+  return reponseJSON({ status: 'success', mode: mode });
 }
 
 function adminApercuAttestation(data, email) {

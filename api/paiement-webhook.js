@@ -2,14 +2,38 @@ const { Webhook } = require("fedapay");
 
 // Deux jeux de secrets distincts dans Vercel (FEDAPAY_WEBHOOK_SECRET pour
 // le live, FEDAPAY_WEBHOOK_SECRET_MODE_SANDBOX pour les tests) — on choisit
-// lequel utiliser via FEDAPAY_MODE, sans jamais copier de valeur d'une
-// variable à l'autre. Doit rester synchronisé avec FEDAPAY_ENVIRONNEMENT
-// dans index.html (même bascule, deux endroits).
-function _obtenirSecretWebhook() {
-  const mode = (process.env.FEDAPAY_MODE || "live").toLowerCase();
+// lequel utiliser via le mode ACTUEL, lu dynamiquement depuis GAS (source
+// unique de vérité, pilotée depuis l'admin — voir GAS/carte.gs
+// obtenirModePaiementPublic). On ne dépend plus d'une variable
+// d'environnement Vercel pour ce choix : un admin peut ainsi basculer
+// sandbox/live sans jamais toucher à Vercel.
+function _obtenirSecretWebhook(mode) {
   return mode === "sandbox"
     ? process.env.FEDAPAY_WEBHOOK_SECRET_MODE_SANDBOX
     : process.env.FEDAPAY_WEBHOOK_SECRET;
+}
+
+// Interroge GAS pour connaître le mode de paiement actuel (sandbox/live).
+// Ne renvoie jamais de secret, juste ce mot — c'est pourquoi côté GAS
+// cette route est volontairement publique (aucun token requis).
+// En cas d'échec réseau, on retombe sur 'sandbox' par prudence : mieux
+// vaut un webhook qui échoue proprement (visible dans les logs) qu'un
+// webhook qui utiliserait par erreur les mauvais secrets.
+async function _obtenirModeActuel(urlGas) {
+  try {
+    const reponse = await fetch(urlGas, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "obtenir_mode_paiement" })
+    });
+    const resultat = await reponse.json();
+    if (resultat.status === "success" && (resultat.mode === "sandbox" || resultat.mode === "live")) {
+      return resultat.mode;
+    }
+  } catch (erreur) {
+    console.error("[Webhook] Impossible de récupérer le mode de paiement depuis GAS, repli sur 'sandbox' :", erreur.message);
+  }
+  return "sandbox";
 }
 
 module.exports = async (req, res) => {
@@ -18,17 +42,23 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const mode            = (process.env.FEDAPAY_MODE || "live").toLowerCase();
-  const secretWebhook = _obtenirSecretWebhook();
-  const urlGas         = process.env.GAS_URL;
-  const secretGas       = process.env.GAS_SHARED_SECRET;
+  const urlGas    = process.env.GAS_URL;
+  const secretGas = process.env.GAS_SHARED_SECRET;
 
-  // Le mode retenu ici DOIT correspondre à FEDAPAY_ENVIRONNEMENT dans
-  // index.html (voir commentaire là-bas). S'ils divergent, la signature
-  // du webhook est vérifiée avec le mauvais secret et échoue TOUJOURS,
-  // silencieusement pour l'apprenant (il voit juste "confirmation en
-  // cours" qui n'aboutit jamais) — d'où ce log explicite à chaque appel.
-  console.log("[Webhook] FEDAPAY_MODE effectif :", mode, "(doit correspondre à FEDAPAY_ENVIRONNEMENT dans index.html)");
+  if (!urlGas || !secretGas) {
+    console.error("[Webhook] Configuration serveur incomplète — vérifier sur Vercel : GAS_URL, GAS_SHARED_SECRET.");
+    res.status(500).end();
+    return;
+  }
+
+  const mode          = await _obtenirModeActuel(urlGas);
+  const secretWebhook = _obtenirSecretWebhook(mode);
+
+  // Le mode retenu ici vient directement de l'admin (onglet Actualités →
+  // Mode de paiement FedaPay). S'il ne correspond pas au secret réellement
+  // configuré côté FedaPay pour ce mode, la signature du webhook échoue
+  // TOUJOURS, silencieusement pour l'apprenant — d'où ce log explicite.
+  console.log("[Webhook] Mode de paiement effectif (piloté depuis l'admin) :", mode);
 
   if (!secretWebhook || !urlGas || !secretGas) {
     console.error(`[Webhook] Configuration serveur incomplète pour le mode "${mode}" — vérifier sur Vercel : ${mode === "sandbox" ? "FEDAPAY_WEBHOOK_SECRET_MODE_SANDBOX" : "FEDAPAY_WEBHOOK_SECRET"}, GAS_URL, GAS_SHARED_SECRET.`);

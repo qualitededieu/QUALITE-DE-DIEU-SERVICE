@@ -132,6 +132,7 @@ function doPost(e) {
     const action = (e.parameter && e.parameter.action) || data.action || 'inscription';
   if (action === 'bandeau_get_public') return bandeauGetPublic(data);
   if (action === 'annonce_get_publique') return annonceGetPublique(data);
+  if (action === 'obtenir_mode_paiement') return obtenirModePaiementPublic(data);
   if (action.startsWith('admin_') || action === 'carte_get_data' || action === 'carte_verifier') return routerAdmin(data, action);
   if (action === 'verifier_document_par_id') return verifierDocumentParId(data);
   if (action === 'verifier_acces_telechargement') return verifierAccesTelechargement(data);
