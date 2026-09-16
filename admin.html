@@ -1650,15 +1650,27 @@ async function exporterCSV() {
 /* ================================================================
    CARTE D'APPRENTISSAGE
 ================================================================ */
-async function envoyerCarte(id) {
+async function envoyerCarte(id, forcerEnvoi = false) {
   confirmer(
     'Envoyer la carte',
     `Envoyer la carte d'apprentissage pour le dossier ${id} par email ?`,
     async () => {
       try {
-        const result = await apiCall('admin_envoyer_carte', { id });
+        const result = await apiCall('admin_envoyer_carte', { id, forcerEnvoi });
+
         if (result.status === 'success') {
           toast(`Carte envoyée à ${result.apprenant.email}`, 'success');
+
+        } else if (result.status === 'confirmation_requise') {
+          // La formation n'est pas encore terminée — deuxième confirmation
+          // explicite requise avant d'envoyer un document "fin de formation"
+          // en avance. Voir GAS/carte.gs → envoyerCarteAdmin.
+          confirmer(
+            'Formation non terminée',
+            result.message,
+            () => envoyerCarte(id, true)
+          );
+
         } else {
           toast(result.message || 'Erreur envoi carte', 'error');
         }

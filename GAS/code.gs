@@ -159,24 +159,43 @@ function doGet(e) {
   return reponseJSON({ status: 'ok', message: 'LQD Service API v3.1 opérationnelle.' });
 }
 
+// Jeu de test complet, synchronisé avec TOUS les champs actuellement
+// exigés par validerDonneesInscription() (sexe, dateNaissance, filiation,
+// pièce, signature, clauses...). Mis à jour car l'ancienne version de ce
+// test datait du formulaire v3.1 (avant l'ajout des champs famille/pièce/
+// clauses) et échouait donc systématiquement — un rejet ICI reflète un
+// vrai bug de validerDonneesInscription, plus un simple oubli de test.
 function testerDoPost() {
   const fakeEvent = {
     postData: {
       contents: JSON.stringify({
-        action:         'inscription',
-        prenom:         'Philippe',
-        nom:            'Bénin',
-        telephone:      '+2290162484491',
-        email:          'phanoskosmos@gmail.com',
-        formations:     ['Informatique & Bureautique'],
-        typePiece:      'CIP (Carte d\'Identité Personnelle)',
-        message:        'Test depuis éditeur GAS v3.1',
-        piece1Base64:   'dGVzdA==',
-        piece1MimeType: 'image/jpeg',
-        photoBase64:    'dGVzdA==',
-        photoMimeType:  'image/jpeg',
-        preuveBase64:   '',
-        preuveMimeType: ''
+        action:          'inscription',
+        prenom:          'Philippe',
+        nom:             'Bénin',
+        sexe:            'Masculin',
+        dateNaissance:   '1990-01-01',
+        lieuNaissance:   'Comé',
+        nationalite:     'Béninoise',
+        adresse:         'Comé, Mono',
+        telephone:       '+2290162484491',
+        email:           'phanoskosmos@gmail.com',
+        prenomMere:      'Marie',
+        nomMere:         'Test',
+        prenomPere:      'Jean',
+        nomPere:         'Test',
+        typePiece:       'CIP (Carte d\'Identité Personnelle)',
+        numeroPiece:     'B1234567',
+        formations:      ['Informatique & Bureautique'],
+        message:         'Test depuis éditeur GAS v3.1',
+        piece1Base64:    'dGVzdA==',
+        piece1MimeType:  'image/jpeg',
+        photoBase64:     'dGVzdA==',
+        photoMimeType:   'image/jpeg',
+        signatureBase64: 'dGVzdA=='.repeat(20),
+        clause1:         true,
+        clause2:         true,
+        preuveBase64:    '',
+        preuveMimeType:  ''
       })
     },
     parameter: { action: 'inscription' }

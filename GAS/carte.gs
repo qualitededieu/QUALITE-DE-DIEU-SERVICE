@@ -168,11 +168,33 @@ function envoyerCarteAdmin(data, email) {
     return reponseJSON({ status: 'error', message: 'Pas d\'email pour cet apprenant.' });
   }
 
+  // GARDE-FOU CRITIQUE : c'est ICI que part le document final vers
+  // l'apprenant par email — bien plus sensible que le simple aperçu
+  // admin. On refuse par défaut d'envoyer une attestation "fin de
+  // formation" tant que la date de fin réelle n'est pas atteinte, sauf
+  // confirmation explicite de l'admin (data.forcerEnvoi === true), pour
+  // les cas légitimes (ex. document intermédiaire demandé exceptionnellement).
+  if (apprenant.dateFin && !data.forcerEnvoi) {
+    const finFormation = new Date(apprenant.dateFin);
+    if (!isNaN(finFormation.getTime())) {
+      const aujourdHui = new Date();
+      aujourdHui.setHours(0, 0, 0, 0);
+      finFormation.setHours(0, 0, 0, 0);
+      if (aujourdHui < finFormation) {
+        return reponseJSON({
+          status:  'confirmation_requise',
+          message: `Attention : la formation de ce dossier se termine le ${apprenant.dateFin} — elle n'est pas encore finie. Envoyer quand même ?`,
+          dateFin: apprenant.dateFin
+        });
+      }
+    }
+  }
+
   const token = _genererTokenCarte(apprenant);
 
   _envoyerEmailCarte(apprenant, token);
 
-  console.log(`[Admin:${email}] Carte envoyée → ${apprenant.email} (${id})`);
+  console.log(`[Admin:${email}] Carte envoyée → ${apprenant.email} (${id})` + (data.forcerEnvoi ? ' [ENVOI FORCÉ — formation non terminée]' : ''));
   return reponseJSON({
     status:   'success',
     message:  `Carte envoyée à ${apprenant.email}`,

@@ -782,7 +782,57 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _rect(ctx, 0, ATT.H - 18, ATT.W, 18, ATT.OR);
 
+  // GARDE-FOU CRITIQUE : une attestation "fin de formation" ne doit
+  // jamais pouvoir sortir avec l'apparence d'un document final tant que
+  // la formation n'est pas réellement terminée (dateFin non atteinte).
+  // Le blocage existe déjà côté téléchargement public (verifierAccesTelechargement
+  // dans carte.gs), mais PAS côté aperçu admin (adminApercuAttestation) —
+  // qui doit rester utilisable pour vérifier la mise en page avant la fin
+  // du cursus. Solution : on laisse la génération se faire, mais on
+  // recouvre le document entier d'un filigrane impossible à ignorer ou à
+  // recadrer, rendant le document inutilisable comme preuve officielle
+  // tant que la date de fin n'est pas passée.
+  _dessinerFiligraneSiNonTerminee(ctx, apprenant);
+
   return canvas;
+}
+
+function _dessinerFiligraneSiNonTerminee(ctx, apprenant) {
+  if (!apprenant.dateFin) return;
+  const finFormation = new Date(apprenant.dateFin);
+  if (isNaN(finFormation.getTime())) return;
+
+  const aujourdHui = new Date();
+  aujourdHui.setHours(0, 0, 0, 0);
+  finFormation.setHours(0, 0, 0, 0);
+  if (aujourdHui >= finFormation) return; // Formation bien terminée — document valide, rien à signaler.
+
+  const dateFinTxt = finFormation.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  const ligne1 = "APERÇU — FORMATION EN COURS";
+  const ligne2 = `Document non valide avant le ${dateFinTxt}`;
+
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.translate(ATT.W / 2, ATT.H / 2);
+  ctx.rotate(-Math.PI / 8);
+
+  // Bandeau plein pour garantir la lisibilité même sur fond clair/photo.
+  _font(ctx, 96, "bold");
+  const largeurBandeau = Math.max(_mw(ctx, ligne1), _mw(ctx, ligne2)) + 160;
+  ctx.fillStyle = "rgba(200, 30, 30, 0.92)";
+  ctx.fillRect(-largeurBandeau / 2, -110, largeurBandeau, 220);
+  ctx.strokeStyle = "#FFFFFF";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(-largeurBandeau / 2, -110, largeurBandeau, 220);
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.textAlign = "center";
+  ctx.fillText(ligne1, 0, -18);
+  _font(ctx, 46, "bold", "DM Sans");
+  ctx.fillText(ligne2, 0, 55);
+  ctx.textAlign = "left";
+
+  ctx.restore();
 }
 
 async function afficherAttestationCanvas(apprenant, token) {
