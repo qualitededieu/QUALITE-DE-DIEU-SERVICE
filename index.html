@@ -2233,18 +2233,36 @@ function payerTelechargementAttestation(id, montant) {
       if (btn) { btn.disabled = false; btn.innerHTML = libelleInitial; }
       if (resultat.reason === FedaPay.DIALOG_DISMISSED) return;
 
-      attendreConfirmationPaiement(id);
+      // On récupère l'ID de la transaction FedaPay pour pouvoir la
+      // vérifier ACTIVEMENT côté serveur (voir api/paiement-verifier.js)
+      // plutôt que de dépendre uniquement du webhook FedaPay, qui s'est
+      // montré non fiable en pratique. La forme exacte de `resultat`
+      // varie selon les versions du widget, d'où ces vérifications
+      // défensives successives.
+      const transactionId =
+        (resultat.transaction && resultat.transaction.id) ||
+        resultat.transaction_id ||
+        resultat.id ||
+        null;
+
+      attendreConfirmationPaiement(id, transactionId);
     }
   });
   widget.open();
 }
 
 // Le widget FedaPay confirme côté client immédiatement, mais le
-// déblocage réel (compteur de téléchargements dans le Sheet) ne se
-// fait que via le webhook serveur (FedaPay → Vercel → GAS), qui peut
-// prendre quelques secondes, voire échouer silencieusement en cas de
-// mauvaise config (secret webhook, secret partagé GAS, mode live/sandbox
-// désynchronisés — voir LISEZ-MOI / api/paiement-webhook.js).
+// déblocage réel (compteur de téléchargements dans le Sheet) doit être
+// confirmé par le serveur. Deux chemins en parallèle, redondants et
+// indépendants :
+//  1. ACTIF (prioritaire) : on appelle nous-mêmes /api/paiement-verifier
+//     avec l'ID de la transaction FedaPay ; ce endpoint interroge
+//     directement l'API FedaPay (clé secrète, jamais côté navigateur)
+//     et débloque via GAS si la transaction est réellement approuvée.
+//     Ne dépend PAS de la livraison d'un webhook par FedaPay.
+//  2. PASSIF (filet de sécurité) : le webhook serveur (FedaPay → Vercel
+//     → GAS, voir api/paiement-webhook.js) peut aussi débloquer en
+//     parallèle ; on vérifie donc aussi l'accès via GAS directement.
 //
 // IMPORTANT : on ne doit JAMAIS réafficher automatiquement le bouton
 // "Payer" après un paiement déjà effectué — l'apprenant risquerait de
@@ -2252,7 +2270,7 @@ function payerTelechargementAttestation(id, montant) {
 // plusieurs fois avec un délai croissant, puis on bascule sur un écran
 // de contact support (jamais un nouveau bouton de paiement) si le
 // déblocage n'est toujours pas arrivé.
-async function attendreConfirmationPaiement(id, tentative = 1) {
+async function attendreConfirmationPaiement(id, transactionId, tentative = 1) {
   const MAX_TENTATIVES = 5;
   const preview = document.getElementById('attestation-preview');
   preview.innerHTML = `
@@ -2263,6 +2281,25 @@ async function attendreConfirmationPaiement(id, tentative = 1) {
 
   await new Promise(r => setTimeout(r, 3000 + (tentative - 1) * 2000));
 
+  // 1. Vérification ACTIVE auprès de FedaPay via notre propre serveur.
+  if (transactionId) {
+    try {
+      const respActive = await fetch('/api/paiement-verifier', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ id, transactionId })
+      });
+      const resultActive = await respActive.json();
+      if (resultActive.status === 'success') {
+        ouvrirDocument('attestation');
+        return;
+      }
+    } catch (e) {
+      console.error('[attendreConfirmationPaiement] vérification active', e);
+    }
+  }
+
+  // 2. Filet de sécurité : accès déjà débloqué par le webhook passif ?
   try {
     const resp = await fetch(GAS_WEBAPP_URL, {
       method:  'POST',
@@ -2281,7 +2318,7 @@ async function attendreConfirmationPaiement(id, tentative = 1) {
   }
 
   if (tentative < MAX_TENTATIVES) {
-    attendreConfirmationPaiement(id, tentative + 1);
+    attendreConfirmationPaiement(id, transactionId, tentative + 1);
     return;
   }
 
