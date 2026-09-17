@@ -29,6 +29,15 @@ function _telephoneSembleIncomplet(tel) {
   return _normaliserTel(tel).length === 8;
 }
 
+// Dossier retrouvé par son ID, mais AUCUN téléphone n'est enregistré sur
+// la ligne — cas différent d'un téléphone simplement mal saisi (aucune
+// nouvelle tentative de saisie ne pourra jamais correspondre). Ne peut
+// venir que d'une inscription prise en présentiel et retranscrite dans
+// le tableur sans ce champ — à corriger en présentiel, pas en ligne.
+function _messageDossierSansTelephone() {
+  return "Aucun numéro de téléphone n'est enregistré pour ce dossier. Veuillez vous rendre au centre de formation Les Qualités de Dieu Service Sarl ou contacter le service au 01 97 95 12 30 pour le mettre à jour.";
+}
+
 function getCarte(data) {
   // Interrupteur temporaire — le site étant en construction, on peut
   // couper l'accès public à l'espace apprenant sans toucher au code.
@@ -53,7 +62,8 @@ function getCarte(data) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
-  let idTrouveTelIncorrect = false;
+  let idTrouveTelIncorrect  = false;
+  let idTrouveSansTelephone = false;
 
   const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
   if (feuilleMaitre) {
@@ -66,6 +76,7 @@ function getCarte(data) {
       if (idRow !== id) continue;
 
       const telRow = String(row[9] || '').trim();
+      if (!telRow) { idTrouveSansTelephone = true; continue; }
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
       const statut = String(row[28] || '').trim();
@@ -78,6 +89,9 @@ function getCarte(data) {
     }
   }
 
+  if (idTrouveSansTelephone) {
+    return reponseJSON({ status: 'error', message: _messageDossierSansTelephone() });
+  }
   if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
     return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
   }
@@ -114,6 +128,7 @@ function verifierAncienApprenant(data) {
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
   let idTrouveTelIncorrect  = false;
+  let idTrouveSansTelephone = false;
   let idTrouveNonTermine    = false;
   let idTrouveStatutInvalide = false;
   let idTrouveDateIllisible  = false;
@@ -129,6 +144,7 @@ function verifierAncienApprenant(data) {
       if (idRow !== id) continue;
 
       const telRow = String(row[9] || '').trim();
+      if (!telRow) { idTrouveSansTelephone = true; continue; }
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
       const statut = String(row[28] || '').trim();
@@ -168,6 +184,9 @@ function verifierAncienApprenant(data) {
   }
   if (idTrouveStatutInvalide) {
     return reponseJSON({ status: 'error', message: 'Ce dossier existe mais votre inscription n\'est pas encore confirmée par l\'administration. Contactez le centre si vous pensez qu\'il s\'agit d\'une erreur.' });
+  }
+  if (idTrouveSansTelephone) {
+    return reponseJSON({ status: 'error', message: _messageDossierSansTelephone() });
   }
   if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
     return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });

@@ -312,11 +312,13 @@ function candidatureAttestationGetData(data) {
   if (!feuille) return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé.' });
 
   const rows = feuille.getDataRange().getValues();
-  let idTrouveTelIncorrect = false;
+  let idTrouveTelIncorrect  = false;
+  let idTrouveSansTelephone = false;
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (!r[0]) continue;
     if (String(r[0]).trim() !== id) continue;
+    if (!String(r[5] || '').trim()) { idTrouveSansTelephone = true; continue; }
     if (!_telephonesEquivalents(r[5], telephone)) { idTrouveTelIncorrect = true; continue; }
 
     if (String(r[1]).trim() !== 'stage') {
@@ -346,6 +348,9 @@ function candidatureAttestationGetData(data) {
     return reponseJSON({ status: 'success', apprenant: candidat, token });
   }
 
+  if (idTrouveSansTelephone) {
+    return reponseJSON({ status: 'error', message: _messageDossierSansTelephone() });
+  }
   if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
     return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
   }
