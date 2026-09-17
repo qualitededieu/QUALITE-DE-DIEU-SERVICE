@@ -113,8 +113,10 @@ function verifierAncienApprenant(data) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
-  let idTrouveTelIncorrect = false;
-  let idTrouveNonTermine   = false;
+  let idTrouveTelIncorrect  = false;
+  let idTrouveNonTermine    = false;
+  let idTrouveStatutInvalide = false;
+  let idTrouveDateIllisible  = false;
 
   const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
   if (feuilleMaitre) {
@@ -130,12 +132,12 @@ function verifierAncienApprenant(data) {
       if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
 
       const statut = String(row[28] || '').trim();
-      if (statut !== 'Confirmé' && statut !== 'Migré' && statut !== 'Terminé') continue;
+      if (statut !== 'Confirmé' && statut !== 'Migré' && statut !== 'Terminé') { idTrouveStatutInvalide = true; continue; }
 
       const apprenant = _mapperApprenantInscription(row);
 
       const finFormation = apprenant.dateFin ? new Date(apprenant.dateFin) : null;
-      if (!finFormation || isNaN(finFormation.getTime())) continue;
+      if (!finFormation || isNaN(finFormation.getTime())) { idTrouveDateIllisible = true; continue; }
       const aujourdHui = new Date();
       aujourdHui.setHours(0, 0, 0, 0);
       finFormation.setHours(0, 0, 0, 0);
@@ -155,8 +157,17 @@ function verifierAncienApprenant(data) {
     }
   }
 
+  // Diagnostics rangés du plus précis au plus vague — un dossier
+  // trouvé (même rejeté) doit toujours donner un message exploitable,
+  // jamais se noyer dans le "aucun dossier trouvé" générique.
   if (idTrouveNonTermine) {
     return reponseJSON({ status: 'error', message: 'Ce dossier existe mais votre formation n\'est pas encore terminée. Vous pourrez utiliser cet espace dès la fin de votre formation.' });
+  }
+  if (idTrouveDateIllisible) {
+    return reponseJSON({ status: 'error', message: 'Ce dossier existe mais sa date de fin de formation n\'est pas renseignée dans nos systèmes. Contactez le centre pour régulariser votre dossier avant de continuer.' });
+  }
+  if (idTrouveStatutInvalide) {
+    return reponseJSON({ status: 'error', message: 'Ce dossier existe mais votre inscription n\'est pas encore confirmée par l\'administration. Contactez le centre si vous pensez qu\'il s\'agit d\'une erreur.' });
   }
   if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
     return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
