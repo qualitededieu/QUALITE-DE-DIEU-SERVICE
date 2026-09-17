@@ -325,18 +325,46 @@
               </div>
 
               <div id="blocStage" style="display:none;">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Établissement / école <span class="req">*</span></label>
-                    <input type="text" id="etablissement" placeholder="Nom de votre établissement" />
-                    <span class="field-error" id="err-etablissement">Ce champ est requis.</span>
+
+                <div class="form-group" id="blocAncienApprenantToggle" style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.35);border-radius:10px;padding:14px 16px;">
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0;">
+                    <input type="checkbox" id="ancienApprenantCheckbox" onchange="basculerAncienApprenant(this.checked)" style="width:18px;height:18px;flex:none;" />
+                    <span>Je suis un <strong>ancien apprenant de LQD Service</strong> et je postule pour un stage dans le même centre</span>
+                  </label>
+                </div>
+
+                <div id="blocAncienApprenantVerif" style="display:none;margin-bottom:16px;">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Numéro de dossier LQD <span class="req">*</span></label>
+                      <input type="text" id="ancienApprenantId" placeholder="LQD-XXXXXX-XXXX" style="font-family:monospace;" />
+                    </div>
+                    <div class="form-group">
+                      <label>Téléphone utilisé lors de votre inscription <span class="req">*</span></label>
+                      <input type="tel" id="ancienApprenantTel" placeholder="+229 01 XX XX XX XX" />
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label>Niveau d'études <span class="req">*</span></label>
-                    <input type="text" id="niveauEtudes" placeholder="Ex : Licence 2, BTS 1..." />
-                    <span class="field-error" id="err-niveauEtudes">Ce champ est requis.</span>
+                  <button type="button" class="btn-next" id="btnVerifierAncienApprenant" onclick="verifierAncienApprenant()" style="margin-bottom:10px;">
+                    <span class="iconify" data-icon="tabler:shield-check"></span> Vérifier mon dossier
+                  </button>
+                  <div id="ancienApprenantMsg" style="display:none;padding:12px 16px;border-radius:8px;font-size:14px;"></div>
+                </div>
+
+                <div id="blocStageExterne">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Établissement / école <span class="req">*</span></label>
+                      <input type="text" id="etablissement" placeholder="Nom de votre établissement" />
+                      <span class="field-error" id="err-etablissement">Ce champ est requis.</span>
+                    </div>
+                    <div class="form-group">
+                      <label>Niveau d'études <span class="req">*</span></label>
+                      <input type="text" id="niveauEtudes" placeholder="Ex : Licence 2, BTS 1..." />
+                      <span class="field-error" id="err-niveauEtudes">Ce champ est requis.</span>
+                    </div>
                   </div>
                 </div>
+
                 <div class="form-group">
                   <label>Durée de stage souhaitée <span class="req">*</span></label>
                   <select id="dureeStage">
@@ -402,6 +430,14 @@
               </div>
 
               <div id="docPiece" style="display:none;">
+
+                <div id="noteAncienApprenantDocs" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:13.5px;background:rgba(52,152,219,0.1);color:#2E86C1;line-height:1.5;">
+                  <span class="iconify" data-icon="tabler:info-circle" style="vertical-align:-3px;"></span>
+                  Votre attestation de fin de formation LQD est déjà dans nos dossiers, inutile de la joindre à nouveau.
+                  Si votre stage est retenu, une convention de stage bipartite et un engagement de confidentialité vous
+                  seront transmis à signer avant le démarrage.
+                </div>
+
                 <div class="form-group">
                   <label>Pièce d'identité <span class="req">*</span></label>
                   <div class="upload-zone" id="zone-piece" ondragover="onDragOver(event,'zone-piece')" ondragleave="onDragLeave('zone-piece')" ondrop="onDrop(event,'piece','zone-piece')">
@@ -435,7 +471,7 @@
               </div>
 
               <div class="form-group">
-                <label>Lettre de motivation <span class="opt">(optionnel)</span></label>
+                <label id="labelLettre">Lettre de motivation <span class="opt" id="lettreOptTag">(optionnel)</span><span class="req" id="lettreReqTag" style="display:none;">*</span></label>
                 <div class="upload-zone" id="zone-lettre" ondragover="onDragOver(event,'zone-lettre')" ondragleave="onDragLeave('zone-lettre')" ondrop="onDrop(event,'lettre','zone-lettre')">
                   <input type="file" id="lettre" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileChange('lettre','preview-lettre','zone-lettre')" />
                   <span class="iconify icon-upload" data-icon="tabler:file-text"></span>
@@ -447,6 +483,7 @@
                   <span class="file-name" id="name-lettre">—</span>
                   <button type="button" class="remove-file" onclick="supprimerFichier('lettre','preview-lettre','zone-lettre')">&times;</button>
                 </div>
+                <span class="field-error" id="err-lettre">La lettre de demande de stage est requise.</span>
               </div>
 
               <div class="form-nav">
@@ -551,6 +588,10 @@
     const NB_ETAPES = 3;
     let etapeActuelle = 1;
     let typeChoisi = 'formateur';
+    let ancienApprenantActif     = false;  // case cochée
+    let ancienApprenantVerifie   = false;  // dossier confirmé par le serveur
+    let ancienApprenantDossierId = '';
+    let ancienApprenantFiliere   = '';
 
     const fichiers = {
       cv:             { base64: '', mimeType: '', nom: '' },
@@ -570,6 +611,111 @@
       document.getElementById('blocStage').style.display     = type === 'stage'     ? '' : 'none';
       document.getElementById('docCV').style.display    = type === 'formateur' ? '' : 'none';
       document.getElementById('docPiece').style.display = type === 'stage'     ? '' : 'none';
+
+      if (type !== 'stage') {
+        document.getElementById('ancienApprenantCheckbox').checked = false;
+        basculerAncienApprenant(false);
+      }
+    }
+
+    /* =====================================================================
+       ANCIEN APPRENANT DU CENTRE — parcours de stage allégé
+    ===================================================================== */
+    function basculerAncienApprenant(actif) {
+      ancienApprenantActif = actif;
+      if (!actif) {
+        ancienApprenantVerifie   = false;
+        ancienApprenantDossierId = '';
+        ancienApprenantFiliere   = '';
+      }
+      document.getElementById('blocAncienApprenantVerif').style.display = actif ? '' : 'none';
+      document.getElementById('blocStageExterne').style.display         = (actif && ancienApprenantVerifie) ? 'none' : '';
+      document.getElementById('noteAncienApprenantDocs').style.display  = (actif && ancienApprenantVerifie) ? '' : 'none';
+      document.getElementById('lettreOptTag').style.display = (actif && ancienApprenantVerifie) ? 'none' : '';
+      document.getElementById('lettreReqTag').style.display = (actif && ancienApprenantVerifie) ? '' : 'none';
+      document.getElementById('labelLettre').firstChild.textContent = (actif && ancienApprenantVerifie)
+        ? 'Lettre de demande de stage '
+        : 'Lettre de motivation ';
+      const msg = document.getElementById('ancienApprenantMsg');
+      msg.style.display = 'none';
+      if (!actif) {
+        document.getElementById('ancienApprenantId').value  = '';
+        document.getElementById('ancienApprenantTel').value = '';
+      } else {
+        // Pré-remplit avec le téléphone déjà saisi à l'étape 1, par confort.
+        const telEtape1 = document.getElementById('telephone').value.trim();
+        if (telEtape1 && !document.getElementById('ancienApprenantTel').value) {
+          document.getElementById('ancienApprenantTel').value = telEtape1;
+        }
+      }
+    }
+
+    async function verifierAncienApprenant() {
+      const id  = document.getElementById('ancienApprenantId').value.trim();
+      const tel = document.getElementById('ancienApprenantTel').value.trim();
+      const msg = document.getElementById('ancienApprenantMsg');
+      const btn = document.getElementById('btnVerifierAncienApprenant');
+
+      if (!id || !tel) {
+        msg.style.display    = 'block';
+        msg.style.background = 'rgba(226,75,74,0.1)';
+        msg.style.color      = '#E24B4A';
+        msg.textContent      = 'Veuillez renseigner le numéro de dossier et le téléphone.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Vérification…';
+      msg.style.display = 'none';
+
+      try {
+        const resp = await fetch(GAS_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body:    JSON.stringify({ action: 'verifier_ancien_apprenant', id, telephone: tel })
+        });
+        const result = await resp.json();
+
+        if (result.status === 'success') {
+          ancienApprenantVerifie   = true;
+          ancienApprenantDossierId = result.apprenant.id;
+          ancienApprenantFiliere   = result.apprenant.filiere || '';
+
+          msg.style.display    = 'block';
+          msg.style.background = 'rgba(46,204,113,0.12)';
+          msg.style.color      = '#27AE60';
+          msg.innerHTML = `<span class="iconify" data-icon="tabler:circle-check" style="vertical-align:-3px;"></span> Dossier confirmé : ${result.apprenant.prenom} ${result.apprenant.nom} — formation « ${ancienApprenantFiliere || 'suivie au centre'} » terminée le ${result.apprenant.dateFin}.`;
+
+          // Le domaine/spécialité peut être pré-rempli avec la formation suivie.
+          const domaineChamp = document.getElementById('domaine');
+          if (!domaineChamp.value.trim() && ancienApprenantFiliere) domaineChamp.value = ancienApprenantFiliere;
+
+          document.getElementById('blocStageExterne').style.display        = 'none';
+          document.getElementById('noteAncienApprenantDocs').style.display = '';
+          document.getElementById('lettreOptTag').style.display = 'none';
+          document.getElementById('lettreReqTag').style.display = '';
+          document.getElementById('labelLettre').firstChild.textContent = 'Lettre de demande de stage ';
+        } else {
+          ancienApprenantVerifie   = false;
+          ancienApprenantDossierId = '';
+          ancienApprenantFiliere   = '';
+          msg.style.display    = 'block';
+          msg.style.background = 'rgba(226,75,74,0.1)';
+          msg.style.color      = '#E24B4A';
+          msg.textContent      = result.message || 'Dossier introuvable.';
+          document.getElementById('blocStageExterne').style.display        = '';
+          document.getElementById('noteAncienApprenantDocs').style.display = 'none';
+        }
+      } catch (err) {
+        console.error('[verifierAncienApprenant]', err);
+        msg.style.display    = 'block';
+        msg.style.background = 'rgba(226,75,74,0.1)';
+        msg.style.color      = '#E24B4A';
+        msg.textContent      = 'Erreur de connexion. Réessayez.';
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<span class="iconify" data-icon="tabler:shield-check"></span> Vérifier mon dossier';
     }
 
     /* =====================================================================
@@ -621,8 +767,14 @@
         if (typeChoisi === 'formateur') {
           ok = marquerErreur('experience', '', document.getElementById('experience').value.trim().length >= 10) && ok;
         } else {
-          ok = marquerErreur('etablissement', '', document.getElementById('etablissement').value.trim().length >= 2) && ok;
-          ok = marquerErreur('niveauEtudes', '', document.getElementById('niveauEtudes').value.trim().length >= 1) && ok;
+          if (ancienApprenantActif && !ancienApprenantVerifie) {
+            afficherToast('Veuillez d\'abord vérifier votre dossier d\'ancien apprenant, ou décochez l\'option.', true);
+            ok = false;
+          }
+          if (!(ancienApprenantActif && ancienApprenantVerifie)) {
+            ok = marquerErreur('etablissement', '', document.getElementById('etablissement').value.trim().length >= 2) && ok;
+            ok = marquerErreur('niveauEtudes', '', document.getElementById('niveauEtudes').value.trim().length >= 1) && ok;
+          }
           ok = marquerErreur('dureeStage', '', !!document.getElementById('dureeStage').value) && ok;
         }
         ok = marquerErreur('disponibilite', '', document.getElementById('disponibilite').value.trim().length >= 2) && ok;
@@ -634,6 +786,9 @@
           ok = marquerErreur('cv', '', !!fichiers.cv.base64) && ok;
         } else {
           ok = marquerErreur('piece', '', !!fichiers.piece.base64) && ok;
+          if (ancienApprenantActif && ancienApprenantVerifie) {
+            ok = marquerErreur('lettre', '', !!fichiers.lettre.base64) && ok;
+          }
         }
       }
 
@@ -715,6 +870,8 @@
         dureeStage:     typeChoisi === 'stage' ? document.getElementById('dureeStage').value : '',
         disponibilite:  document.getElementById('disponibilite').value.trim(),
         motivation:     document.getElementById('motivation').value.trim(),
+
+        ancienApprenantId: (typeChoisi === 'stage' && ancienApprenantActif && ancienApprenantVerifie) ? ancienApprenantDossierId : '',
 
         cvBase64: fichiers.cv.base64, cvNom: fichiers.cv.nom, cvMime: fichiers.cv.mimeType,
         lettreBase64: fichiers.lettre.base64, lettreNom: fichiers.lettre.nom, lettreMime: fichiers.lettre.mimeType,

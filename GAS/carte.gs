@@ -92,6 +92,82 @@ function getCarte(data) {
   return reponseJSON({ status: 'error', message: 'Aucun dossier trouvé. Vérifiez votre numéro et téléphone.' });
 }
 
+// ================================================================
+// ANCIEN APPRENANT — CANDIDATURE DE STAGE
+// Vérifie qu'un dossier ID + téléphone correspond bien à un apprenant
+// du centre dont la formation est réellement TERMINÉE (date de fin
+// dépassée), avant de lui ouvrir le parcours de candidature "stage"
+// allégé sur postuler.html. Volontairement plus stricte que getCarte
+// (qui accepte aussi 'Confirmé' en cours) : ici on exige que la
+// formation soit effectivement achevée, sans quoi le formulaire
+// laisserait passer quelqu'un qui n'a pas fini son cursus.
+// ================================================================
+function verifierAncienApprenant(data) {
+  const id        = String(data.id        || '').trim();
+  const telephone = String(data.telephone || '').trim();
+
+  if (!id || !telephone) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier et téléphone requis.' });
+  }
+
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
+
+  let idTrouveTelIncorrect = false;
+  let idTrouveNonTermine   = false;
+
+  const feuilleMaitre = ss.getSheetByName('Toutes les inscriptions');
+  if (feuilleMaitre) {
+    const donnees = feuilleMaitre.getDataRange().getValues();
+    for (let i = 1; i < donnees.length; i++) {
+      const row = donnees[i];
+      if (!row[0] || row[0] === 'LQD-EXEMPLE') continue;
+
+      const idRow = String(row[0]).trim();
+      if (idRow !== id) continue;
+
+      const telRow = String(row[9] || '').trim();
+      if (!_telephonesEquivalents(telRow, telephone)) { idTrouveTelIncorrect = true; continue; }
+
+      const statut = String(row[28] || '').trim();
+      if (statut !== 'Confirmé' && statut !== 'Migré' && statut !== 'Terminé') continue;
+
+      const apprenant = _mapperApprenantInscription(row);
+
+      const finFormation = apprenant.dateFin ? new Date(apprenant.dateFin) : null;
+      if (!finFormation || isNaN(finFormation.getTime())) continue;
+      const aujourdHui = new Date();
+      aujourdHui.setHours(0, 0, 0, 0);
+      finFormation.setHours(0, 0, 0, 0);
+      if (aujourdHui < finFormation) { idTrouveNonTermine = true; continue; }
+
+      return reponseJSON({
+        status:     'success',
+        apprenant: {
+          id:       apprenant.id,
+          prenom:   apprenant.prenom,
+          nom:      apprenant.nom,
+          telephone: apprenant.telephone,
+          filiere:  apprenant.filiere,
+          dateFin:  apprenant.dateFin
+        }
+      });
+    }
+  }
+
+  if (idTrouveNonTermine) {
+    return reponseJSON({ status: 'error', message: 'Ce dossier existe mais votre formation n\'est pas encore terminée. Vous pourrez utiliser cet espace dès la fin de votre formation.' });
+  }
+  if (idTrouveTelIncorrect && _telephoneSembleIncomplet(telephone)) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas. Au Bénin, les numéros commencent maintenant par 01 — vérifiez que votre numéro est bien précédé de 01 (ex : 01 97 95 12 30).' });
+  }
+  if (idTrouveTelIncorrect) {
+    return reponseJSON({ status: 'error', message: 'Numéro de dossier reconnu, mais le téléphone ne correspond pas.' });
+  }
+
+  return reponseJSON({ status: 'error', message: 'Aucun dossier d\'apprenant LQD trouvé avec ces informations. Si vous n\'êtes pas un ancien apprenant du centre, décochez cette option et postulez normalement.' });
+}
+
 function verifierCarte(data) {
   const token = String(data.token || '').trim();
   if (!token) return reponseJSON({ status: 'error', message: 'Token manquant.' });

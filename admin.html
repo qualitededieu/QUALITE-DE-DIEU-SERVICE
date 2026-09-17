@@ -1815,7 +1815,7 @@ function renderTableauCandidatures(candidatures) {
       <tbody>${candidatures.map(c => `<tr>
         <td><span class="mono">${c.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${c.dateCandidature}</span></td>
         <td><strong>${c.prenom} ${c.nom}</strong><br/><span class="mono">${c.telephone}</span></td>
-        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}</td>
+        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}${c.ancienApprenantDossier ? `<br/><span style="color:#F5A623;font-weight:600;font-size:11px;">Ancien apprenant</span>` : ''}</td>
         <td style="font-size:12px;color:var(--text-3);">${c.domaine || '—'}</td>
         <td>${badgeCandStatut(c.statut)}</td>
         <td>
@@ -1854,14 +1854,22 @@ function renderModalCandidature(c) {
       <div class="info-field"><label>Date de naissance</label><span>${c.dateNaissance || '—'}</span></div>
       <div class="info-field" style="grid-column:1/-1;"><label>Adresse</label><span>${c.adresse || '—'}</span></div>
     </div>
+    ${c.ancienApprenantDossier ? `
+    <div class="modal-section-title">Ancien apprenant du centre</div>
+    <div class="info-grid" style="margin-bottom:8px;">
+      <div class="info-field"><label>Dossier LQD vérifié</label><span class="mono" style="color:#F5A623;font-weight:700;">${c.ancienApprenantDossier}</span></div>
+      <div class="info-field"><label>Formation suivie</label><span>${c.ancienApprenantFiliere || '—'}</span></div>
+    </div>` : ''}
     <div class="modal-section-title">Parcours</div>
     <div class="info-grid">
       <div class="info-field"><label>Domaine</label><span>${c.domaine || '—'}</span></div>
       ${c.type === 'formateur'
         ? `<div class="info-field" style="grid-column:1/-1;"><label>Expérience</label><span>${c.experience || '—'}</span></div>`
-        : `<div class="info-field"><label>Établissement</label><span>${c.etablissement || '—'}</span></div>
+        : (c.ancienApprenantDossier
+            ? `<div class="info-field" style="grid-column:1/-1;"><label>Durée souhaitée</label><span>${c.dureeStage || '—'}</span></div>`
+            : `<div class="info-field"><label>Établissement</label><span>${c.etablissement || '—'}</span></div>
            <div class="info-field"><label>Niveau d'études</label><span>${c.niveauEtudes || '—'}</span></div>
-           <div class="info-field"><label>Durée souhaitée</label><span>${c.dureeStage || '—'}</span></div>`}
+           <div class="info-field"><label>Durée souhaitée</label><span>${c.dureeStage || '—'}</span></div>`)}
       <div class="info-field"><label>Disponibilité</label><span>${c.disponibilite || '—'}</span></div>
       <div class="info-field" style="grid-column:1/-1;"><label>Motivation</label><span>${c.motivation || '—'}</span></div>
     </div>

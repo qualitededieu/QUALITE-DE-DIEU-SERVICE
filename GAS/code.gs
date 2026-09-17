@@ -146,6 +146,7 @@ function doPost(e) {
   if (action === 'chat_lead') return enregistrerLeadChat(data);
   if (action === 'candidature') return enregistrerCandidature(data);
   if (action === 'candidature_attestation_get_data') return candidatureAttestationGetData(data);
+  if (action === 'verifier_ancien_apprenant') return verifierAncienApprenant(data);
   if (action === 'annonces_list_publiees') return annoncesListPubliees(data);
     return traiterInscription(data);
 

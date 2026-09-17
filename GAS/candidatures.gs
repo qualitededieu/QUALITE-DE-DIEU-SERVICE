@@ -8,7 +8,8 @@ const ENTETES_CANDIDATURE = [
   'Statut',
   'Traité par', 'Date traitement',
   'Sexe', 'Date début stage', 'Date fin stage',
-  'Missions stage (JSON)'
+  'Missions stage (JSON)',
+  'Ancien apprenant (Dossier LQD)', 'Formation LQD suivie'
 ];
 
 const STATUTS_CANDIDATURE_VALIDES = ['Nouveau', 'Vu', 'Contacté', 'Retenu', 'Terminé', 'Rejeté'];
@@ -58,7 +59,8 @@ function repararEnTeteCandidatures() {
     150, 110, 180, 150, 150, 120, 250,
     160, 160, 160, 160,
     120, 130, 150,
-    90, 140, 140, 260
+    90, 140, 140, 260,
+    170, 200
   ];
   largeurs.forEach(function(l, i) {
     if (i < ENTETES_CANDIDATURE.length) feuille.setColumnWidth(i + 1, l);
@@ -114,6 +116,31 @@ function enregistrerCandidature(data) {
     return reponseJSON({ status: 'error', message: 'E-mail invalide.' });
   }
 
+  // Ancien apprenant du centre postulant à un stage — le client indique
+  // avoir vérifié un dossier, mais on ne fait JAMAIS confiance à cette
+  // seule affirmation : on rejoue la vérification serveur (dossier +
+  // téléphone + formation réellement terminée) avant de l'enregistrer.
+  let ancienApprenantDossier = '';
+  let ancienApprenantFiliere = '';
+  const ancienApprenantId = nettoyer(data.ancienApprenantId || '');
+  if (type === 'stage' && ancienApprenantId) {
+    const verif = JSON.parse(verifierAncienApprenant({ id: ancienApprenantId, telephone }).getContent());
+    if (verif.status === 'success') {
+      ancienApprenantDossier = verif.apprenant.id;
+      ancienApprenantFiliere = verif.apprenant.filiere;
+    } else {
+      return reponseJSON({ status: 'error', message: 'Impossible de confirmer votre dossier d\'ancien apprenant (' + (verif.message || 'dossier introuvable') + '). Vérifiez vos informations ou décochez l\'option "ancien apprenant".' });
+    }
+    // Pour ce parcours allégé, on exige la pièce d'identité et une
+    // lettre de demande de stage en bonne et due forme.
+    if (!data.pieceBase64) {
+      return reponseJSON({ status: 'error', message: 'La pièce d\'identité est requise.' });
+    }
+    if (!data.lettreBase64) {
+      return reponseJSON({ status: 'error', message: 'La lettre de demande de stage est requise pour un ancien apprenant du centre.' });
+    }
+  }
+
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   if (!ss) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
@@ -160,7 +187,8 @@ function enregistrerCandidature(data) {
     nettoyer(data.motivation || ''),
     cvId, lettreId, pieceId, recoId,
     'Nouveau', '', '',
-    nettoyer(data.sexe || ''), '', ''
+    nettoyer(data.sexe || ''), '', '', '',
+    ancienApprenantDossier, ancienApprenantFiliere
   ]);
   forcerTelephoneTexte(feuille, 6, telephone);
 
@@ -197,7 +225,9 @@ function adminGetCandidatures(data, email) {
       aCV: !!r[15], aLettre: !!r[16], aPiece: !!r[17], aRecommandation: !!r[18],
       statut: r[19] || 'Nouveau', traitePar: r[20] || '', dateTraitement: r[21] || '',
       sexe: String(r[22] || '').trim(), dateDebutStage: r[23] || '', dateFinStage: r[24] || '',
-      missionsStage: _parseMissionsStageJSON(r[25])
+      missionsStage: _parseMissionsStageJSON(r[25]),
+      ancienApprenantDossier: String(r[26] || '').trim(),
+      ancienApprenantFiliere: String(r[27] || '').trim()
     });
   }
   candidatures.sort((a, b) => new Date(b.dateCandidature) - new Date(a.dateCandidature));
