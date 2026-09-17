@@ -340,6 +340,23 @@
     .footer-col ul li a:hover{color:var(--orange-400)}
     .footer-bottom{border-top:1px solid rgba(255,255,255,0.08);padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:13px}
     .footer-bottom a{color:var(--orange-400)}
+    .footer-newsletter{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px 28px;margin-bottom:40px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+    .footer-newsletter h5{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:var(--white);margin:0 0 4px}
+    .footer-newsletter p{font-size:13px;color:rgba(255,255,255,0.55);margin:0}
+    .footer-newsletter-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;min-width:280px;flex:1;max-width:460px}
+    .footer-newsletter-row{display:flex;gap:10px;width:100%}
+    .footer-newsletter-row input[type="email"]{flex:1;min-width:0;padding:12px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#FFF;font-size:14px;font-family:inherit}
+    .footer-newsletter-row input[type="email"]::placeholder{color:rgba(255,255,255,0.4)}
+    .footer-newsletter-row button{padding:12px 20px;border-radius:9px;border:none;background:var(--orange-400);color:#04342C;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit}
+    .footer-newsletter-row button:hover{background:#FABD50}
+    .footer-newsletter-row button:disabled{opacity:.6;cursor:not-allowed}
+    .footer-newsletter-consent{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5}
+    .footer-newsletter-consent input{margin-top:3px;flex:none}
+    .footer-newsletter-msg{font-size:12.5px;margin-top:2px;display:none}
+    .footer-newsletter-msg.show{display:block}
+    .footer-newsletter-msg.ok{color:#5ED9A0}
+    .footer-newsletter-msg.err{color:#F28B82}
+    @media(max-width:768px){.footer-newsletter{flex-direction:column;align-items:stretch}.footer-newsletter-form{max-width:none}}
 
     /* TOAST */
     #toast{position:fixed;bottom:28px;right:28px;background:var(--gray-900);color:var(--white);padding:14px 22px;border-radius:var(--radius-md);font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform 0.35s ease,opacity 0.35s ease}
@@ -1301,6 +1318,25 @@
 
   <footer>
     <div class="container">
+
+      <div class="footer-newsletter">
+        <div>
+          <h5>Newsletter du centre</h5>
+          <p>Nouvelles formations, événements et offres — un email de temps en temps, pas plus.</p>
+        </div>
+        <form class="footer-newsletter-form" id="form-newsletter" onsubmit="return inscrireNewsletter(event)">
+          <div class="footer-newsletter-row">
+            <input type="email" id="newsletter-email" placeholder="Votre adresse email" required />
+            <button type="submit" id="btn-newsletter">S'abonner</button>
+          </div>
+          <label class="footer-newsletter-consent">
+            <input type="checkbox" id="newsletter-consentement" required />
+            <span>J'accepte de recevoir la newsletter de LES QUALITÉS DE DIEU SERVICE SARL par email. Désinscription possible à tout moment en un clic.</span>
+          </label>
+          <div class="footer-newsletter-msg" id="newsletter-msg"></div>
+        </form>
+      </div>
+
       <div class="footer-grid">
         <div class="footer-brand">
           <img src="icons/logoqds.jpg" alt="LQD Service" />
@@ -2500,6 +2536,58 @@ document.querySelectorAll('.pk-modal-overlay').forEach(overlay => {
     if (e.target === overlay) overlay.classList.remove('open');
   });
 });
+
+/* =====================================================================
+   NEWSLETTER — Inscription depuis le pied de page
+===================================================================== */
+async function inscrireNewsletter(evt) {
+  evt.preventDefault();
+
+  const emailInput = document.getElementById('newsletter-email');
+  const consentInput = document.getElementById('newsletter-consentement');
+  const btn = document.getElementById('btn-newsletter');
+  const msg = document.getElementById('newsletter-msg');
+
+  const email = emailInput.value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.textContent = 'Adresse email invalide.';
+    msg.className = 'footer-newsletter-msg show err';
+    return false;
+  }
+  if (!consentInput.checked) {
+    msg.textContent = 'Veuillez accepter de recevoir la newsletter.';
+    msg.className = 'footer-newsletter-msg show err';
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+  msg.className = 'footer-newsletter-msg';
+
+  try {
+    const resp = await fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'newsletter_inscrire', email, consentement: true, source: 'site' })
+    });
+    const result = await resp.json();
+
+    msg.textContent = result.message || (result.status === 'success' ? 'Inscription confirmée.' : 'Une erreur est survenue.');
+    msg.className = 'footer-newsletter-msg show ' + (result.status === 'success' ? 'ok' : 'err');
+    if (result.status === 'success') {
+      emailInput.value = '';
+      consentInput.checked = false;
+    }
+  } catch (err) {
+    console.error('[inscrireNewsletter]', err);
+    msg.textContent = 'Erreur de connexion. Réessayez.';
+    msg.className = 'footer-newsletter-msg show err';
+  }
+
+  btn.disabled = false;
+  btn.textContent = "S'abonner";
+  return false;
+}
   </script>
 
   <script src="js/attestation_generator.js"></script>

@@ -147,6 +147,7 @@ function doPost(e) {
   if (action === 'candidature') return enregistrerCandidature(data);
   if (action === 'candidature_attestation_get_data') return candidatureAttestationGetData(data);
   if (action === 'verifier_ancien_apprenant') return verifierAncienApprenant(data);
+  if (action === 'newsletter_inscrire') return inscrireAbonneNewsletter(data);
   if (action === 'annonces_list_publiees') return annoncesListPubliees(data);
     return traiterInscription(data);
 
@@ -157,6 +158,8 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  const params = (e && e.parameter) || {};
+  if (params.action === 'desinscription') return traiterDesinscriptionNewsletter(params);
   return reponseJSON({ status: 'ok', message: 'LQD Service API v3.1 opérationnelle.' });
 }
 

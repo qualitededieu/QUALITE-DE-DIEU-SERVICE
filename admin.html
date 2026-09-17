@@ -510,6 +510,15 @@
         <span class="iconify" data-icon="tabler:message-question"></span> Renseignements
         <span class="nav-badge" id="badge-rens">0</span>
       </button>
+      <button class="nav-item" onclick="naviguer('messages')">
+        <span class="iconify" data-icon="tabler:inbox"></span> Messages (RDV / Chat)
+        <span class="nav-badge" id="badge-messages">0</span>
+      </button>
+
+      <div class="nav-section-label">Communication</div>
+      <button class="nav-item" onclick="naviguer('newsletter')">
+        <span class="iconify" data-icon="tabler:mail-forward"></span> Newsletter
+      </button>
 
       <div class="nav-section-label">Outils</div>
       <button class="nav-item" onclick="exporterCSV()">
@@ -675,6 +684,83 @@
       </div>
     </div>
 
+    <div class="page" id="page-messages">
+      <div class="filters-bar">
+        <div class="search-input-bar">
+          <span class="iconify" data-icon="tabler:search"></span>
+          <input type="text" id="search-msg" placeholder="Nom, ID, téléphone, contenu..." oninput="filtrerMessages()" />
+        </div>
+        <select class="filter-select" id="filtre-msg-source" onchange="filtrerMessages()">
+          <option value="">Toutes les sources</option>
+          <option value="renseignement">Renseignement</option>
+          <option value="rdv">Rendez-vous</option>
+          <option value="lead">Contact chat</option>
+        </select>
+        <select class="filter-select" id="filtre-msg-statut" onchange="filtrerMessages()">
+          <option value="">Tous les statuts</option>
+          <option value="Nouveau">Nouveau</option>
+          <option value="Vu">Vu</option>
+          <option value="Traité">Traité</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="chargerBoiteMessages()">
+          <span class="iconify" data-icon="tabler:refresh"></span>
+        </button>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Boîte de messages — Renseignements, RDV et contacts du chat</span>
+          <span id="msg-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <div id="msg-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-newsletter">
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title">
+            <span class="iconify" data-icon="tabler:mail-forward"></span> Composer une newsletter
+          </span>
+          <span id="newsletter-abonnes-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <div style="padding:20px;">
+          <p style="font-size:12.5px;color:var(--text-3);margin-bottom:16px;line-height:1.6;">
+            Envoyée à tous les abonnés actifs. Chaque email inclut automatiquement un lien de désinscription
+            en un clic. L'envoi passe par le quota Gmail quotidien du compte du centre — au-delà de la limite,
+            l'envoi s'arrête proprement et le reste peut être relancé le lendemain.
+          </p>
+          <label class="auth-label" for="newsletter-sujet">Sujet</label>
+          <input type="text" id="newsletter-sujet" class="auth-input" placeholder="Ex. Nouvelles formations — rentrée d'octobre" maxlength="150" />
+
+          <label class="auth-label" for="newsletter-contenu" style="margin-top:14px;display:block;">Contenu</label>
+          <textarea id="newsletter-contenu"></textarea>
+
+          <div class="auth-error" id="err-newsletter"></div>
+
+          <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border,#E5E9F0);display:flex;align-items:center;gap:12px;">
+            <button class="btn btn-primary btn-sm" onclick="confirmerEnvoiNewsletter()" id="btn-newsletter-envoyer">
+              <span class="iconify" data-icon="tabler:send"></span> Envoyer à tous les abonnés
+            </button>
+            <span id="newsletter-send-status" style="font-size:12px;color:var(--text-3);"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Historique des campagnes</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerCampagnesNewsletter()">
+            <span class="iconify" data-icon="tabler:refresh"></span>
+          </button>
+        </div>
+        <div id="campagnes-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="page" id="page-actualites">
 
       <div class="table-card" style="margin-bottom:20px;border:1px solid var(--orange-500,#F97316);">
@@ -793,6 +879,52 @@
     </div>
     <div class="modal-body" id="cand-modal-body"><div class="loading-overlay"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="cand-modal-footer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-message">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="msg-modal-title">Message</h3>
+      <button class="modal-close" onclick="fermerModal('modal-message')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="msg-modal-body"></div>
+    <div class="modal-footer" id="msg-modal-footer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-repondre">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="repondre-modal-title">Répondre</h3>
+      <button class="modal-close" onclick="fermerModal('modal-repondre')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-3);margin-bottom:14px;" id="repondre-destinataire-info"></p>
+
+      <label class="auth-label" for="repondre-sujet">Sujet</label>
+      <input type="text" id="repondre-sujet" class="auth-input" maxlength="150" />
+
+      <label class="auth-label" for="repondre-contenu" style="margin-top:14px;display:block;">Votre réponse</label>
+      <textarea id="repondre-contenu"></textarea>
+
+      <label class="auth-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px;">
+        <input type="checkbox" id="repondre-marquer-traite" style="width:18px;height:18px;cursor:pointer;" checked />
+        Marquer ce dossier comme « Traité » après l'envoi
+      </label>
+
+      <div class="auth-error" id="err-repondre"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-repondre')">Annuler</button>
+      <button class="btn btn-primary btn-sm" onclick="envoyerReponseMessage()" id="btn-repondre-envoyer">
+        <span class="iconify" data-icon="tabler:send"></span> Envoyer la réponse
+      </button>
+    </div>
   </div>
 </div>
 
@@ -935,7 +1067,8 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhY
 let state = {
   token: null, email: null, page: 'dashboard',
   filtre: '', recherche: '', dossiers: [], rens: [],
-  currentPage: 1, perPage: 20, totalPages: 1, pendingLogin: null
+  currentPage: 1, perPage: 20, totalPages: 1, pendingLogin: null,
+  messages: [], abonnesActifs: 0
 };
 
 /* ================================================================
@@ -1244,13 +1377,15 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
   if (page === 'renseignements')  chargerRenseignements();
   if (page === 'candidatures')    chargerCandidatures();
   if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); chargerModePaiementAdmin(); }
+  if (page === 'messages')        chargerBoiteMessages();
+  if (page === 'newsletter')      { chargerNewsletterAbonnes(); chargerCampagnesNewsletter(); }
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -1924,6 +2059,10 @@ function renderModalCandidature(c) {
     <button class="btn btn-danger btn-sm" onclick="supprimerCandidature('${c.id}', '${c.prenom} ${c.nom}')">
       <span class="iconify" data-icon="tabler:trash"></span> Supprimer
     </button>
+    ${c.email ? `
+    <button class="btn btn-ghost btn-sm" onclick="ouvrirReponseMessage('candidature', '${c.id}', '${(c.prenom + ' ' + c.nom).replace(/'/g, "\\'")}', '${c.email}', 'Votre candidature ${c.id}')">
+      <span class="iconify" data-icon="tabler:mail-forward"></span> Répondre
+    </button>` : ''}
     <button class="btn btn-primary" onclick="changerStatutCandidature('${c.id}')">
       <span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer le statut
     </button>`;
@@ -1978,6 +2117,294 @@ function supprimerCandidature(id, nom) {
       if (result.status === 'success') { toast(`Candidature ${id} supprimée.`, 'success'); fermerModal('modal-cand'); chargerCandidatures(); }
       else { toast(result.message || 'Erreur.', 'error'); }
     } catch (e) { toast('Erreur réseau.', 'error'); }
+  });
+}
+
+/* ================================================================
+   BOÎTE DE MESSAGES — Renseignements + RDV + Contacts chat, unifiés
+================================================================ */
+let messagesCache = [];
+const SOURCE_LABELS_MSG = { renseignement: 'Renseignement', rdv: 'Rendez-vous', lead: 'Contact chat' };
+
+async function chargerBoiteMessages() {
+  document.getElementById('msg-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_get_boite_messages');
+    if (result.status !== 'success') throw new Error(result.message);
+    messagesCache = result.messages || [];
+    document.getElementById('badge-messages').textContent =
+      messagesCache.filter(m => m.statut === 'Nouveau').length;
+    filtrerMessages();
+  } catch (e) {
+    document.getElementById('msg-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:alert-triangle"></span><p>Erreur de chargement</p></div>';
+  }
+}
+
+function filtrerMessages() {
+  const recherche = (document.getElementById('search-msg')?.value || '').toLowerCase();
+  const source    = document.getElementById('filtre-msg-source')?.value || '';
+  const statut    = document.getElementById('filtre-msg-statut')?.value || '';
+
+  const filtres = messagesCache.filter(m => {
+    if (source && m.source !== source) return false;
+    if (statut && m.statut !== statut) return false;
+    if (recherche) {
+      const cible = `${m.nom} ${m.id} ${m.telephone} ${m.email} ${m.message} ${m.extras}`.toLowerCase();
+      if (!cible.includes(recherche)) return false;
+    }
+    return true;
+  });
+  document.getElementById('msg-count').textContent = filtres.length + ' message(s)';
+  renderTableauMessages(filtres);
+}
+
+function renderTableauMessages(messages) {
+  if (!messages.length) {
+    document.getElementById('msg-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:inbox-off"></span><p>Aucun message trouvé</p></div>';
+    return;
+  }
+  document.getElementById('msg-table-container').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th>Référence</th><th>Contact</th><th>Source</th><th>Aperçu</th><th>Statut</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${messages.map(m => `<tr>
+        <td><span class="mono">${m.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${m.date}</span></td>
+        <td><strong>${m.nom}</strong><br/><span class="mono">${m.telephone || '—'}</span></td>
+        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${m.sourceLabel}</td>
+        <td style="font-size:12px;color:var(--text-3);max-width:260px;">${(m.resume || '—')}</td>
+        <td>${badgeRensStatut(m.statut)}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-ghost btn-sm" title="Voir" onclick="ouvrirMessage('${m.id}')">
+            <span class="iconify" data-icon="tabler:eye"></span>
+          </button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function ouvrirMessage(id) {
+  const m = messagesCache.find(x => x.id === id);
+  if (!m) return;
+  ouvrirModal('modal-message');
+  document.getElementById('msg-modal-title').textContent = `${m.sourceLabel} — ${m.id}`;
+  document.getElementById('msg-modal-body').innerHTML = `
+    <div class="modal-section-title">Contact</div>
+    <div class="info-grid">
+      <div class="info-field"><label>Nom</label><span>${m.nom}</span></div>
+      <div class="info-field"><label>Date</label><span>${m.date}</span></div>
+      <div class="info-field"><label>Téléphone</label><span>${m.telephone ? `<a href="tel:${m.telephone}">${m.telephone}</a>` : '—'}</span></div>
+      <div class="info-field"><label>Email</label><span>${m.email ? `<a href="mailto:${m.email}">${m.email}</a>` : '—'}</span></div>
+      ${m.extras ? `<div class="info-field" style="grid-column:1/-1;"><label>Détails</label><span>${m.extras}</span></div>` : ''}
+      <div class="info-field" style="grid-column:1/-1;"><label>Message</label><span>${m.message || '—'}</span></div>
+    </div>`;
+  document.getElementById('msg-modal-footer').innerHTML = `
+    <select class="modal-select" id="select-msg-statut" style="margin-right:auto;">
+      ${['Nouveau','Vu','Traité'].map(s => `<option value="${s}" ${m.statut === s ? 'selected' : ''}>${s}</option>`).join('')}
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="changerStatutMessage('${m.source}','${m.id}')">
+      <span class="iconify" data-icon="tabler:device-floppy"></span> Mettre à jour
+    </button>
+    ${m.email ? `
+    <button class="btn btn-primary btn-sm" onclick="fermerModal('modal-message'); ouvrirReponseMessage('${m.source}', '${m.id}', '${m.nom.replace(/'/g, "\\'")}', '${m.email}', 'Réponse à votre ${m.sourceLabel.toLowerCase()}')">
+      <span class="iconify" data-icon="tabler:mail-forward"></span> Répondre
+    </button>` : `<span style="font-size:12px;color:var(--text-3);">Pas d'email — contactez par téléphone.</span>`}`;
+}
+
+async function changerStatutMessage(source, id) {
+  const statut = document.getElementById('select-msg-statut').value;
+  try {
+    const result = await apiCall('admin_update_statut_message', { source, id, statut });
+    if (result.status === 'success') {
+      toast('Statut mis à jour.', 'success');
+      fermerModal('modal-message');
+      chargerBoiteMessages();
+    } else { toast(result.message || 'Erreur.', 'error'); }
+  } catch (e) { toast('Erreur réseau.', 'error'); }
+}
+
+/* ================================================================
+   RÉPONSE GÉNÉRIQUE — utilisée par la boîte de messages ET par le
+   bouton "Répondre" de la fiche candidature.
+================================================================ */
+let _repondreContexte = null;
+
+function ouvrirReponseMessage(source, id, nomDestinataire, emailDestinataire, sujetSuggere) {
+  _repondreContexte = { source, id, emailDestinataire };
+  document.getElementById('repondre-destinataire-info').innerHTML =
+    `Réponse à <strong>${nomDestinataire}</strong> — <a href="mailto:${emailDestinataire}">${emailDestinataire}</a>`;
+  document.getElementById('repondre-sujet').value = sujetSuggere || '';
+  document.getElementById('repondre-marquer-traite').checked = true;
+  document.getElementById('err-repondre').textContent = '';
+  ouvrirModal('modal-repondre');
+  initEditeurSimple('repondre-contenu', '', 260);
+}
+
+async function envoyerReponseMessage() {
+  const erreurEl = document.getElementById('err-repondre');
+  erreurEl.textContent = '';
+
+  const sujet = document.getElementById('repondre-sujet').value.trim();
+  const inst  = tinymce.get('repondre-contenu');
+  const messageHtml = inst ? inst.getContent() : '';
+  const marquerTraite = document.getElementById('repondre-marquer-traite').checked;
+
+  if (!sujet || !messageHtml || messageHtml === '<p></p>') {
+    erreurEl.textContent = 'Le sujet et le contenu de la réponse sont requis.';
+    return;
+  }
+  if (!_repondreContexte) return;
+
+  const btn = document.getElementById('btn-repondre-envoyer');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Envoi…';
+
+  try {
+    const result = await apiCall('admin_repondre_message', {
+      source: _repondreContexte.source, id: _repondreContexte.id,
+      sujet, messageHtml, marquerTraite
+    });
+    if (result.status === 'success') {
+      toast(result.message || 'Réponse envoyée.', 'success');
+      detruireEditeurSimple('repondre-contenu');
+      fermerModal('modal-repondre');
+      if (_repondreContexte.source === 'candidature') chargerCandidatures();
+      else chargerBoiteMessages();
+    } else {
+      erreurEl.textContent = result.message || 'Erreur lors de l\'envoi.';
+    }
+  } catch (e) {
+    erreurEl.textContent = 'Erreur réseau.';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> Envoyer la réponse';
+}
+
+/* ================================================================
+   NEWSLETTER
+================================================================ */
+async function chargerNewsletterAbonnes() {
+  try {
+    const result = await apiCall('admin_get_abonnes');
+    if (result.status !== 'success') throw new Error(result.message);
+    state.abonnesActifs = result.actifs || 0;
+    document.getElementById('newsletter-abonnes-count').textContent =
+      `${result.actifs} abonné(s) actif(s) sur ${result.total}`;
+  } catch (e) {
+    document.getElementById('newsletter-abonnes-count').textContent = '—';
+  }
+  initEditeurSimple('newsletter-contenu', '', 320);
+}
+
+async function chargerCampagnesNewsletter() {
+  document.getElementById('campagnes-table-container').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_get_campagnes_newsletter');
+    if (result.status !== 'success') throw new Error(result.message);
+    const campagnes = result.campagnes || [];
+    if (!campagnes.length) {
+      document.getElementById('campagnes-table-container').innerHTML =
+        '<div class="empty-state"><span class="iconify" data-icon="tabler:mail-off"></span><p>Aucune campagne envoyée pour l\'instant</p></div>';
+      return;
+    }
+    document.getElementById('campagnes-table-container').innerHTML = `
+      <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Sujet</th><th>Envoyée par</th><th>Ciblés</th><th>Réussis</th><th>Échecs</th></tr></thead>
+        <tbody>${campagnes.map(c => `<tr>
+          <td style="font-size:12px;color:var(--text-3);">${c.dateEnvoi}</td>
+          <td><strong>${c.sujet}</strong></td>
+          <td style="font-size:12px;">${c.envoyeePar}</td>
+          <td>${c.cibles}</td>
+          <td style="color:var(--green,#22C55E);font-weight:700;">${c.reussis}</td>
+          <td style="color:${c.echecs > 0 ? 'var(--red,#EF4444)' : 'var(--text-3)'};font-weight:700;">${c.echecs}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    document.getElementById('campagnes-table-container').innerHTML =
+      '<div class="empty-state"><span class="iconify" data-icon="tabler:alert-triangle"></span><p>Erreur de chargement</p></div>';
+  }
+}
+
+function confirmerEnvoiNewsletter() {
+  const sujet = document.getElementById('newsletter-sujet').value.trim();
+  const inst  = tinymce.get('newsletter-contenu');
+  const contenuHtml = inst ? inst.getContent() : '';
+  const erreurEl = document.getElementById('err-newsletter');
+  erreurEl.textContent = '';
+
+  if (!sujet || !contenuHtml || contenuHtml === '<p></p>') {
+    erreurEl.textContent = 'Le sujet et le contenu sont requis.';
+    return;
+  }
+  confirmer(
+    'Envoyer la newsletter',
+    `Envoyer « ${sujet} » à ${state.abonnesActifs} abonné(s) actif(s) ? Cette action est irréversible.`,
+    () => envoyerNewsletterEffectif(sujet, contenuHtml)
+  );
+}
+
+async function envoyerNewsletterEffectif(sujet, contenuHtml) {
+  const btn = document.getElementById('btn-newsletter-envoyer');
+  const statusEl = document.getElementById('newsletter-send-status');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Envoi en cours…';
+  statusEl.textContent = 'Ceci peut prendre quelques minutes selon le nombre d\'abonnés…';
+
+  try {
+    const result = await apiCall('admin_envoyer_newsletter', { sujet, contenuHtml });
+    if (result.status === 'success') {
+      toast(result.message || 'Newsletter envoyée.', 'success');
+      statusEl.textContent = result.message || '';
+      document.getElementById('newsletter-sujet').value = '';
+      detruireEditeurSimple('newsletter-contenu');
+      initEditeurSimple('newsletter-contenu', '', 320);
+      chargerCampagnesNewsletter();
+    } else {
+      toast(result.message || 'Erreur lors de l\'envoi.', 'error');
+      statusEl.textContent = '';
+    }
+  } catch (e) {
+    toast('Erreur réseau.', 'error');
+    statusEl.textContent = '';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> Envoyer à tous les abonnés';
+}
+
+/* ================================================================
+   ÉDITEUR TINYMCE GÉNÉRIQUE — réponses aux messages + newsletter
+   (version allégée, sans upload d'image, pour rester simple)
+================================================================ */
+function detruireEditeurSimple(selectorId) {
+  const inst = tinymce.get(selectorId);
+  if (inst) inst.remove();
+}
+
+function initEditeurSimple(selectorId, contenuInitial, hauteur) {
+  detruireEditeurSimple(selectorId);
+  const el = document.getElementById(selectorId);
+  el.value = contenuInitial || '';
+  return new Promise((resolve) => {
+    tinymce.init({
+      selector:    '#' + selectorId,
+      license_key: 'gpl',
+      base_url:    'tinymce',
+      suffix:      '.min',
+      height:      hauteur || 260,
+      menubar:     false,
+      branding:    false,
+      promotion:   false,
+      plugins:     'lists advlist link autolink wordcount',
+      toolbar:     'undo redo | bold italic underline | forecolor | bullist numlist | link | removeformat',
+      content_style: "body { font-family: 'Poppins', Arial, sans-serif; font-size: 14px; line-height: 1.65; color: #1A1A2E; padding: 8px; }",
+      setup: (editor) => { editor.on('init', () => resolve(editor)); },
+    });
   });
 }
 

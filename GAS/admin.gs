@@ -61,6 +61,14 @@ function routerAdmin(data, action) {
       case 'admin_get_mode_paiement':   return requireAuth(data, adminGetModePaiement);
       case 'admin_set_mode_paiement':   return requireAuth(data, adminSetModePaiement);
 
+      case 'admin_get_boite_messages':    return requireAuth(data, adminGetBoiteMessages);
+      case 'admin_repondre_message':      return requireAuth(data, adminRepondreMessage);
+      case 'admin_update_statut_message': return requireAuth(data, adminUpdateStatutMessage);
+
+      case 'admin_get_abonnes':              return requireAuth(data, adminGetAbonnes);
+      case 'admin_envoyer_newsletter':       return requireAuth(data, adminEnvoyerNewsletter);
+      case 'admin_get_campagnes_newsletter': return requireAuth(data, adminGetCampagnesNewsletter);
+
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
     }
