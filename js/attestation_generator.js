@@ -499,6 +499,30 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
     posY += 190;
 
+    // Domaine de formation — affiché explicitement en clair, sous le nom
+    // du diplômé. Auparavant absent du gabarit long (seulement dilué dans
+    // le détail des compétences, sous une étiquette marketing différente
+    // du nom officiel de la filière) ; corrigé pour rester au même niveau
+    // de clarté que le gabarit court (initiation), qui l'affiche déjà.
+    // Fonctionne aussi pour un parcours à plusieurs filières (déjà stocké
+    // sous forme de liste séparée par virgules).
+    if (apprenant.filiere) {
+      _font(ctx, 44, "bold");
+      ctx.fillStyle = COULEUR_PRINCIPALE;
+      const labelDomaine = "Domaine de formation : ";
+      const domaineTxt   = String(apprenant.filiere);
+      const largeurLabel = _mw(ctx, labelDomaine);
+      const centreDomaine = CENTRE_HAUT;
+      const largeurTotale = largeurLabel + (() => { _font(ctx, 44, "normal"); const w = _mw(ctx, domaineTxt); _font(ctx, 44, "bold"); return w; })();
+      let dxDom = centreDomaine - largeurTotale / 2;
+      ctx.fillText(labelDomaine, dxDom, posY);
+      dxDom += largeurLabel;
+      _font(ctx, 44, "normal");
+      ctx.fillStyle = ATT.TEXTE;
+      ctx.fillText(domaineTxt, dxDom, posY);
+      posY += 64;
+    }
+
     if (apprenant.dateNaissance) {
       _font(ctx, 40, "normal");
       ctx.fillStyle = ATT.TEXTE;

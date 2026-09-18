@@ -2573,8 +2573,12 @@ async function inscrireNewsletter(evt) {
     const result = await resp.json();
 
     msg.textContent = result.message || (result.status === 'success' ? 'Inscription confirmée.' : 'Une erreur est survenue.');
-    msg.className = 'footer-newsletter-msg show ' + (result.status === 'success' ? 'ok' : 'err');
-    if (result.status === 'success') {
+    // "Déjà abonné" n'est pas une erreur technique, mais ce n'est pas non
+    // plus une nouvelle inscription réussie — affiché en rouge pour bien
+    // distinguer visuellement les deux cas, comme demandé.
+    const estErreurOuDejaAbonne = result.status !== 'success' || result.dejaAbonne === true;
+    msg.className = 'footer-newsletter-msg show ' + (estErreurOuDejaAbonne ? 'err' : 'ok');
+    if (result.status === 'success' && !result.dejaAbonne) {
       emailInput.value = '';
       consentInput.checked = false;
     }

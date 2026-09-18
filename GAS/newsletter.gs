@@ -80,7 +80,11 @@ function inscrireAbonneNewsletter(data) {
     if (String(rows[i][2] || '').trim().toLowerCase() !== emailNorm) continue;
 
     if (String(rows[i][3]).trim() === 'Actif') {
-      return reponseJSON({ status: 'success', message: 'Vous êtes déjà abonné à notre newsletter.' });
+      // Pas une erreur technique, mais PAS un succès nouveau non plus —
+      // dejaAbonne permet au front d'afficher ce cas en rouge (différent
+      // visuellement d'une inscription qui vient d'aboutir), sans pour
+      // autant le traiter comme une panne.
+      return reponseJSON({ status: 'success', dejaAbonne: true, message: 'Vous êtes déjà abonné à notre newsletter.' });
     }
 
     // Réactivation d'un ancien désabonné — nouveau jeton par prudence.
@@ -89,6 +93,7 @@ function inscrireAbonneNewsletter(data) {
     feuille.getRange(i + 1, 5).setValue(nouveauToken);
     feuille.getRange(i + 1, 6).setValue('');
     try { _envoyerEmailConfirmationAbonnement(emailNorm, nouveauToken); } catch (e) { console.error('[inscrireAbonneNewsletter] mail', e.toString()); }
+    try { _notifierAdminNouvelAbonne(emailNorm, data.source || 'site', true); } catch (e) { console.error('[inscrireAbonneNewsletter] mail admin', e.toString()); }
     return reponseJSON({ status: 'success', message: 'Bienvenue à nouveau ! Votre réinscription est confirmée.' });
   }
 
@@ -102,8 +107,34 @@ function inscrireAbonneNewsletter(data) {
   ]);
 
   try { _envoyerEmailConfirmationAbonnement(emailNorm, token); } catch (e) { console.error('[inscrireAbonneNewsletter] mail', e.toString()); }
+  try { _notifierAdminNouvelAbonne(emailNorm, data.source || 'site', false); } catch (e) { console.error('[inscrireAbonneNewsletter] mail admin', e.toString()); }
 
   return reponseJSON({ status: 'success', message: 'Merci ! Votre inscription à la newsletter est confirmée.' });
+}
+
+// Notifie l'administration à chaque nouvel abonné — pour rester cohérent
+// avec toutes les autres entrées du site (renseignement, candidature,
+// chat) qui préviennent déjà l'admin de toute nouvelle activité.
+function _notifierAdminNouvelAbonne(email, source, estReactivation) {
+  const titre = estReactivation ? 'Réabonnement à la newsletter' : 'Nouvel abonné à la newsletter';
+  const htmlBody = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+<tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#FFF;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <tr><td style="background:${CONFIG.COULEUR_DARK};padding:20px 28px;">
+    <h1 style="margin:0;font-size:15px;color:#FFF;font-weight:700;">${titre}</h1>
+  </td></tr>
+  <tr><td style="padding:20px 24px;">
+    ${ligneInfoEmail('Email', email)}
+    ${ligneInfoEmail('Source', source)}
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+  GmailApp.sendEmail(CONFIG.ADMIN_EMAIL, `[Newsletter] ${titre}`, `${titre} : ${email}`,
+    { htmlBody: htmlBody, name: CONFIG.EXPEDITEUR_NOM });
 }
 
 // =====================================================================
