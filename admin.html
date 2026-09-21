@@ -791,6 +791,27 @@
 
       <div class="table-card" style="margin-bottom:20px;">
         <div class="table-card-header">
+          <span class="table-card-title">
+            <span class="iconify" data-icon="tabler:lock-access"></span>
+            Espace apprenant / candidat
+          </span>
+          <span id="acces-espace-badge" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;">—</span>
+        </div>
+        <div style="padding:20px;">
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px;line-height:1.6;">
+            Coupe ou réactive l'accès public à la carte d'apprentissage, aux attestations et à l'espace
+            candidat (recherche par ID + téléphone), sans toucher au code. Remplace l'ancien réglage
+            manuel dans les Propriétés du script Apps Script.
+          </p>
+          <label class="auth-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:4px;">
+            <input type="checkbox" id="acces-espace-toggle" style="width:18px;height:18px;cursor:pointer;" onchange="basculerAccesEspaceApprenant(this)" />
+            Bloquer l'accès (site en cours de finalisation / maintenance)
+          </label>
+        </div>
+      </div>
+
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-card-header">
           <span class="table-card-title">Bandeau d'information (haut de page)</span>
         </div>
         <div style="padding:20px;">
@@ -947,7 +968,7 @@
         <option value="Informatique & Bureautique">Informatique & Bureautique</option>
         <option value="Graphisme & PAO">Graphisme & PAO</option>
         <option value="Sérigraphie">Sérigraphie</option>
-        <option value="Création de sites web">Création de sites web</option>
+        <option value="Création de sites web">Création de sites web & Application Mobile</option>
       </select>
 
       <label class="auth-label" for="annonce-type" style="margin-top:14px;display:block;">Type d'annonce</label>
@@ -1383,7 +1404,7 @@ function naviguer(page, filtre = '') {
   if (page === 'dossiers')        chargerDossiers();
   if (page === 'renseignements')  chargerRenseignements();
   if (page === 'candidatures')    chargerCandidatures();
-  if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); chargerModePaiementAdmin(); }
+  if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); chargerModePaiementAdmin(); chargerAccesEspaceApprenant(); }
   if (page === 'messages')        chargerBoiteMessages();
   if (page === 'newsletter')      { chargerNewsletterAbonnes(); chargerCampagnesNewsletter(); }
   if (filtre && page === 'dossiers') {
@@ -2428,7 +2449,14 @@ function badgeRegStatut(statut) {
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
 }
 function abrevierFormation(f) {
-  const map = { 'Informatique & Bureautique': 'Informatique', 'Graphisme & PAO': 'Graphisme', 'Sérigraphie': 'Sérigraphie', 'Création de sites web': 'Web' };
+  const map = {
+    'Informatique & Bureautique':        'Informatique',
+    'Graphisme & PAO':                   'Graphisme',
+    'Sérigraphie':                       'Sérigraphie',
+    'Création de sites web':             'Web & Mobile',
+    'Initiation rapide (1 mois)':        'Initiation',
+    'Pack Complet — Toutes les filières':'Pack Complet'
+  };
   return map[f] || f;
 }
 
@@ -2799,6 +2827,54 @@ function basculerModePaiement(checkbox) {
       if (result.status === 'success') {
         _rendreBadgeModePaiement(result.mode);
         toast(`Mode de paiement : ${result.mode.toUpperCase()}.`, 'success');
+      } else {
+        toast(result.message || 'Erreur.', 'error');
+      }
+    } catch (e) {
+      toast('Erreur réseau.', 'error');
+    }
+  });
+}
+
+/* ================================================================
+   ACCÈS ESPACE APPRENANT / CANDIDAT — remplace l'ancien réglage
+   manuel TELECHARGEMENT_BLOQUE dans les Propriétés du script GAS.
+   Même mécanisme que le mode de paiement : un seul toggle, aucun
+   accès au code nécessaire.
+================================================================ */
+function _rendreBadgeAccesEspace(bloque) {
+  const badge  = document.getElementById('acces-espace-badge');
+  const toggle = document.getElementById('acces-espace-toggle');
+  toggle.checked = !!bloque;
+  badge.textContent = bloque ? 'BLOQUÉ' : 'OUVERT';
+  badge.style.background = bloque ? 'var(--red,#EF4444)' : 'var(--teal-l,#0D9488)';
+  badge.style.color = '#fff';
+}
+
+async function chargerAccesEspaceApprenant() {
+  try {
+    const result = await apiCall('admin_get_acces_espace_apprenant');
+    if (result.status === 'success') _rendreBadgeAccesEspace(result.bloque);
+  } catch (e) {
+    console.warn('Chargement accès espace apprenant impossible :', e.message);
+  }
+}
+
+function basculerAccesEspaceApprenant(checkbox) {
+  const nouveauBloque = checkbox.checked;
+  const titre = nouveauBloque ? 'Bloquer l\'accès ?' : 'Réactiver l\'accès ?';
+  const message = nouveauBloque
+    ? "Les apprenants et candidats ne pourront plus consulter leur carte, télécharger leurs attestations ni accéder à l'espace stage tant que ce n'est pas réactivé."
+    : "L'espace apprenant et candidat redevient accessible publiquement.";
+
+  checkbox.checked = !checkbox.checked; // annulé tant que non confirmé
+
+  confirmer(titre, message, async () => {
+    try {
+      const result = await apiCall('admin_set_acces_espace_apprenant', { bloque: nouveauBloque });
+      if (result.status === 'success') {
+        _rendreBadgeAccesEspace(result.bloque);
+        toast(result.bloque ? 'Accès bloqué.' : 'Accès réactivé.', 'success');
       } else {
         toast(result.message || 'Erreur.', 'error');
       }

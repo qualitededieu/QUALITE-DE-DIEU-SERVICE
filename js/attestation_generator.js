@@ -32,12 +32,17 @@ const ATT_ENTREPRISE = {
   IFU:      "3202357917037",
 };
 
+// Indexé par nom D'AFFICHAGE (pas la clé technique GAS) : apprenant.filiere,
+// injecté par carte.gs::_mapperApprenantInscription, est déjà passé au
+// travers de CONFIG.NOMS_AFFICHAGE_PUBLIC côté serveur — ces clés doivent
+// donc rester synchronisées avec ce dictionnaire-là (GAS/code.gs).
 const ATT_DESCRIPTIONS = {
-  "Informatique & Bureautique": "Maîtrise des outils bureautiques (Word, Excel, PowerPoint), gestion de base de l'outil informatique, saisie et mise en forme de documents professionnels, navigation Internet.",
-  "Graphisme & PAO":            "Publication assistée par ordinateur, conception d'affiches et de supports visuels, maîtrise des logiciels professionnels (Photoshop, Illustrator, CorelDRAW, Canva Pro).",
-  "Sérigraphie":                "Techniques d'impression sur tout support (tissu, enseignes, objets promotionnels), préparation des écrans, gestion des couleurs et finitions.",
-  "Création de sites web":      "Conception et publication de sites internet, bases HTML/CSS, gestion de contenu avec WordPress et Wix, mise en ligne et hébergement.",
-  "Initiation rapide (1 mois)": "Initiation accélérée aux outils numériques essentiels : prise en main de l'ordinateur, bureautique de base et navigation Internet.",
+  "Informatique & Bureautique":                    "Maîtrise des outils bureautiques (Word, Excel, PowerPoint), gestion de base de l'outil informatique, saisie et mise en forme de documents professionnels, navigation Internet.",
+  "Graphisme & PAO":                                "Publication assistée par ordinateur, conception d'affiches et de supports visuels, maîtrise des logiciels professionnels (Photoshop, Illustrator, CorelDRAW, Canva Pro).",
+  "Sérigraphie":                                    "Techniques d'impression sur tout support (tissu, enseignes, objets promotionnels), préparation des écrans, gestion des couleurs et finitions.",
+  "Création de sites web & Application Mobile":     "Conception et publication de sites internet (HTML/CSS, WordPress, Wix) et d'applications mobiles, mise en ligne, hébergement et publication sur les stores.",
+  "Initiation rapide (1 mois)":                     "Initiation accélérée aux outils numériques essentiels : prise en main de l'ordinateur, bureautique de base et navigation Internet.",
+  "Pack Complet — Toutes les filières":             "Parcours complet couvrant l'ensemble des filières du centre (Bureautique, Graphisme, Sérigraphie, Web & Mobile), avec remise d'un PC portable Core i7.",
 };
 
 function _attDescription(filiere) {
@@ -49,12 +54,22 @@ function _attDescription(filiere) {
 }
 
 const ATT_CATEGORIES_LONGUE = {
-  "Informatique & Bureautique": { categorie: "Bureautique & Digital", texte: ATT_DESCRIPTIONS["Informatique & Bureautique"] },
-  "Graphisme & PAO":            { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Graphisme & PAO"] },
-  "Sérigraphie":                { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Sérigraphie"] },
-  "Création de sites web":      { categorie: "Développement Web",     texte: ATT_DESCRIPTIONS["Création de sites web"] },
-  "Initiation rapide (1 mois)": { categorie: "Initiation numérique",  texte: ATT_DESCRIPTIONS["Initiation rapide (1 mois)"] },
+  "Informatique & Bureautique":                { categorie: "Bureautique & Digital", texte: ATT_DESCRIPTIONS["Informatique & Bureautique"] },
+  "Graphisme & PAO":                            { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Graphisme & PAO"] },
+  "Sérigraphie":                                { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Sérigraphie"] },
+  "Création de sites web & Application Mobile": { categorie: "Développement Web & Mobile", texte: ATT_DESCRIPTIONS["Création de sites web & Application Mobile"] },
+  "Initiation rapide (1 mois)":                 { categorie: "Initiation numérique",  texte: ATT_DESCRIPTIONS["Initiation rapide (1 mois)"] },
 };
+
+// Les 4 filières couvertes par le Pack Complet — utilisées pour développer
+// ses compétences dans _competencesLongue, puisque ATT_CATEGORIES_LONGUE
+// n'a pas d'entrée directe pour "Pack Complet — Toutes les filières".
+const ATT_PACK_COMPLET_FILIERES = [
+  "Informatique & Bureautique",
+  "Graphisme & PAO",
+  "Sérigraphie",
+  "Création de sites web & Application Mobile",
+];
 
 const ATT_MODULE_MANAGEMENT = {
   categorie: "Management",
@@ -75,7 +90,16 @@ function _intituleAffichage(filiere, estStage) {
 }
 
 function _competencesLongue(filiereStr) {
-  const filieres = String(filiereStr || "").split(",").map(s => s.trim()).filter(Boolean);
+  let filieres = String(filiereStr || "").split(",").map(s => s.trim()).filter(Boolean);
+
+  // Le Pack Complet est stocké comme une seule "filière" (son nom exact,
+  // exclusif — voir GAS/code.gs CONFIG.PACK_COMPLET) : on le développe ici
+  // en ses 4 domaines réels pour que l'attestation détaille les mêmes
+  // compétences que si l'apprenant avait suivi chaque filière séparément.
+  if (filieres.includes("Pack Complet — Toutes les filières")) {
+    filieres = ATT_PACK_COMPLET_FILIERES;
+  }
+
   const parCategorie = new Map();
 
   filieres.forEach(f => {

@@ -4,11 +4,15 @@
 
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
 
+  // Synchronisé avec GAS/code.gs CONFIG.COUTS_FORMATIONS / DUREES_FORMATIONS
+  // (mise à jour tarifaire PDG, septembre 2026). Le Pack Complet n'a pas
+  // d'entrée ici : il sort du cadre du quiz filière-par-filière ci-dessous
+  // (recommandation basée sur un score par domaine unique).
   const FORMATIONS = {
-    informatique:   { label: 'Informatique & Bureautique', duree: '3 mois', prix: '45 000 F' },
-    graphisme:      { label: 'Graphisme & PAO',             duree: '4 mois', prix: '65 000 F' },
-    serigraphie:    { label: 'Sérigraphie',                 duree: '3 mois', prix: '35 000 F' },
-    developpement:  { label: 'Création de sites web',       duree: '4 mois', prix: '200 000 F' },
+    informatique:   { label: 'Informatique & Bureautique',                duree: '6 mois',  prix: '100 000 F' },
+    graphisme:      { label: 'Graphisme & PAO',                            duree: '6 mois',  prix: '200 000 F' },
+    serigraphie:    { label: 'Sérigraphie',                                duree: '6 mois',  prix: '100 000 F' },
+    developpement:  { label: 'Création de sites web & Application Mobile', duree: '24 mois', prix: '250 000 F' },
   };
   const FRAIS_INSCRIPTION = '10 000 F';
   const TEL_CONTACT   = '+229 01 97 95 12 30';
