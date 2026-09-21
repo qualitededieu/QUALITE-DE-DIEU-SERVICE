@@ -61,6 +61,9 @@ function routerAdmin(data, action) {
       case 'admin_get_mode_paiement':   return requireAuth(data, adminGetModePaiement);
       case 'admin_set_mode_paiement':   return requireAuth(data, adminSetModePaiement);
 
+      case 'admin_get_acces_espace_apprenant': return requireAuth(data, adminGetAccesEspaceApprenant);
+      case 'admin_set_acces_espace_apprenant': return requireAuth(data, adminSetAccesEspaceApprenant);
+
       case 'admin_get_boite_messages':    return requireAuth(data, adminGetBoiteMessages);
       case 'admin_repondre_message':      return requireAuth(data, adminRepondreMessage);
       case 'admin_update_statut_message': return requireAuth(data, adminUpdateStatutMessage);
@@ -456,6 +459,23 @@ function adminSetModePaiement(data, email) {
   return reponseJSON({ status: 'success', mode: mode });
 }
 
+// Bascule "espace apprenant / candidat en pause" — remplace l'ancien
+// réglage manuel via Propriétés du script (Apps Script → Propriétés du
+// projet → Script Properties → TELECHARGEMENT_BLOQUE). Même clé de
+// propriété, seule la façon de la modifier change : depuis l'admin
+// maintenant, plus besoin de retourner dans l'éditeur Apps Script.
+function adminGetAccesEspaceApprenant(data, email) {
+  const bloque = PropertiesService.getScriptProperties().getProperty('TELECHARGEMENT_BLOQUE') === 'true';
+  return reponseJSON({ status: 'success', bloque: bloque });
+}
+
+function adminSetAccesEspaceApprenant(data, email) {
+  const bloque = data.bloque === true || data.bloque === 'true';
+  PropertiesService.getScriptProperties().setProperty('TELECHARGEMENT_BLOQUE', bloque ? 'true' : 'false');
+  console.log(`[Admin:${email}] Espace apprenant/candidat ${bloque ? 'BLOQUÉ' : 'RÉACTIVÉ'}`);
+  return reponseJSON({ status: 'success', bloque: bloque });
+}
+
 function adminApercuAttestation(data, email) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
@@ -696,9 +716,14 @@ function envoyerEmailResetOTP(email, otp) {
 
 function envoyerEmailConfirmationPaiement(dossier) {
   const montants = calculerMontantsTotal(dossier.formations || []);
+  // Nom(s) d'AFFICHAGE pour cet email apprenant — dossier.formationsLabel
+  // (ligne 816) porte la clé TECHNIQUE brute (row[22]), jamais à montrer
+  // telle quelle à l'apprenant (voir CONFIG.NOMS_AFFICHAGE_PUBLIC).
+  const formationsAffichage = String(dossier.formationsLabel || '')
+    .split(' | ').map(f => nomAffichagePublic(f.trim())).join(' | ');
   GmailApp.sendEmail(
     dossier.email,
-    `Paiement confirmé — ${dossier.formationsLabel} — LQD Service`,
+    `Paiement confirmé — ${formationsAffichage} — LQD Service`,
     `Bonjour ${dossier.prenom}, votre paiement pour le dossier ${dossier.id} a été vérifié.`,
     {
       htmlBody: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
@@ -718,12 +743,12 @@ function envoyerEmailConfirmationPaiement(dossier) {
     <p style="font-size:15px;color:#444;line-height:1.75;margin:0 0 20px;">
       Bonjour <strong>${dossier.prenom}</strong>,<br/><br/>
       Votre paiement pour le dossier <strong>${dossier.id}</strong> a été vérifié et validé.
-      Votre inscription à <strong>${dossier.formationsLabel}</strong> est confirmée. Bienvenue !
+      Votre inscription à <strong>${formationsAffichage}</strong> est confirmée. Bienvenue !
     </p>
     <table width="100%" cellpadding="0" cellspacing="0"
       style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;">
       ${ligneInfoEmail('Dossier', dossier.id)}
-      ${ligneInfoEmail('Formation(s)', dossier.formationsLabel)}
+      ${ligneInfoEmail('Formation(s)', formationsAffichage)}
       ${ligneInfoEmailAccent('Statut', 'Inscrit — Paiement vérifié')}
     </table>
   </td></tr>

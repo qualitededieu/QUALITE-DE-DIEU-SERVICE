@@ -326,10 +326,13 @@ function _trouverApprenantParId(ss, id) {
 function _mapperApprenantInscription(row) {
   // Dates réelles si présentes (nouveau schéma + dossiers migrés depuis
   // Régularisation) ; à défaut, estimation depuis la soumission — la durée
-  // de repli dépend de la formation choisie (1 mois pour l'offre courte,
-  // 1 an pour les 4 filières longues, comportement historique conservé).
+  // de repli dépend désormais de la/les formation(s) choisie(s) et non plus
+  // d'un forfait uniforme "+1 an" (obsolète depuis la mise à jour tarifaire
+  // de septembre 2026 : 6 mois pour les 3 filières classiques, 18 mois pour
+  // le Pack Complet, 24 mois pour le web, 1 mois pour l'offre courte).
   const filiereLigne = String(row[22] || '');
-  const estFormationCourte = filiereLigne.includes('Initiation rapide (1 mois)');
+  const estFormationCourte = filiereLigne.includes(CONFIG.FORMATION_COURTE.NOM);
+  const estPackComplet     = filiereLigne.includes(CONFIG.PACK_COMPLET.NOM);
 
   let dateEntree = String(row[24] || '');
   let dateFin    = String(row[25] || '');
@@ -337,8 +340,22 @@ function _mapperApprenantInscription(row) {
   if (!dateEntree) dateEntree = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
   if (!dateFin && row[1]) {
     const d = new Date(row[1]);
-    if (estFormationCourte) d.setMonth(d.getMonth() + 1);
-    else d.setFullYear(d.getFullYear() + 1);
+    if (estFormationCourte) {
+      d.setMonth(d.getMonth() + 1);
+    } else if (estPackComplet) {
+      d.setMonth(d.getMonth() + CONFIG.PACK_COMPLET.DUREE_MOIS);
+    } else {
+      // Plusieurs filières classiques peuvent être combinées (hors offre
+      // courte et Pack Complet, tous deux exclusifs) — on retient la durée
+      // la plus longue parmi celles sélectionnées, avec 6 mois en repli si
+      // une formation n'est pas reconnue (ancien dossier, nom modifié...).
+      const filieres = filiereLigne.split(' | ').map(f => f.trim()).filter(Boolean);
+      const dureeMax = filieres.reduce((max, f) => {
+        const duree = CONFIG.DUREES_FORMATIONS[f] || 6;
+        return Math.max(max, duree);
+      }, 6);
+      d.setMonth(d.getMonth() + dureeMax);
+    }
     dateFin = d.toISOString().split('T')[0];
   }
 
@@ -351,7 +368,15 @@ function _mapperApprenantInscription(row) {
     lieuNaissance: String(row[6]  || ''),
     telephone:     String(row[9]  || ''),
     email:         String(row[10] || ''),
-    filiere:       String(row[22] || '').replace(/ \| /g, ', '),
+    // Nom d'AFFICHAGE (pas la clé technique) : ce champ alimente tout ce
+    // qui est montré à l'apprenant (carte, badge, fiche, attestation,
+    // espace apprenant, emails) — voir CONFIG.NOMS_AFFICHAGE_PUBLIC. La clé
+    // technique (row[22] brut) ne sert qu'en interne (Sheets, filtres,
+    // CONFIG) et ne doit jamais fuiter vers l'apprenant. Les dictionnaires
+    // de js/attestation_generator.js (ATT_CATEGORIES_LONGUE, etc.) sont
+    // volontairement indexés par ce même nom d'affichage pour rester
+    // cohérents avec ce que reçoit ce champ.
+    filiere:       String(row[22] || '').split(' | ').map(f => nomAffichagePublic(f.trim())).join(', '),
     dateEntree:    dateEntree,
     dateFin:       dateFin,
     niveauAtteint: String(row[26] || ''),

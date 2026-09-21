@@ -14,15 +14,51 @@ const CONFIG = {
 
   FRAIS_INSCRIPTION: 10000,
 
+  // Tarifs mis à jour par le PDG (septembre 2026) — durée 6 mois pour les
+  // 3 filières classiques, 24 mois pour le web (offre élargie au mobile).
   COUTS_FORMATIONS: {
-    'Informatique & Bureautique': 45000,
-    'Graphisme & PAO':            65000,
-    'Sérigraphie':                35000,
-    'Création de sites web':      200000
+    'Informatique & Bureautique': 100000,
+    'Graphisme & PAO':            200000,
+    'Sérigraphie':                100000,
+    'Création de sites web':      250000
   },
 
-  // Offre autonome à paiement unique — distincte des 4 filières longues
+  // Durée en mois par filière longue — utilisée pour l'affichage public et
+  // pour le calcul de la date de fin prévisionnelle (voir carte.gs,
+  // _mapperApprenantInscription). Ne pas confondre avec PACK_COMPLET.DUREE_MOIS.
+  DUREES_FORMATIONS: {
+    'Informatique & Bureautique': 6,
+    'Graphisme & PAO':            6,
+    'Sérigraphie':                6,
+    'Création de sites web':      24
+  },
+
+  // La clé technique 'Création de sites web' est conservée telle quelle
+  // pour ne jamais casser les dossiers déjà enregistrés (feuilles, filtres,
+  // attestations existantes). Le PDG a cependant renommé l'offre publique
+  // pour inclure le volet mobile — ce nom d'affichage doit être utilisé
+  // PARTOUT où une formation est montrée à un apprenant/visiteur (site,
+  // emails, attestations). Toujours lire via nomAffichagePublic(filiere)
+  // (voir plus bas) plutôt que d'indexer ce dictionnaire directement.
+  NOMS_AFFICHAGE_PUBLIC: {
+    'Création de sites web': 'Création de sites web & Application Mobile'
+  },
+
+  // Pack "toutes les filières" — option exclusive et autonome (jamais
+  // combinée avec une sélection filière par filière), incluant l'achat
+  // d'un PC portable Core i7. Son coût est forfaitaire, pas une somme des
+  // COUTS_FORMATIONS ci-dessus (voir calculerMontantsTotal).
+  PACK_COMPLET: {
+    NOM:        'Pack Complet — Toutes les filières',
+    COUT:       570000,
+    DUREE_MOIS: 18,
+    FILIERES:   ['Informatique & Bureautique', 'Graphisme & PAO', 'Sérigraphie', 'Création de sites web'],
+    EQUIPEMENT: 'PC portable Core i7 inclus'
+  },
+
+  // Offre autonome à paiement unique — distincte des filières longues
   // ci-dessus qui restent sur le système de tranches (50/25/25%).
+  // Inchangée par la mise à jour tarifaire de septembre 2026.
   FORMATION_COURTE: {
     NOM:               'Initiation rapide (1 mois)',
     COUT:              25000,
@@ -52,9 +88,19 @@ const CONFIG = {
     'Graphisme & PAO',
     'Sérigraphie',
     'Création de sites web',
-    'Initiation rapide (1 mois)'
+    'Initiation rapide (1 mois)',
+    'Pack Complet — Toutes les filières'
   ]
 };
+
+// Nom à afficher à un apprenant/visiteur pour une filière donnée — passe
+// par CONFIG.NOMS_AFFICHAGE_PUBLIC quand une entrée existe (ex. web →
+// web + mobile), sinon renvoie le nom technique tel quel. À utiliser
+// partout où un nom de formation est montré côté public (site, emails,
+// attestations) — jamais pour les clés internes (Sheets, filtres, CONFIG).
+function nomAffichagePublic(filiere) {
+  return (CONFIG.NOMS_AFFICHAGE_PUBLIC && CONFIG.NOMS_AFFICHAGE_PUBLIC[filiere]) || filiere;
+}
 
 const ENTETES_INSCRIPTION = [
   'ID',
@@ -269,11 +315,17 @@ function traiterInscription(data) {
     return reponseJSON({ status: 'error', message: 'Aucune formation valide sélectionnée.' });
   }
 
-  // L'offre courte est exclusive : si elle est cochée, elle prime seule
-  // sur toute autre sélection (impossible de mélanger paiement unique
-  // et système de tranches dans le même dossier).
+  // L'offre courte ET le Pack Complet sont chacun exclusifs : si l'un des
+  // deux est coché, il prime seul sur toute autre sélection (impossible de
+  // les mélanger entre eux ou avec une sélection filière par filière).
+  // L'offre courte est prioritaire si jamais les deux sont cochés en même
+  // temps (anomalie front-end) — mieux vaut facturer le montant le plus
+  // faible que le plus élevé en cas d'ambiguïté.
   const estFormationCourte = formationsBrutes.includes(CONFIG.FORMATION_COURTE.NOM);
-  const formations = estFormationCourte ? [CONFIG.FORMATION_COURTE.NOM] : formationsBrutes;
+  const estPackComplet     = formationsBrutes.includes(CONFIG.PACK_COMPLET.NOM);
+  const formations = estFormationCourte ? [CONFIG.FORMATION_COURTE.NOM]
+                    : estPackComplet     ? [CONFIG.PACK_COMPLET.NOM]
+                    : formationsBrutes;
 
   const montants = calculerMontantsTotal(formations);
 
@@ -302,6 +354,12 @@ function traiterInscription(data) {
     telephoneTuteur:  nettoyer(data.telephoneTuteur || ''),
     formations,
     formationsLabel:  formations.join(' | '),
+    // Nom(s) d'AFFICHAGE — pour tout texte montré à l'apprenant (emails de
+    // confirmation, rappels...) ; formationsLabel ci-dessus reste la clé
+    // TECHNIQUE (stockée telle quelle dans le Sheet, utilisée pour les
+    // filtres/COUNTA/exclusivités) et ne doit jamais être remplacée par
+    // celui-ci sous peine de casser ces recherches.
+    formationsLabelAffichage: formations.map(nomAffichagePublic).join(' | '),
     nbFormations:     formations.length,
     dateEntree:       nettoyer(data.dateEntree || ''),
     dateFin:          '',
@@ -399,6 +457,19 @@ function calculerMontantsTotal(formations) {
       premierVirement,
       paiementUnique: true
     };
+  }
+
+  // Pack complet : coût forfaitaire fixe (570 000 F, PC portable Core i7
+  // inclus) — jamais une somme des COUTS_FORMATIONS individuels. Reste sur
+  // le système de tranches (50/25/25%) comme les filières classiques.
+  if (formations.length === 1 && formations[0] === CONFIG.PACK_COMPLET.NOM) {
+    const fraisInscription = CONFIG.FRAIS_INSCRIPTION;
+    const coutTotal        = CONFIG.PACK_COMPLET.COUT;
+    const tranche1         = Math.round(coutTotal * 0.50);
+    const tranche2         = Math.round(coutTotal * 0.25);
+    const tranche3         = coutTotal - tranche1 - tranche2;
+    const premierVirement  = fraisInscription + tranche1;
+    return { fraisInscription, coutTotal, tranche1, tranche2, tranche3, premierVirement, paiementUnique: false };
   }
 
   const fraisInscription = CONFIG.FRAIS_INSCRIPTION;
@@ -743,7 +814,7 @@ function envoyerEmailApprenant(inscription, montants) {
   if (!inscription.email) return;
   GmailApp.sendEmail(
     inscription.email,
-    `Dossier reçu — ${inscription.formationsLabel} — LQD Service`,
+    `Dossier reçu — ${inscription.formationsLabelAffichage} — LQD Service`,
     `Bonjour ${inscription.prenom}, dossier ${inscription.id} bien reçu.`,
     {
       htmlBody: construireEmailApprenant(inscription, montants, false),
@@ -757,7 +828,7 @@ function envoyerEmailVirement(inscription, montants) {
   if (!inscription.email) return;
   GmailApp.sendEmail(
     inscription.email,
-    `Coordonnées bancaires — ${inscription.formationsLabel} — LQD Service`,
+    `Coordonnées bancaires — ${inscription.formationsLabelAffichage} — LQD Service`,
     `Bonjour ${inscription.prenom}, voici vos coordonnées de virement. Réf: ${inscription.id}.`,
     {
       htmlBody: construireEmailVirement(inscription, montants),
@@ -869,10 +940,10 @@ function construireEmailAdmin(inscription, montants) {
 function construireEmailApprenant(inscription, montants, estRappel) {
   const intro = estRappel
     ? `Bonjour <strong>${inscription.prenom}</strong>,<br/><br/>
-       Rappel : votre dossier d'inscription à <strong>${inscription.formationsLabel}</strong>
+       Rappel : votre dossier d'inscription à <strong>${inscription.formationsLabelAffichage}</strong>
        est en attente de votre virement bancaire.`
     : `Bonjour <strong>${inscription.prenom}</strong>,<br/><br/>
-       Votre dossier d'inscription à <strong>${inscription.formationsLabel}</strong>
+       Votre dossier d'inscription à <strong>${inscription.formationsLabelAffichage}</strong>
        a bien été reçu et enregistré. Notre équipe vous contactera dans les <strong>24 heures</strong>.`;
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/></head>
@@ -901,7 +972,7 @@ function construireEmailApprenant(inscription, montants, estRappel) {
       ${ligneInfoEmail('Numéro de dossier',  inscription.id)}
       ${ligneInfoEmail('Date',               inscription.date)}
       ${ligneInfoEmail('Prénom et nom',      inscription.prenom + ' ' + inscription.nom)}
-      ${ligneInfoEmailAccent('Formation(s)', inscription.formationsLabel)}
+      ${ligneInfoEmailAccent('Formation(s)', inscription.formationsLabelAffichage)}
     </table>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">
@@ -980,7 +1051,7 @@ function construireEmailVirement(inscription, montants) {
       ${ligneInfoEmail('N° de compte',         CONFIG.BANQUE.NUMERO_COMPTE + (CONFIG.BANQUE.CLE_RIB ? ' (clé ' + CONFIG.BANQUE.CLE_RIB + ')' : ''))}
       ${CONFIG.BANQUE.CODE_BANQUE  ? ligneInfoEmail('Code banque',  CONFIG.BANQUE.CODE_BANQUE)  : ''}
       ${CONFIG.BANQUE.CODE_AGENCE  ? ligneInfoEmail('Code agence',  CONFIG.BANQUE.CODE_AGENCE)  : ''}
-      ${ligneInfoEmailAccent('Motif du virement', `${inscription.id} — ${inscription.formationsLabel}`)}
+      ${ligneInfoEmailAccent('Motif du virement', `${inscription.id} — ${inscription.formationsLabelAffichage}`)}
     </table>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">

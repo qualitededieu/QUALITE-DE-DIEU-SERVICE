@@ -61,6 +61,8 @@ function initSheets() {
     'Graphisme & PAO',
     'Sérigraphie',
     'Création de sites web',
+    'Initiation rapide (1 mois)',
+    'Pack Complet — Toutes les filières',
     'Multi-formations',
     'Renseignements'
   ];
@@ -284,6 +286,7 @@ function creerOngletDashboard(ss) {
     ['Sérigraphie',                "=COUNTA('Sérigraphie'!A:A)-1"],
     ['Création de sites web',      "=COUNTA('Création de sites web'!A:A)-1"],
     ['Initiation rapide (1 mois)', "=COUNTA('Initiation rapide (1 mois)'!A:A)-1"],
+    ['Pack Complet',               "=COUNTA('Pack Complet — Toutes les filières'!A:A)-1"],
     ['Multi-formations',           "=COUNTA('Multi-formations'!A:A)-1"],
     ['Renseignements reçus',       "=COUNTA('Renseignements'!A:A)-1"]
   ];
@@ -703,6 +706,7 @@ function verifierInit() {
       'Sérigraphie',
       'Création de sites web',
       'Initiation rapide (1 mois)',
+      'Pack Complet — Toutes les filières',
       'Multi-formations',
       'Renseignements'
     ];
