@@ -376,7 +376,12 @@ function _mapperApprenantInscription(row) {
     // de js/attestation_generator.js (ATT_CATEGORIES_LONGUE, etc.) sont
     // volontairement indexés par ce même nom d'affichage pour rester
     // cohérents avec ce que reçoit ce champ.
-    filiere:       String(row[22] || '').split(' | ').map(f => nomAffichagePublic(f.trim())).join(', '),
+    // Séparateur ' | ' (pas une virgule) : le nom d'affichage du Pack 3
+    // Filières contient lui-même une virgule (voir CONFIG.NOMS_AFFICHAGE_
+    // PUBLIC) — une virgule ici casserait le split(",") de
+    // js/attestation_generator.js::_competencesLongue en cas de parcours
+    // multi-filières.
+    filiere:       String(row[22] || '').split(' | ').map(f => nomAffichagePublic(f.trim())).join(' | '),
     dateEntree:    dateEntree,
     dateFin:       dateFin,
     niveauAtteint: String(row[26] || ''),

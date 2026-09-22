@@ -40,19 +40,27 @@ const CONFIG = {
   // PARTOUT où une formation est montrée à un apprenant/visiteur (site,
   // emails, attestations). Toujours lire via nomAffichagePublic(filiere)
   // (voir plus bas) plutôt que d'indexer ce dictionnaire directement.
+  // ATTENTION : le nom d'affichage du Pack contient une virgule — le
+  // séparateur utilisé par carte.gs pour joindre plusieurs filières côté
+  // affichage est ' | ' (jamais une virgule) précisément pour éviter toute
+  // collision avec une virgule interne à un nom d'affichage comme celui-ci.
   NOMS_AFFICHAGE_PUBLIC: {
-    'Création de sites web': 'Création de sites web & Application Mobile'
+    'Création de sites web': 'Création de sites web & Application Mobile',
+    'Pack 3 Filières':       'Pack 3 Filières — Bureautique, Graphisme & Sérigraphie'
   },
 
-  // Pack "toutes les filières" — option exclusive et autonome (jamais
-  // combinée avec une sélection filière par filière), incluant l'achat
-  // d'un PC portable Core i7. Son coût est forfaitaire, pas une somme des
-  // COUTS_FORMATIONS ci-dessus (voir calculerMontantsTotal).
+  // Pack 3 filières — option exclusive et autonome (jamais combinée avec
+  // une sélection filière par filière), incluant l'achat d'un PC portable
+  // Core i7. NE COUVRE PAS "Création de sites web & Application Mobile"
+  // (exclue délibérément — confirmé par le PDG). Son coût est forfaitaire,
+  // pas une somme des COUTS_FORMATIONS ci-dessus (voir calculerMontantsTotal).
+  // Nom volontairement débarrassé de "Toutes les filières" (trompeur vu
+  // l'exclusion du web) — voir échange du 22/09/2026.
   PACK_COMPLET: {
-    NOM:        'Pack Complet — Toutes les filières',
+    NOM:        'Pack 3 Filières',
     COUT:       570000,
     DUREE_MOIS: 18,
-    FILIERES:   ['Informatique & Bureautique', 'Graphisme & PAO', 'Sérigraphie', 'Création de sites web'],
+    FILIERES:   ['Informatique & Bureautique', 'Graphisme & PAO', 'Sérigraphie'],
     EQUIPEMENT: 'PC portable Core i7 inclus'
   },
 
@@ -89,7 +97,7 @@ const CONFIG = {
     'Sérigraphie',
     'Création de sites web',
     'Initiation rapide (1 mois)',
-    'Pack Complet — Toutes les filières'
+    'Pack 3 Filières'
   ]
 };
 

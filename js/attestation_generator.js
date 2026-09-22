@@ -77,17 +77,25 @@ const ATT_MODULE_MANAGEMENT = {
   texte: "Initiation à la gestion d'entreprise et à l'entrepreneuriat.",
 };
 
-// Intitulé affiché sur l'attestation — peut différer de l'identifiant
-// produit interne (utilisé pour la tarification, l'admin, le Sheet).
-// Ne jamais modifier CONFIG.FORMATION_COURTE.NOM directement : ça
-// casserait la tarification et la logique d'exclusivité du formulaire.
+// Intitulé "métier" affiché en cursive sur l'attestation — distinct du nom
+// commercial/produit (utilisé pour la tarification, l'admin, le Sheet, les
+// emails). Répond à la question qu'un recruteur se pose devant un nom de
+// pack ou d'offre marketing : "c'est quel métier ?". Ne jamais modifier
+// CONFIG.FORMATION_COURTE.NOM ou CONFIG.PACK_COMPLET.NOM directement pour
+// changer ce texte : ça casserait la tarification et l'exclusivité.
 const ATT_NOMS_AFFICHAGE = {
   "Initiation rapide (1 mois)": "Bureautique & Internet — Niveau Initiation",
+  "Pack 3 Filières":            "Technicien(ne) Polyvalent(e) en Bureautique, Graphisme & Sérigraphie",
 };
 
 function _intituleAffichage(filiere, estStage) {
   if (!filiere) return estStage ? "Stage professionnel" : "Formation professionnelle";
-  return ATT_NOMS_AFFICHAGE[filiere] || filiere;
+  if (ATT_NOMS_AFFICHAGE[filiere]) return ATT_NOMS_AFFICHAGE[filiere];
+  // Correspondance par préfixe : apprenant.filiere porte ici le nom
+  // d'AFFICHAGE complet côté GAS (ex. "Pack 3 Filières — Bureautique,
+  // Graphisme & Sérigraphie"), pas la clé technique courte ci-dessus.
+  const cle = Object.keys(ATT_NOMS_AFFICHAGE).find(k => filiere.startsWith(k));
+  return cle ? ATT_NOMS_AFFICHAGE[cle] : filiere;
 }
 
 function _competencesLongue(filiereStr) {
@@ -542,11 +550,14 @@ async function genererAttestationCanvas(apprenant, token) {
     posY += 78;
 
     if (apprenant.filiere) {
-      const domaineTxt = String(apprenant.filiere);
+      // _intituleAffichage() substitue un intitulé "métier" au nom
+      // commercial quand une entrée existe dans ATT_NOMS_AFFICHAGE (Pack 3
+      // Filières, Initiation) — sinon renvoie le nom de filière inchangé.
+      const domaineTxt = _intituleAffichage(String(apprenant.filiere), estStage);
       // Taille réduite progressivement si le nom est trop large pour la
-      // zone réservée (cas des libellés longs, ex. Pack 3 Filières) —
-      // jamais de retour à la ligne en cursive, illisible sur un document
-      // officiel.
+      // zone réservée (cas des libellés longs, ex. l'intitulé métier du
+      // Pack) — jamais de retour à la ligne en cursive, illisible sur un
+      // document officiel.
       let taille = 108;
       let police = document.fonts.check(taille + "px 'Great Vibes'")
         ? taille + "px 'Great Vibes'"
