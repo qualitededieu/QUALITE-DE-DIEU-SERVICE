@@ -944,9 +944,14 @@ async function genererAttestationCanvas(apprenant, token) {
       }
     } else {
       if (signatureImg) {
+        // Largeur recalculée si la hauteur bute sur son plafond (140) —
+        // même précaution que la carte et la fiche apprenant, pour ne
+        // jamais écraser une signature large sans réduire sa largeur en
+        // conséquence (22/09/2026).
         const ratio = signatureImg.height / signatureImg.width;
-        const SIG_H = Math.min(Math.round(SIG_W * ratio), 140);
-        ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, SIG_W, SIG_H);
+        let sigW = SIG_W, SIG_H = Math.round(SIG_W * ratio);
+        if (SIG_H > 140) { SIG_H = 140; sigW = Math.round(140 / ratio); }
+        ctx.drawImage(signatureImg, ancrageX + 140, SIG_Y + 280, sigW, SIG_H);
       }
       if (cachet) ctx.drawImage(cachet, ancrageX + 260, SIG_Y + 70, CACHET_W, CACHET_W);
     }

@@ -648,8 +648,17 @@ async function genererCarteVersoCanvas(apprenant, token) {
       ctx.restore();
     }
     if (sigImg) {
+      // Même précaution que pour le cachet juste au-dessus : la hauteur
+      // cible (60) écrasait certaines signatures larges (ex.
+      // signature-pdg.png, qui inclut son propre cachet et est donc plus
+      // large que haute) sans recalculer la largeur en conséquence —
+      // l'image ressortait aplatie/ovale. Signalé par le PDG le
+      // 22/09/2026 (visible sur la carte ET sur les attestations avant
+      // ce correctif).
       const ratio = sigImg.height / sigImg.width;
-      const sigW = 130, sigH = Math.min(Math.round(sigW * ratio), 60);
+      const SIG_MAX_W = 130, SIG_MAX_H = 60;
+      let sigW = SIG_MAX_W, sigH = Math.round(SIG_MAX_W * ratio);
+      if (sigH > SIG_MAX_H) { sigH = SIG_MAX_H; sigW = Math.round(SIG_MAX_H / ratio); }
       ctx.drawImage(sigImg, x + 6, SIG_BOTTOM - sigH - 4, sigW, sigH);
     }
 
