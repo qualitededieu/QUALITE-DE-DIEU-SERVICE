@@ -28,6 +28,18 @@ function _fFont(ctx, size, style = "normal", family = "DM Sans, Arial") {
   ctx.font = `${style} ${size}px '${family}', Arial, sans-serif`;
 }
 function _fMw(ctx, txt) { return ctx.measureText(txt).width; }
+// Même convention civile que l'attestation (NOM en majuscules, Prénom en
+// casse normale, ex. "TOSSOU Cossi Philippe") — voir _capitaliserPrenom
+// dans attestation_generator.js. Dupliqué ici car chaque générateur de
+// document de ce projet est volontairement autonome (pas de module
+// partagé) — demande du PDG le 22/09/2026, appliquée par cohérence à la
+// fiche apprenant.
+function _fCapitaliserPrenom(prenom) {
+  return String(prenom || "")
+    .trim()
+    .toLowerCase()
+    .replace(/(^|[\s\-'’])(\p{L})/gu, (m, sep, lettre) => sep + lettre.toUpperCase());
+}
 function _fRoundRect(ctx, x, y, w, h, r, color) {
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -156,8 +168,20 @@ async function genererFicheApprenant(apprenant, token) {
   if (logo) { ctx.save(); ctx.beginPath(); ctx.arc(140, 130, 66, 0, Math.PI * 2); ctx.clip(); _fDrawCover(ctx, logo, 74, 64, 132, 132); ctx.restore(); }
   ctx.restore();
 
-  _fFont(ctx, 40, "700"); ctx.fillStyle = FICHE.BLANC;
-  ctx.fillText(FICHE_ENTREPRISE.NOM.split(" ").slice(0, 3).join(" "), 250, 108);
+  // Nom complet de l'entreprise, plus tronqué aux 3 premiers mots (rendait
+  // "LES QUALITÉS DE" au lieu du nom entier — bug signalé par le PDG le
+  // 22/09/2026). Rétrécissement de sécurité si jamais le nom ne tient pas
+  // dans l'espace disponible (même logique que l'intitulé de filière sur
+  // l'attestation), plutôt qu'une troncature muette.
+  let tailleNomEntete = 40;
+  _fFont(ctx, tailleNomEntete, "700");
+  const largeurDispoNomEntete = W - 250 - M;
+  while (_fMw(ctx, FICHE_ENTREPRISE.NOM) > largeurDispoNomEntete && tailleNomEntete > 24) {
+    tailleNomEntete -= 2;
+    _fFont(ctx, tailleNomEntete, "700");
+  }
+  ctx.fillStyle = FICHE.BLANC;
+  ctx.fillText(FICHE_ENTREPRISE.NOM, 250, 108);
   _fFont(ctx, 26, "500"); ctx.fillStyle = FICHE.OR_LIGHT;
   ctx.fillText("FICHE APPRENANT DÉTAILLÉE", 250, 160);
   _fFont(ctx, 20, "400"); ctx.fillStyle = "rgba(255,255,255,0.6)";
@@ -173,9 +197,11 @@ async function genererFicheApprenant(apprenant, token) {
   else { ctx.fillStyle = "#E5E0D5"; ctx.fillRect(PH_X, PH_Y, PH_W, PH_H); }
   ctx.restore();
 
+  // Convention civile NOM + Prénom, cohérente avec l'attestation
+  // (demande du PDG le 22/09/2026).
   const sexeNorm = String(apprenant.sexe || "").trim().toUpperCase();
   const civ = sexeNorm === "F" ? "Mme" : (sexeNorm === "M" ? "M." : "");
-  const nomComplet = (civ ? civ + " " : "") + (apprenant.prenom || "").toUpperCase() + " " + (apprenant.nom || "").toUpperCase();
+  const nomComplet = (civ ? civ + " " : "") + (apprenant.nom || "").toUpperCase() + " " + _fCapitaliserPrenom(apprenant.prenom);
   _fFont(ctx, 38, "700"); ctx.fillStyle = FICHE.MARINE;
   _fWrap(ctx, nomComplet, M, HEADER_H + 90, PH_X - M - 30, 46);
   ctx.save(); ctx.fillStyle = FICHE.OR; ctx.fillRect(M, HEADER_H + 108, 100, 5); ctx.restore();

@@ -85,17 +85,45 @@ const ATT_MODULE_MANAGEMENT = {
 // changer ce texte : ça casserait la tarification et l'exclusivité.
 const ATT_NOMS_AFFICHAGE = {
   "Initiation rapide (1 mois)": "Bureautique & Internet — Niveau Initiation",
+  // Forme épicène "(ne)"/"(e)" conservée comme SOURCE ici — _accorderGenre()
+  // l'accorde ensuite au masculin ou au féminin selon apprenant.sexe.
   "Pack 3 Filières":            "Technicien(ne) Polyvalent(e) en Bureautique, Graphisme & Sérigraphie",
 };
 
-function _intituleAffichage(filiere, estStage) {
+// Accorde un texte porteur de marques épicènes "Mot(suffixe)" (ex.
+// "Technicien(ne)", "Polyvalent(e)") au genre de l'apprenant : "M" retire
+// la parenthèse ("Technicien"), "F" fusionne base+suffixe ("Technicienne").
+// Genre absent/inconnu : la forme épicène entre parenthèses est conservée
+// telle quelle — jamais un genre par défaut deviné. Demande du PDG,
+// 22/09/2026 : une attestation nominative doit accorder l'intitulé du
+// métier au genre de la personne, pas rester au générique épicène par
+// défaut quand le genre est connu.
+function _accorderGenre(texte, sexe) {
+  const s = String(sexe || "").trim().toUpperCase();
+  if (s !== "M" && s !== "F") return texte;
+  return String(texte).replace(/(\S+?)\(([^)]+)\)/g, (_, base, suffixe) => s === "F" ? base + suffixe : base);
+}
+
+// Convention civile/administrative française : NOM (majuscules) puis
+// Prénom (casse normale, chaque mot capitalisé) — ex. "TOSSOU Cossi
+// Philippe", pas "COSSI PHILIPPE TOSSOU" tout en capitales. Gère les
+// prénoms composés (espace, tiret, apostrophe) et les accents.
+// Demande du PDG le 22/09/2026.
+function _capitaliserPrenom(prenom) {
+  return String(prenom || "")
+    .trim()
+    .toLowerCase()
+    .replace(/(^|[\s\-'’])(\p{L})/gu, (m, sep, lettre) => sep + lettre.toUpperCase());
+}
+
+function _intituleAffichage(filiere, estStage, sexe) {
   if (!filiere) return estStage ? "Stage professionnel" : "Formation professionnelle";
-  if (ATT_NOMS_AFFICHAGE[filiere]) return ATT_NOMS_AFFICHAGE[filiere];
+  if (ATT_NOMS_AFFICHAGE[filiere]) return _accorderGenre(ATT_NOMS_AFFICHAGE[filiere], sexe);
   // Correspondance par préfixe : apprenant.filiere porte ici le nom
   // d'AFFICHAGE complet côté GAS (ex. "Pack 3 Filières — Bureautique,
   // Graphisme & Sérigraphie"), pas la clé technique courte ci-dessus.
   const cle = Object.keys(ATT_NOMS_AFFICHAGE).find(k => filiere.startsWith(k));
-  return cle ? ATT_NOMS_AFFICHAGE[cle] : filiere;
+  return cle ? _accorderGenre(ATT_NOMS_AFFICHAGE[cle], sexe) : filiere;
 }
 
 function _competencesLongue(filiereStr) {
@@ -252,6 +280,76 @@ function _wrap(ctx, txt, x, y, maxW, lh) {
   return curY;
 }
 
+// Variante "à blanc" de _wrap : mesure la hauteur sans dessiner (measureText
+// n'a pas besoin de fillStyle ni de fillText). Utilisée pour choisir la
+// bonne taille de police AVANT de dessiner — voir _choisirTailleCompetences.
+function _mesurerFinWrap(ctx, txt, y, maxW, lh) {
+  const words = String(txt).split(" ");
+  let line = "", curY = y;
+  for (const w of words) {
+    const test = line ? line + " " + w : w;
+    if (_mw(ctx, test) > maxW && line) { curY += lh; line = w; }
+    else line = test;
+  }
+  if (line) { curY += lh; }
+  return curY;
+}
+
+// Version "à blanc" de la boucle de compétences (voir plus bas, la boucle
+// réelle) : même algorithme de retour à la ligne, sans fillText. Sert à
+// mesurer où se terminerait le bloc compétences pour une taille de police
+// donnée, avant de choisir laquelle utiliser réellement.
+function _mesurerFinCompetences(ctx, competences, startPosY, photoLimitY, CX, CW_HAUT, CW, taille, ligneH, gapBloc) {
+  let posY = startPosY;
+  competences.forEach(bloc => {
+    const largeurDisponible = (posY < photoLimitY) ? CW_HAUT : CW;
+    _font(ctx, taille, "bold");
+    const label = bloc.categorie + " : ";
+    const labelW = _mw(ctx, label);
+    _font(ctx, taille, "normal");
+    const words = String(bloc.texte).split(" ");
+    let ligne = "", premierMot = true;
+    const finLigneX = CX + largeurDisponible;
+    for (const mot of words) {
+      const test = ligne ? ligne + " " + mot : mot;
+      const largeurTest = _mw(ctx, test) + (premierMot ? labelW : 0);
+      if (CX + largeurTest > finLigneX && ligne) {
+        posY += ligneH;
+        ligne = mot; premierMot = false;
+      } else {
+        ligne = test;
+      }
+    }
+    if (ligne) { posY += ligneH; }
+    posY += gapBloc;
+  });
+  return posY;
+}
+
+// Choisit la plus grande taille de police (parmi une liste décroissante) qui
+// permet au bloc compétences + à la phrase de clôture ("En foi de quoi...")
+// de tenir AVANT la zone réservée aux signatures/QR (SIG_Y, plafonnée à
+// 1700 — voir plus bas). Répond au cas réel du Pack 3 Filières
+// ("Technicien Polyvalent") : 3 catégories + Management détaillées en
+// entier débordaient sur la zone signature/QR à taille fixe 42px — signalé
+// par le PDG le 22/09/2026 (cachet et texte "Fait à Comé" chevauchant le
+// bloc compétences sur une vraie attestation). Plutôt que replâtrer avec
+// une constante de plus, la taille s'adapte désormais au volume réel de
+// texte, comme pour d'autres blocs du document (nom, intitulé filière).
+function _choisirTailleCompetences(ctx, competences, startPosY, photoLimitY, CX, CW_HAUT, CW, gapBloc, gapFinal) {
+  const SAFE_MAX = 1670; // marge de 30px avant le plafond SIG_Y (1700)
+  const CANDIDATS = [[42, 54], [38, 50], [34, 46], [30, 42]];
+  for (const [taille, ligneH] of CANDIDATS) {
+    let fin = _mesurerFinCompetences(ctx, competences, startPosY, photoLimitY, CX, CW_HAUT, CW, taille, ligneH, gapBloc);
+    fin += gapFinal; // même espacement que le code réel avant "En foi de quoi..."
+    fin = _mesurerFinWrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", fin, CW, 52);
+    if (fin <= SAFE_MAX || taille === CANDIDATS[CANDIDATS.length - 1][0]) {
+      return [taille, ligneH];
+    }
+  }
+  return CANDIDATS[CANDIDATS.length - 1];
+}
+
 function _dessinerRubanCoin(ctx, ancrageX, ancrageY, angleDeg, longueur, largeurPrincipale, couleurPrincipale, couleurSecondaire) {
   ctx.save();
   ctx.translate(ancrageX, ancrageY);
@@ -349,51 +447,62 @@ async function genererAttestationCanvas(apprenant, token) {
   let HDR_H;
 
   if (estFormationLongue) {
-    HDR_H = 560;
+    // En-tête logo-à-gauche + texte à droite (comme le gabarit court) au
+    // lieu de logo empilé au-dessus d'un bloc de texte centré : ça libère
+    // ~160px de hauteur (HDR_H 560 → 400) qui redescendent directement
+    // dans le budget du corps du document (photo, compétences, signatures)
+    // — demande du PDG le 22/09/2026, en complément du resserrement
+    // dynamique déjà en place pour le cas Pack 3 Filières.
+    HDR_H = 400;
 
     _dessinerRubanCoin(ctx, 0, 0, -35, 900, 70, "#1B3A6B", ATT.OR);
     _dessinerRubanCoin(ctx, 0, ATT.H, -35, 900, 70, "#1B3A6B", ATT.OR);
 
+    const LOGO_D = 220, LOGO_CX = 240 + LOGO_D / 2, LOGO_CY = HDR_H / 2;
     if (logo) {
-      const LOGO_D = 210;
       ctx.save();
-      ctx.beginPath(); ctx.arc(ATT.W / 2, 150, LOGO_D / 2, 0, Math.PI * 2); ctx.clip();
-      _drawImageCover(ctx, logo, ATT.W / 2 - LOGO_D / 2, 150 - LOGO_D / 2, LOGO_D, LOGO_D);
+      ctx.beginPath(); ctx.arc(LOGO_CX, LOGO_CY, LOGO_D / 2, 0, Math.PI * 2); ctx.clip();
+      _drawImageCover(ctx, logo, LOGO_CX - LOGO_D / 2, LOGO_CY - LOGO_D / 2, LOGO_D, LOGO_D);
       ctx.restore();
       ctx.save();
-      ctx.beginPath(); ctx.arc(ATT.W / 2, 150, LOGO_D / 2 + 4, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(LOGO_CX, LOGO_CY, LOGO_D / 2 + 4, 0, Math.PI * 2);
       ctx.strokeStyle = ATT.OR; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
 
-    _font(ctx, 62, "bold");
+    // Zone de texte centrée à droite du logo (et non plus alignée à
+    // gauche sur TXT_X) — demande du PDG le 22/09/2026 : le logo reste à
+    // gauche, mais chaque ligne se centre dans l'espace qui lui reste.
+    // La référence du document a été retirée d'ici : elle fait doublon
+    // avec la ligne "Réf : ..." déjà présente en pied de page.
+    const TXT_ZONE_X = LOGO_CX + LOGO_D / 2 + 50;
+    const TXT_ZONE_W = (ATT.W - 240) - TXT_ZONE_X;
+    const _centrerTxt = (txt) => TXT_ZONE_X + (TXT_ZONE_W - _mw(ctx, txt)) / 2;
+
+    _font(ctx, 56, "bold");
     ctx.fillStyle = "#C97A1A";
     const nomLg = "STÉ " + ATT_ENTREPRISE.NOM + " SARL";
-    ctx.fillText(nomLg, (ATT.W - _mw(ctx, nomLg)) / 2, 300);
+    ctx.fillText(nomLg, _centrerTxt(nomLg), 140);
 
-    _font(ctx, 40, "bold", "DM Sans");
+    _font(ctx, 34, "bold", "DM Sans");
     ctx.fillStyle = "#1B3A6B";
     const sousTitreLg = "Centre de Formation Professionnelle en Informatique";
-    ctx.fillText(sousTitreLg, (ATT.W - _mw(ctx, sousTitreLg)) / 2, 350);
-
-    _font(ctx, 30, "normal", "DM Sans");
-    ctx.fillStyle = ATT.TEXTE;
-    const detailLg = "Imprimerie, Graphisme et Sérigraphie Numérique";
-    ctx.fillText(detailLg, (ATT.W - _mw(ctx, detailLg)) / 2, 392);
+    ctx.fillText(sousTitreLg, _centrerTxt(sousTitreLg), 190);
 
     _font(ctx, 26, "normal", "DM Sans");
+    ctx.fillStyle = ATT.TEXTE;
+    const detailLg = "Imprimerie, Graphisme et Sérigraphie Numérique";
+    ctx.fillText(detailLg, _centrerTxt(detailLg), 228);
+
+    _font(ctx, 23, "normal", "DM Sans");
     ctx.fillStyle = ATT.GRIS;
     const ligneLegale = `RCCM ${ATT_ENTREPRISE.RCCM}  —  IFU ${ATT_ENTREPRISE.IFU}  —  Tél : ${ATT_ENTREPRISE.TEL}  —  ${ATT_ENTREPRISE.EMAIL}`;
-    ctx.fillText(ligneLegale, (ATT.W - _mw(ctx, ligneLegale)) / 2, 428);
+    ctx.fillText(ligneLegale, _centrerTxt(ligneLegale), 262);
 
-    _font(ctx, 32, "normal");
+    _font(ctx, 28, "normal");
     ctx.fillStyle = ATT.OR;
     const etoiles = "★  ★  ★  ★  ★  ★";
-    ctx.fillText(etoiles, (ATT.W - _mw(ctx, etoiles)) / 2, 470);
-
-    _font(ctx, 30, "bold", "DM Sans");
-    ctx.fillStyle = ATT.TEXTE;
-    ctx.fillText(`Réf. : ${apprenant.id}`, 240, 520);
+    ctx.fillText(etoiles, _centrerTxt(etoiles), 306);
 
   } else {
     HDR_H = 402;
@@ -474,18 +583,24 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.restore();
   }
 
+  const C2_W = 236, C2_X = PHOTO_X - 65, C2_Y = PHOTO_Y + PHOTO_H - 160;
   if (cachet) {
     ctx.save();
     ctx.globalAlpha = 0.88;
-    const C2_W = 236, C2_X = PHOTO_X - 65, C2_Y = PHOTO_Y + PHOTO_H - 160;
     ctx.drawImage(cachet, C2_X, C2_Y, C2_W, C2_W);
     ctx.restore();
   }
 
+  // Étiquette repoussée sous le bas réel du cachet (C2_Y + C2_W), pas sous
+  // la photo seule : le cachet déborde de 76px sous la photo (effet
+  // "cachet de cire" volontaire sur son coin), et l'étiquette se
+  // retrouvait en plein dedans dès qu'un vrai cachet (non transparent) a
+  // été câblé — signalé par le PDG le 22/09/2026.
   _font(ctx, 22, "normal", "DM Sans");
   ctx.fillStyle = ATT.GRIS;
   const lblPhoto = "Photo d'identité";
-  ctx.fillText(lblPhoto, PHOTO_X + (PHOTO_W - _mw(ctx, lblPhoto)) / 2, PHOTO_Y + PHOTO_H + 40);
+  const lblPhotoY = Math.max(PHOTO_Y + PHOTO_H + 40, C2_Y + C2_W + 26);
+  ctx.fillText(lblPhoto, PHOTO_X + (PHOTO_W - _mw(ctx, lblPhoto)) / 2, lblPhotoY);
 
   if (logo) {
     ctx.save();
@@ -518,6 +633,22 @@ async function genererAttestationCanvas(apprenant, token) {
 
     posY = TITRE_Y + 160;
 
+    // Calculé ICI (avant le préambule) et pas seulement avant la boucle de
+    // compétences, pour pouvoir resserrer TOUT le préambule quand il y a
+    // beaucoup de catégories à détailler (cas Pack 3 Filières = 3 domaines
+    // + Management) — un simple rétrécissement de la police des
+    // compétences ne suffisait pas à éviter le chevauchement avec la zone
+    // signature/QR (constaté sur une vraie attestation, 22/09/2026) : même
+    // à la taille plancher, le texte débordait encore d'environ 140px.
+    const competences = _competencesLongue(apprenant.filiere);
+    const beaucoupDeCompetences = competences.length >= 3;
+    // Facteur de compaction appliqué UNIQUEMENT aux espaces de respiration
+    // (jamais à la taille des textes/titres, ni à la hauteur des blocs
+    // dessinés comme le bandeau du nom) — 1 = mise en page inchangée pour
+    // le cas courant (1 ou 2 catégories), qui reste identique à avant.
+    const G = beaucoupDeCompetences ? 0.72 : 1;
+    const _g = (px) => Math.round(px * G);
+
     _font(ctx, 40, "normal");
     ctx.fillStyle = ATT.TEXTE;
     const preambule =
@@ -530,18 +661,36 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillStyle = "#A6402F";
     const attestePar = "ATTESTONS PAR LA PRÉSENTE QUE :";
     ctx.fillText(attestePar, CENTRE_HAUT - _mw(ctx, attestePar) / 2, posY);
-    posY += 76;
+    posY += _g(76);
 
+    // NOM (majuscules) puis Prénom (casse normale) — convention civile,
+    // au lieu de "Prénom NOM" tout en capitales — demande du PDG du
+    // 22/09/2026, pour une lecture "Monsieur TOSSOU Cossi Philippe".
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
     const civiliteLg = sexeNorm === "F" ? "Madame " : (sexeNorm === "M" ? "Monsieur " : "");
-    const nomComplet = `${civiliteLg}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
+    const nomComplet = `${civiliteLg}${(apprenant.nom || "").toUpperCase()} ${_capitaliserPrenom(apprenant.prenom)}`;
     const BANNER_CX  = CX + CW_HAUT / 2;
     const BANNER_W   = CW_HAUT;
     _roundRect(ctx, CX, posY - 52, BANNER_W, 158, 24, COULEUR_PRINCIPALE);
     _font(ctx, 82, "bold");
     ctx.fillStyle = ATT.OR_LIGHT;
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
-    posY += 190;
+    posY += 106 + _g(84); // 106 = jusqu'au bas du bandeau (hauteur fixe), seule la marge sous le bandeau se resserre
+
+    // Ordre de lecture corrigé le 22/09/2026 (demande du PDG) : le nom est
+    // immédiatement suivi de "né(e) le ... à ...", PUIS de "a suivi avec
+    // assiduité...", pour une phrase qui coule ("Monsieur TOSSOU Cossi
+    // Philippe né le 30 juin 1995 à Comé a suivi avec assiduité et validé
+    // la formation en : ..."), au lieu de renvoyer la naissance après le
+    // nom de la filière comme c'était le cas avant.
+    if (apprenant.dateNaissance) {
+      _font(ctx, 44, "normal");
+      ctx.fillStyle = ATT.TEXTE;
+      const lieuTxt = apprenant.lieuNaissance ? ` à ${apprenant.lieuNaissance}` : "";
+      const naissanceTxt = `${_accorderGenre("né(e)", apprenant.sexe)} le ${fmt(apprenant.dateNaissance)}${lieuTxt}`;
+      ctx.fillText(naissanceTxt, CENTRE_HAUT - _mw(ctx, naissanceTxt) / 2, posY);
+      posY += _g(70);
+    }
 
     // "a suivi ... la formation en :" + nom de la filière en cursive —
     // même traitement que le gabarit court (initiation), au lieu de la
@@ -551,13 +700,13 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillStyle = ATT.TEXTE;
     const introFormation = "a suivi avec assiduité et a validé la formation en :";
     ctx.fillText(introFormation, CENTRE_HAUT - _mw(ctx, introFormation) / 2, posY);
-    posY += 78;
+    posY += _g(78);
 
     if (apprenant.filiere) {
       // _intituleAffichage() substitue un intitulé "métier" au nom
       // commercial quand une entrée existe dans ATT_NOMS_AFFICHAGE (Pack 3
       // Filières, Initiation) — sinon renvoie le nom de filière inchangé.
-      const domaineTxt = _intituleAffichage(String(apprenant.filiere), estStage);
+      const domaineTxt = _intituleAffichage(String(apprenant.filiere), estStage, apprenant.sexe);
       // Taille réduite progressivement si le nom est trop large pour la
       // zone réservée (cas des libellés longs, ex. l'intitulé métier du
       // Pack) — jamais de retour à la ligne en cursive, illisible sur un
@@ -577,18 +726,9 @@ async function genererAttestationCanvas(apprenant, token) {
       ctx.fillStyle = COULEUR_PRINCIPALE;
       const dW = _mw(ctx, domaineTxt);
       ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, posY + 14);
-      posY += 34;
+      posY += _g(34);
       _rect(ctx, CENTRE_HAUT - dW / 2 - 40, posY + 10, dW + 80, 6, ATT.OR);
-      posY += 76;
-    }
-
-    if (apprenant.dateNaissance) {
-      _font(ctx, 40, "normal");
-      ctx.fillStyle = ATT.TEXTE;
-      const lieuTxt = apprenant.lieuNaissance ? ` à ${apprenant.lieuNaissance}` : "";
-      const naissanceTxt = `né(e) le ${fmt(apprenant.dateNaissance)}${lieuTxt}.`;
-      ctx.fillText(naissanceTxt, CENTRE_HAUT - _mw(ctx, naissanceTxt) / 2, posY);
-      posY += 64;
+      posY += _g(76);
     }
 
     _font(ctx, 44, "normal");
@@ -599,25 +739,26 @@ async function genererAttestationCanvas(apprenant, token) {
     _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d2, dx, posY); dx += _mw(ctx, d2);
     _font(ctx, 44, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(d3, dx, posY); dx += _mw(ctx, d3);
     _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d4, dx, posY);
-    posY += 64;
+    posY += _g(64);
 
     _font(ctx, 44, "normal");
     ctx.fillStyle = ATT.TEXTE;
-    posY = _wrap(ctx, "Cette formation professionnelle complète lui a permis de valider les compétences suivantes :", CX, posY, CW_HAUT, 54) + 10;
+    posY = _wrap(ctx, "Cette formation professionnelle complète lui a permis de valider les compétences suivantes :", CX, posY, CW_HAUT, 54) + _g(10);
 
-    const competences = _competencesLongue(apprenant.filiere);
+    const gapBloc = _g(12);
+    const [tailleComp, ligneHComp] = _choisirTailleCompetences(ctx, competences, posY, PHOTO_Y + PHOTO_H, CX, CW_HAUT, CW, gapBloc, _g(10));
     competences.forEach(bloc => {
       // Zone photo dépassée (posY sous PHOTO_Y + PHOTO_H) : on repasse
       // en pleine largeur pour les compétences restantes.
       const largeurDisponible = (posY < PHOTO_Y + PHOTO_H) ? CW_HAUT : CW;
 
-      _font(ctx, 42, "bold");
+      _font(ctx, tailleComp, "bold");
       ctx.fillStyle = COULEUR_PRINCIPALE;
       const label = bloc.categorie + " : ";
       ctx.fillText(label, CX, posY);
       const labelW = _mw(ctx, label);
 
-      _font(ctx, 42, "normal");
+      _font(ctx, tailleComp, "normal");
       ctx.fillStyle = ATT.TEXTE;
       const words = String(bloc.texte).split(" ");
       let ligne = "", x = CX + labelW, premierMot = true;
@@ -627,21 +768,21 @@ async function genererAttestationCanvas(apprenant, token) {
         const largeurTest = _mw(ctx, test) + (premierMot ? labelW : 0);
         if (CX + largeurTest > finLigneX && ligne) {
           ctx.fillText(ligne, premierMot ? x : CX, posY);
-          posY += 54;
+          posY += ligneHComp;
           ligne = mot; premierMot = false; x = CX;
         } else {
           ligne = test;
         }
       }
-      if (ligne) { ctx.fillText(ligne, premierMot ? x : CX, posY); posY += 54; }
-      posY += 12;
+      if (ligne) { ctx.fillText(ligne, premierMot ? x : CX, posY); posY += ligneHComp; }
+      posY += gapBloc;
     });
 
-    posY += 10;
+    posY += _g(10);
     _font(ctx, 40, "italic");
     ctx.fillStyle = ATT.TEXTE;
     posY = _wrap(ctx, "En foi de quoi, la présente attestation lui est délivrée pour servir et valoir ce que de droit.", CX, posY, CW, 52);
-    posY += 20;
+    posY += _g(20);
 
   } else {
 
@@ -691,8 +832,10 @@ async function genererAttestationCanvas(apprenant, token) {
     const CENTRE_HAUT_COURT = CX + CW_HAUT_COURT / 2;
 
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
+    // Même convention NOM + Prénom que le gabarit long — cohérence entre
+    // les deux formats de document (demande du PDG le 22/09/2026).
     const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
-    const nomComplet = `${civilite}${(apprenant.prenom || "").toUpperCase()} ${(apprenant.nom || "").toUpperCase()}`;
+    const nomComplet = `${civilite}${(apprenant.nom || "").toUpperCase()} ${_capitaliserPrenom(apprenant.prenom)}`;
     const BANNER_CX  = CENTRE_HAUT_COURT;
     _roundRect(ctx, CX, posY - 52, CW_HAUT_COURT, 158, 24, COULEUR_PRINCIPALE);
     _font(ctx, 90, "bold");
@@ -710,7 +853,7 @@ async function genererAttestationCanvas(apprenant, token) {
     );
     posY += 80;
 
-    const intitule = _intituleAffichage(apprenant.filiere, estStage);
+    const intitule = _intituleAffichage(apprenant.filiere, estStage, apprenant.sexe);
     ctx.font = document.fonts.check("120px 'Great Vibes'")
       ? "120px 'Great Vibes'"
       : "italic bold 90px 'Times New Roman', Times, serif";
