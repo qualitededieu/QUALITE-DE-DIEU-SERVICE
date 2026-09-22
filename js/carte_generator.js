@@ -307,7 +307,35 @@ async function genererCarteCanvas(apprenant, token) {
   // ----- colonne droite : identité + infos -----
   const COL_X = PHOTO_X + PHOTO_W + 26;
   const COL_W = C.W - COL_X - L.MARGE;
-  let py = HDR_H + 46;
+  const PY_DEPART = HDR_H + 46;
+  let py = PY_DEPART;
+
+  // ----- redistribution structurelle de l'espace vertical -----
+  // Le nombre de champs optionnels (sous-titre filière, niveau atteint)
+  // varie d'un dossier à l'autre, mais le bloc du bas (devise + site)
+  // reste ANCRÉ au bas de la carte. Avec des espacements fixes, un
+  // dossier à peu de champs laissait un grand vide juste avant ce bloc
+  // ancré (signalé deux fois par le PDG). Plutôt que d'ajouter encore
+  // une constante à la main, on calcule la hauteur "naturelle" du
+  // contenu (avec les espacements de base ci-dessous) et on redistribue
+  // l'écart avec le bloc ancré comme respiration SUPPLÉMENTAIRE entre
+  // les sections, pour que la carte occupe toute sa hauteur quel que
+  // soit le nombre de champs renseignés.
+  const hasSousTitre = !!filiereFmt.sousTitre;
+  const hasNiveau    = !!apprenant.niveauAtteint;
+  const FOOTER_RULE_Y_PREV = (C.H - L.MARGE - 4) - 30 - 34; // = RULE_Y, voir plus bas
+  const finContenuNaturelle = PY_DEPART
+    + 22 + 26 + 22 + 22
+    + (hasSousTitre ? 20 : 0)
+    + 6 + 22 + (38 + 26) + 32 + 44
+    + (hasNiveau ? 44 : 0);
+  const MARGE_AVANT_PIED = 24;
+  const ecartDisponible = (FOOTER_RULE_Y_PREV - MARGE_AVANT_PIED) - finContenuNaturelle;
+  // 4 points de respiration supplémentaires (après le filet sous le nom,
+  // avant la pastille de statut, après la pastille, avant Réf./dates) —
+  // bornée pour ne jamais écarter le contenu au point de le rendre
+  // décousu si un dossier n'a presque aucun champ optionnel.
+  const RESPIRATION = Math.max(0, Math.min(34, ecartDisponible / 4));
 
   const civilite  = String(apprenant.sexe || "").trim().toUpperCase() === "F" ? "Mme " : "";
   const nomComplet = `${civilite}${apprenant.prenom || ""} ${String(apprenant.nom || "").toUpperCase()}`.trim();
@@ -325,7 +353,7 @@ async function genererCarteCanvas(apprenant, token) {
   py += 22;
   ctx.fillStyle = C.ORANGE;
   ctx.fillRect(COL_X, py, 46, 3);
-  py += 26;
+  py += 26 + RESPIRATION;
 
   _carteFont(ctx, 13, "700", "DM Sans");
   ctx.fillStyle = C.TEXTE_3;
@@ -353,7 +381,7 @@ async function genererCarteCanvas(apprenant, token) {
   py += 6;
   ctx.fillStyle = C.BORDER;
   ctx.fillRect(COL_X, py, COL_W, 1.5);
-  py += 22;
+  py += 22 + RESPIRATION;
 
   // Statut : pastille pleine largeur, plus lisible qu'un pill isolé sur
   // une carte de cette taille.
@@ -367,17 +395,16 @@ async function genererCarteCanvas(apprenant, token) {
   _carteFont(ctx, 15, "800", "DM Sans");
   ctx.fillStyle = statutCouleurs.texte;
   ctx.fillText((enCours ? "⌛  " : "✓  ") + statutTxt, COL_X + 14, py + 25);
-  py += 38 + 26;
+  py += 38 + 26 + RESPIRATION;
 
   // Réf. + dates compactées sur 2 colonnes internes pour tenir dans la
-  // hauteur restante. Espacement généreux (au lieu d'un bloc compact
-  // remonté) : la carte doit occuper toute sa hauteur, pas laisser un
-  // vide entre le contenu et le pied de carte quand peu de champs
-  // optionnels (fin de validité, niveau) sont renseignés.
+  // hauteur restante. L'espacement de base est complété par RESPIRATION
+  // (calculé plus haut) qui absorbe l'écart avec le bloc ancré du bas —
+  // voir le commentaire à la déclaration de RESPIRATION.
   _carteFont(ctx, 13, "700", "DM Mono, monospace");
   ctx.fillStyle = C.TEXTE_3;
   ctx.fillText(`Réf. ${apprenant.id || ""}`, COL_X, py);
-  py += 32;
+  py += 32 + RESPIRATION;
 
   const DEMI_W = COL_W / 2 - 8;
   function _champCompact(x, w, label, valeur) {
@@ -589,9 +616,17 @@ async function genererCarteVersoCanvas(apprenant, token) {
   ctx.restore();
 
   if (cachet) {
+    // Le cachet est presque toujours une image non carrée (tampon rond ou
+    // ovale sur fond souvent rectangulaire) : un drawImage forcé en 96x96
+    // l'écrase/l'étire. On l'inscrit ici dans une boîte MAX de 96x96 en
+    // conservant son ratio natif, comme pour la signature juste en dessous.
+    const CACHET_MAX = 96;
+    const ratioC = cachet.height / cachet.width;
+    let cW = CACHET_MAX, cH = Math.round(CACHET_MAX * ratioC);
+    if (cH > CACHET_MAX) { cH = CACHET_MAX; cW = Math.round(CACHET_MAX / ratioC); }
     ctx.save();
     ctx.globalAlpha = 0.85;
-    ctx.drawImage(cachet, COL_X + SIG_W - 74, py - 6, 96, 96);
+    ctx.drawImage(cachet, COL_X + SIG_W - cW, py - 6 + (CACHET_MAX - cH) / 2, cW, cH);
     ctx.restore();
   }
   if (signature) {

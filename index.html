@@ -104,6 +104,20 @@
     .nav-mobile a:hover{background:var(--teal-50);color:var(--teal-700)}
     .nav-mobile.open{display:flex}
 
+    /* RETOUR EN HAUT */
+    #btnRetourHaut{
+      position:fixed;right:20px;bottom:24px;z-index:999;
+      width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+      background:var(--teal-700);color:var(--white);
+      display:flex;align-items:center;justify-content:center;font-size:22px;
+      box-shadow:0 6px 18px rgba(4,52,44,0.35);
+      opacity:0;visibility:hidden;transform:translateY(12px);
+      transition:opacity var(--transition),transform var(--transition),visibility var(--transition),background var(--transition);
+    }
+    #btnRetourHaut.visible{opacity:1;visibility:visible;transform:translateY(0)}
+    #btnRetourHaut:hover{background:var(--teal-800)}
+    @media (max-width:640px){ #btnRetourHaut{right:14px;bottom:18px;width:42px;height:42px;font-size:20px} }
+
     /* HERO */
     #hero{min-height:100vh;background:linear-gradient(145deg,var(--teal-900) 0%,var(--teal-700) 55%,#0A5F6B 100%);display:flex;align-items:center;padding-top:68px;position:relative;overflow:hidden}
     #hero::before{content:'';position:absolute;top:-120px;right:-120px;width:500px;height:500px;border-radius:50%;background:rgba(245,166,35,0.12)}
@@ -433,6 +447,7 @@
           <li><a href="#blog"           class="nav-link">Actualités</a></li>
           <li><a href="#contact"        class="nav-link">Contact</a></li>
            <li><a href="/postuler"               class="nav-link">Postuler</a></li>
+          <li><a href="#carte"          class="nav-link">Espace apprenant</a></li>
           <li><a href="#inscription"    class="btn-nav-cta">S'inscrire</a></li>
         </ul>
         <button class="nav-burger" id="navBurger" aria-label="Menu">
@@ -447,10 +462,15 @@
         <li><a href="#blog"          onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="#contact"       onclick="closeMobileNav()">Contact</a></li>
          <li><a href="/postuler"              onclick="closeMobileNav()">Postuler</a></li>
+        <li><a href="#carte"         onclick="closeMobileNav()">Espace apprenant</a></li>
         <li><a href="#inscription"   onclick="closeMobileNav()" style="color:var(--teal-600);font-weight:700;">S'inscrire maintenant</a></li>
       </ul>
     </div>
   </nav>
+
+  <button id="btnRetourHaut" aria-label="Remonter en haut" title="Remonter en haut" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <span class="iconify" data-icon="tabler:arrow-up"></span>
+  </button>
 
   <section id="hero">
     <div class="container">
@@ -1620,6 +1640,11 @@
     ================================================================ */
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 40));
+
+    // Bouton retour en haut : visible seulement après un scroll significatif,
+    // pas dès le chargement de la page.
+    const btnRetourHaut = document.getElementById('btnRetourHaut');
+    window.addEventListener('scroll', () => btnRetourHaut.classList.toggle('visible', window.scrollY > 480));
 
     const sections = document.querySelectorAll('section[id]');
     const navLinks  = document.querySelectorAll('.nav-link');
