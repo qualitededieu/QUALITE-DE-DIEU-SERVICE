@@ -693,10 +693,10 @@
                   </label>
                 </div>
                 <div class="check-option">
-                  <input type="checkbox" id="rens-f5" name="rens-formations" value="Pack Complet — Toutes les filières" />
+                  <input type="checkbox" id="rens-f5" name="rens-formations" value="Pack 3 Filières" />
                   <label class="check-label" for="rens-f5">
                     <div class="check-icon-wrap" style="background:var(--orange-50);"><span class="iconify" data-icon="tabler:stack-2" style="color:var(--orange-600);font-size:18px;"></span></div>
-                    <div class="check-label-text"><strong>Pack Complet (toutes les filières)</strong><span>18 mois — PC portable Core i7 inclus</span></div>
+                    <div class="check-label-text"><strong>Pack 3 Filières</strong><span>Bureautique, Graphisme & Sérigraphie — 18 mois, PC portable Core i7 inclus</span></div>
                   </label>
                 </div>
               </div>
@@ -909,15 +909,15 @@
               </div>
               <div class="formations-check-grid">
                 <div class="check-option" id="option-pack">
-                  <input type="checkbox" id="f6" name="formations" value="Pack Complet — Toutes les filières" />
+                  <input type="checkbox" id="f6" name="formations" value="Pack 3 Filières" />
                   <label class="check-label" for="f6">
                     <div class="check-icon-wrap" style="background:var(--teal-50);"><span class="iconify" data-icon="tabler:stack-2" style="color:var(--teal-600);font-size:18px;"></span></div>
-                    <div class="check-label-text"><strong>Pack Complet — Toutes les filières</strong><span>18 mois — 570 000 F, PC portable Core i7 inclus</span></div>
+                    <div class="check-label-text"><strong>Pack 3 Filières</strong><span>Bureautique, Graphisme & Sérigraphie — 18 mois — 570 000 F, PC portable Core i7 inclus</span></div>
                   </label>
                 </div>
               </div>
               <p class="hint" id="hint-pack" style="font-size:11px;color:var(--gray-500);margin-top:8px;display:none;">
-                Formule à part : elle ne se combine pas avec les filières ci-dessus ni avec l'initiation rapide.
+                Formule à part (hors Création de sites web & Application Mobile) : elle ne se combine pas avec les filières ci-dessus ni avec l'initiation rapide.
               </p>
 
               <div style="display:flex;align-items:center;gap:10px;margin:16px 0 12px;">
@@ -935,7 +935,7 @@
                 </div>
               </div>
               <p class="hint" id="hint-courte" style="font-size:11px;color:var(--gray-500);margin-top:8px;display:none;">
-                Formule à part : elle ne se combine pas avec les filières ci-dessus ni avec le Pack Complet.
+                Formule à part : elle ne se combine pas avec les filières ci-dessus ni avec le Pack 3 Filières.
               </p>
               <div class="formations-check-error" id="formationsError">Veuillez sélectionner au moins une formation.</div>
             </div>
@@ -1421,7 +1421,9 @@
     // i7 inclus), jamais une somme de COUTS_FORMATIONS. Reste sur le
     // système de tranches (50/25/25%) comme les filières classiques —
     // synchronisé avec CONFIG.PACK_COMPLET côté GAS/code.gs.
-    const PACK_COMPLET = { NOM: 'Pack Complet — Toutes les filières', COUT: 570000, DUREE_MOIS: 18 };
+    // N'inclut PAS "Création de sites web & Application Mobile" — exclue
+    // délibérément de ce pack.
+    const PACK_COMPLET = { NOM: 'Pack 3 Filières', COUT: 570000, DUREE_MOIS: 18 };
     const MAX_FILE_SIZE     = 2 * 1024 * 1024; // 2 Mo
 
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';

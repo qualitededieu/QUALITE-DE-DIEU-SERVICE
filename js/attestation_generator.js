@@ -42,7 +42,7 @@ const ATT_DESCRIPTIONS = {
   "Sérigraphie":                                    "Techniques d'impression sur tout support (tissu, enseignes, objets promotionnels), préparation des écrans, gestion des couleurs et finitions.",
   "Création de sites web & Application Mobile":     "Conception et publication de sites internet (HTML/CSS, WordPress, Wix) et d'applications mobiles, mise en ligne, hébergement et publication sur les stores.",
   "Initiation rapide (1 mois)":                     "Initiation accélérée aux outils numériques essentiels : prise en main de l'ordinateur, bureautique de base et navigation Internet.",
-  "Pack Complet — Toutes les filières":             "Parcours complet couvrant l'ensemble des filières du centre (Bureautique, Graphisme, Sérigraphie, Web & Mobile), avec remise d'un PC portable Core i7.",
+  "Pack 3 Filières":                                "Parcours combiné couvrant trois filières du centre (Bureautique, Graphisme, Sérigraphie), avec remise d'un PC portable Core i7.",
 };
 
 function _attDescription(filiere) {
@@ -61,14 +61,15 @@ const ATT_CATEGORIES_LONGUE = {
   "Initiation rapide (1 mois)":                 { categorie: "Initiation numérique",  texte: ATT_DESCRIPTIONS["Initiation rapide (1 mois)"] },
 };
 
-// Les 4 filières couvertes par le Pack Complet — utilisées pour développer
-// ses compétences dans _competencesLongue, puisque ATT_CATEGORIES_LONGUE
-// n'a pas d'entrée directe pour "Pack Complet — Toutes les filières".
+// Les 3 filières couvertes par le Pack 3 Filières — utilisées pour
+// développer ses compétences dans _competencesLongue, puisque
+// ATT_CATEGORIES_LONGUE n'a pas d'entrée directe pour "Pack 3 Filières".
+// N'inclut PAS "Création de sites web & Application Mobile" — exclue
+// délibérément de ce pack (confirmé par le PDG, 22/09/2026).
 const ATT_PACK_COMPLET_FILIERES = [
   "Informatique & Bureautique",
   "Graphisme & PAO",
   "Sérigraphie",
-  "Création de sites web & Application Mobile",
 ];
 
 const ATT_MODULE_MANAGEMENT = {
@@ -90,13 +91,20 @@ function _intituleAffichage(filiere, estStage) {
 }
 
 function _competencesLongue(filiereStr) {
-  let filieres = String(filiereStr || "").split(",").map(s => s.trim()).filter(Boolean);
+  // Séparateur '|' — apprenant.filiere (carte.gs) joint les filières
+  // multiples avec ' | ', jamais une virgule : le nom d'affichage du Pack
+  // 3 Filières contient lui-même une virgule ("Pack 3 Filières —
+  // Bureautique, Graphisme & Sérigraphie"), qui casserait un split(",").
+  let filieres = String(filiereStr || "").split("|").map(s => s.trim()).filter(Boolean);
 
-  // Le Pack Complet est stocké comme une seule "filière" (son nom exact,
-  // exclusif — voir GAS/code.gs CONFIG.PACK_COMPLET) : on le développe ici
-  // en ses 4 domaines réels pour que l'attestation détaille les mêmes
-  // compétences que si l'apprenant avait suivi chaque filière séparément.
-  if (filieres.includes("Pack Complet — Toutes les filières")) {
+  // Le Pack 3 Filières est stocké comme une seule "filière" (son nom
+  // d'affichage complet, exclusif — voir GAS/code.gs CONFIG.PACK_COMPLET /
+  // NOMS_AFFICHAGE_PUBLIC) : on le développe ici en ses 3 domaines réels
+  // pour que l'attestation détaille les mêmes compétences que si
+  // l'apprenant avait suivi chaque filière séparément. startsWith() plutôt
+  // qu'une égalité stricte : robuste si le libellé complet est ajusté côté
+  // GAS sans synchronisation immédiate de ce fichier front.
+  if (filieres.some(f => f.startsWith("Pack 3 Filières"))) {
     filieres = ATT_PACK_COMPLET_FILIERES;
   }
 
@@ -523,28 +531,40 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
     posY += 190;
 
-    // Domaine de formation — affiché explicitement en clair, sous le nom
-    // du diplômé. Auparavant absent du gabarit long (seulement dilué dans
-    // le détail des compétences, sous une étiquette marketing différente
-    // du nom officiel de la filière) ; corrigé pour rester au même niveau
-    // de clarté que le gabarit court (initiation), qui l'affiche déjà.
-    // Fonctionne aussi pour un parcours à plusieurs filières (déjà stocké
-    // sous forme de liste séparée par virgules).
+    // "a suivi ... la formation en :" + nom de la filière en cursive —
+    // même traitement que le gabarit court (initiation), au lieu de la
+    // ligne "Domaine de formation : X" en police normale d'avant (jugée
+    // trop administrative / peu soignée pour un document officiel).
+    _font(ctx, 44, "normal");
+    ctx.fillStyle = ATT.TEXTE;
+    const introFormation = "a suivi avec assiduité et a validé la formation en :";
+    ctx.fillText(introFormation, CENTRE_HAUT - _mw(ctx, introFormation) / 2, posY);
+    posY += 78;
+
     if (apprenant.filiere) {
-      _font(ctx, 44, "bold");
+      const domaineTxt = String(apprenant.filiere);
+      // Taille réduite progressivement si le nom est trop large pour la
+      // zone réservée (cas des libellés longs, ex. Pack 3 Filières) —
+      // jamais de retour à la ligne en cursive, illisible sur un document
+      // officiel.
+      let taille = 108;
+      let police = document.fonts.check(taille + "px 'Great Vibes'")
+        ? taille + "px 'Great Vibes'"
+        : "italic bold 80px 'Times New Roman', Times, serif";
+      ctx.font = police;
+      while (_mw(ctx, domaineTxt) > CW_HAUT - 40 && taille > 46) {
+        taille -= 6;
+        police = document.fonts.check(taille + "px 'Great Vibes'")
+          ? taille + "px 'Great Vibes'"
+          : "italic bold " + Math.round(taille * 0.74) + "px 'Times New Roman', Times, serif";
+        ctx.font = police;
+      }
       ctx.fillStyle = COULEUR_PRINCIPALE;
-      const labelDomaine = "Domaine de formation : ";
-      const domaineTxt   = String(apprenant.filiere);
-      const largeurLabel = _mw(ctx, labelDomaine);
-      const centreDomaine = CENTRE_HAUT;
-      const largeurTotale = largeurLabel + (() => { _font(ctx, 44, "normal"); const w = _mw(ctx, domaineTxt); _font(ctx, 44, "bold"); return w; })();
-      let dxDom = centreDomaine - largeurTotale / 2;
-      ctx.fillText(labelDomaine, dxDom, posY);
-      dxDom += largeurLabel;
-      _font(ctx, 44, "normal");
-      ctx.fillStyle = ATT.TEXTE;
-      ctx.fillText(domaineTxt, dxDom, posY);
-      posY += 64;
+      const dW = _mw(ctx, domaineTxt);
+      ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, posY + 14);
+      posY += 34;
+      _rect(ctx, CENTRE_HAUT - dW / 2 - 40, posY + 10, dW + 80, 6, ATT.OR);
+      posY += 76;
     }
 
     if (apprenant.dateNaissance) {
@@ -558,7 +578,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
     _font(ctx, 44, "normal");
     const dureeTxt = dureeMois !== null ? ` (${dureeMois} mois)` : "";
-    const d1 = "A suivi avec assiduité et succès, du ", d2 = dateDebut, d3 = " au ", d4 = dateFin + dureeTxt + ",";
+    const d1 = "durant la période du ", d2 = dateDebut, d3 = " au ", d4 = dateFin + dureeTxt + ",";
     let dx = CX;
     ctx.fillStyle = ATT.TEXTE; ctx.fillText(d1, dx, posY); dx += _mw(ctx, d1);
     _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d2, dx, posY); dx += _mw(ctx, d2);
@@ -568,7 +588,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
     _font(ctx, 44, "normal");
     ctx.fillStyle = ATT.TEXTE;
-    posY = _wrap(ctx, "une formation professionnelle complète. À l'issue de ce parcours, l'intéressé(e) a validé les compétences suivantes :", CX, posY, CW_HAUT, 54) + 10;
+    posY = _wrap(ctx, "Cette formation professionnelle complète lui a permis de valider les compétences suivantes :", CX, posY, CW_HAUT, 54) + 10;
 
     const competences = _competencesLongue(apprenant.filiere);
     competences.forEach(bloc => {
