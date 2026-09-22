@@ -41,6 +41,22 @@ const CARTE_C = {
 const CARTE_ENTREPRISE = {
   NOM:      "LES QUALITÉS DE DIEU SERVICE",
   LOGO_URL: "icons/logoqds.jpg",
+  ADRESSE:  "Comé, Hongodé — en face Hôpital de Zone de Comé, Bénin",
+  TEL:      "+229 01 97 95 12 30",
+  SITE:     "qualitededieuservice.com",
+  // Mêmes mentions légales que sur l'attestation (attestation_generator.js
+  // ATT_ENTREPRISE) — cohérence entre documents, même entité juridique.
+  RCCM:     "RB/ABC/23 B 7078",
+  IFU:      "3202357917037",
+  // Signature PDG : fichier présent dans icons/. Le cachet
+  // (icons/cachet.png, comme utilisé par attestation_generator.js et
+  // fiche_apprenant_generator.js) est ABSENT de ce projet au moment où
+  // ce fichier est écrit — le chargement échoue proprement (_carteLoadImg
+  // renvoie null) et le cachet est simplement omis, jamais un blocage.
+  SIGNATURE_PDG_URL: "icons/signature-pdg.png?v=2",
+  CACHET_URL:        "icons/cachet.png?v=2",
+  SIGNATAIRE_PDG:    "M. ATO Blaise",
+  SIGNATAIRE_TITRE:  "Président Directeur Général",
 };
 
 function _carteFont(ctx, size, style = "normal", family = "DM Sans") {
@@ -83,6 +99,19 @@ function _carteLoadImg(src) {
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+// Retour à la ligne simple, aligné à gauche — utilisé pour l'adresse du
+// verso, seul texte de la carte assez long pour en avoir besoin.
+function _carteWrap(ctx, txt, x, y, maxW, lh) {
+  const words = String(txt).split(" ");
+  let ligne = "", curY = y;
+  for (const mot of words) {
+    const test = ligne ? ligne + " " + mot : mot;
+    if (_carteMw(ctx, test) > maxW && ligne) { ctx.fillText(ligne, x, curY); curY += lh; ligne = mot; }
+    else ligne = test;
+  }
+  if (ligne) { ctx.fillText(ligne, x, curY); curY += lh; }
+  return curY;
 }
 function _carteEllipseBlob(ctx, cx, cy, rx, ry, rotationDeg, colorStops) {
   ctx.save();
@@ -173,13 +202,9 @@ async function genererCarteCanvas(apprenant, token) {
   canvas.height = C.H;
   const ctx = canvas.getContext("2d");
 
-  const CARTE_VERIF_URL = "https://qualitededieuservice.com/verifier-document";
-  const lienVerif = token ? `${CARTE_VERIF_URL}?t=${encodeURIComponent(token)}` : "";
-
-  const [logo, photo, qr] = await Promise.all([
+  const [logo, photo] = await Promise.all([
     _carteLoadImg(CARTE_ENTREPRISE.LOGO_URL),
     _carteLoadImg(apprenant.photoUrl),
-    _carteChargerQR(lienVerif),
   ]);
 
   const maintenant = new Date();
@@ -243,8 +268,13 @@ async function genererCarteCanvas(apprenant, token) {
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   ctx.fillText("Carte d'apprentissage officielle", BRAND_X, LOGO_Y + 82);
 
-  // ----- colonne gauche : photo + QR -----
-  const PHOTO_W = 186, PHOTO_H = 224;
+  // ----- colonne gauche : photo -----
+  // Le QR déménage au verso (voir genererCarteVersoCanvas) — c'est la
+  // convention standard sur une carte de poche officielle : le recto
+  // reste personnel (photo/identité), le verso porte le contrôle
+  // d'authenticité et les mentions légales. Ça libère aussi la colonne
+  // gauche : la photo grandit au lieu de laisser un vide sous un QR.
+  const PHOTO_W = 210, PHOTO_H = 272;
   const PHOTO_X = L.MARGE, PHOTO_Y = HDR_H + 18;
   _carteFillRoundRect(ctx, PHOTO_X - 6, PHOTO_Y - 6, PHOTO_W + 12, PHOTO_H + 12, 16, C.BLANC);
   ctx.save();
@@ -261,26 +291,18 @@ async function genererCarteCanvas(apprenant, token) {
     _carteFillRoundRect(ctx, PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H, 10, C.BG);
     ctx.save();
     ctx.fillStyle = "rgba(122,158,149,0.55)";
-    ctx.beginPath(); ctx.arc(PHOTO_X + PHOTO_W / 2, PHOTO_Y + PHOTO_H * 0.36, 32, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(PHOTO_X + PHOTO_W / 2, PHOTO_Y + PHOTO_H * 0.98, 60, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(PHOTO_X + PHOTO_W / 2, PHOTO_Y + PHOTO_H * 0.34, 38, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(PHOTO_X + PHOTO_W / 2, PHOTO_Y + PHOTO_H * 0.98, 72, Math.PI, 0); ctx.fill();
     ctx.restore();
   }
-
-  // QR de vérification sous la photo, dans l'espace restant de la
-  // colonne gauche — absent si aucun token (carte générée sans accès
-  // au dossier, cas théorique uniquement).
-  if (qr) {
-    const QR_D = C.H - (PHOTO_Y + PHOTO_H) - L.MARGE - 22;
-    const QR_D_CLAMPED = Math.max(0, Math.min(QR_D, PHOTO_W));
-    if (QR_D_CLAMPED > 40) {
-      const QR_X = PHOTO_X + (PHOTO_W - QR_D_CLAMPED) / 2, QR_Y = PHOTO_Y + PHOTO_H + 14;
-      ctx.drawImage(qr, QR_X, QR_Y, QR_D_CLAMPED, QR_D_CLAMPED);
-      _carteFont(ctx, 11, "normal", "DM Sans");
-      ctx.fillStyle = C.TEXTE_3;
-      const lbl = "Scanner pour vérifier";
-      ctx.fillText(lbl, PHOTO_X + (PHOTO_W - _carteMw(ctx, lbl)) / 2, QR_Y + QR_D_CLAMPED + 16);
-    }
-  }
+  // Petit repère sous la photo : renvoie au verso pour la vérification
+  // plutôt que de laisser un vide muet.
+  _carteFont(ctx, 10.5, "normal", "DM Sans");
+  ctx.fillStyle = C.TEXTE_3;
+  ctx.textAlign = "center";
+  const lblVerso = "Vérification au verso";
+  ctx.fillText(lblVerso, PHOTO_X + PHOTO_W / 2, PHOTO_Y + PHOTO_H + 24);
+  ctx.textAlign = "left";
 
   // ----- colonne droite : identité + infos -----
   const COL_X = PHOTO_X + PHOTO_W + 26;
@@ -341,33 +363,36 @@ async function genererCarteCanvas(apprenant, token) {
   const statutCouleurs = enCours
     ? { bg: "rgba(245,166,35,0.16)", texte: "#B4740F" }
     : { bg: "rgba(15,110,86,0.13)",  texte: C.TEAL_MID };
-  _carteFillRoundRect(ctx, COL_X, py, COL_W, 34, 8, statutCouleurs.bg);
-  _carteFont(ctx, 14, "800", "DM Sans");
+  _carteFillRoundRect(ctx, COL_X, py, COL_W, 38, 9, statutCouleurs.bg);
+  _carteFont(ctx, 15, "800", "DM Sans");
   ctx.fillStyle = statutCouleurs.texte;
-  ctx.fillText((enCours ? "⌛  " : "✓  ") + statutTxt, COL_X + 12, py + 23);
-  py += 34 + 18;
+  ctx.fillText((enCours ? "⌛  " : "✓  ") + statutTxt, COL_X + 14, py + 25);
+  py += 38 + 26;
 
   // Réf. + dates compactées sur 2 colonnes internes pour tenir dans la
-  // hauteur restante.
-  _carteFont(ctx, 12, "700", "DM Mono, monospace");
+  // hauteur restante. Espacement généreux (au lieu d'un bloc compact
+  // remonté) : la carte doit occuper toute sa hauteur, pas laisser un
+  // vide entre le contenu et le pied de carte quand peu de champs
+  // optionnels (fin de validité, niveau) sont renseignés.
+  _carteFont(ctx, 13, "700", "DM Mono, monospace");
   ctx.fillStyle = C.TEXTE_3;
   ctx.fillText(`Réf. ${apprenant.id || ""}`, COL_X, py);
-  py += 24;
+  py += 32;
 
   const DEMI_W = COL_W / 2 - 8;
   function _champCompact(x, w, label, valeur) {
-    _carteFont(ctx, 10.5, "800", "DM Sans");
+    _carteFont(ctx, 11, "800", "DM Sans");
     ctx.fillStyle = C.TEXTE_3;
     ctx.fillText(label.toUpperCase(), x, py);
-    _carteFont(ctx, 15, "700", "DM Sans");
+    _carteFont(ctx, 16, "700", "DM Sans");
     ctx.fillStyle = C.TEXTE;
-    let taille = 15;
+    let taille = 16;
     _carteFont(ctx, taille, "700", "DM Sans");
     while (_carteMw(ctx, valeur) > w && taille > 10) {
       taille -= 1;
       _carteFont(ctx, taille, "700", "DM Sans");
     }
-    ctx.fillText(valeur, x, py + 19);
+    ctx.fillText(valeur, x, py + 21);
   }
 
   const dateEntreeCourte = apprenant.dateEntree ? _carteFormatDateCourte(apprenant.dateEntree) : "—";
@@ -377,17 +402,237 @@ async function genererCarteCanvas(apprenant, token) {
   if (dateFinCourte) {
     _champCompact(COL_X + DEMI_W + 16, DEMI_W, estStage ? "Fin stage" : "Fin validité", dateFinCourte);
   }
-  py += 36;
+  py += 44;
 
   if (apprenant.niveauAtteint) {
     _champCompact(COL_X, COL_W, "Niveau atteint", String(apprenant.niveauAtteint));
-    py += 36;
+    py += 44;
   }
 
-  // ----- pied de carte : site web -----
+  // ----- bloc bas ANCRÉ au bas de la carte (pas à la suite de py) -----
+  // Contrairement au reste du contenu, ce bloc part du BAS de la carte
+  // et remonte : il apparaît toujours à la même hauteur, qu'il y ait 2
+  // ou 4 champs au-dessus. C'est ce qui comble le grand vide signalé —
+  // un footer qui suit simplement le dernier champ laisse un trou de
+  // taille variable selon le dossier, ce bloc ancré non.
+  const FOOTER_SITE_Y = C.H - L.MARGE - 4;
+  const TAGLINE_Y      = FOOTER_SITE_Y - 30;
+  const RULE_Y          = TAGLINE_Y - 34;
+
+  ctx.fillStyle = C.ORANGE;
+  ctx.fillRect(COL_X, RULE_Y, 64, 3);
+
+  const policeTagline = document.fonts.check("26px 'Great Vibes'")
+    ? "26px 'Great Vibes'"
+    : "italic 17px Georgia, serif";
+  ctx.font = policeTagline;
+  ctx.fillStyle = C.TEAL_MID;
+  ctx.fillText("Plus de compétences pour un meilleur demain", COL_X, TAGLINE_Y);
+
+  _carteFont(ctx, 11, "normal", "DM Sans");
+  ctx.fillStyle = C.TEXTE_3;
+  ctx.fillText(CARTE_ENTREPRISE.SITE, COL_X, FOOTER_SITE_Y);
+
+  // Averti visuellement si le contenu dynamique (rare : nom très long +
+  // tous les champs optionnels) a dépassé la zone réservée avant le
+  // bloc ancré — en développement seulement, jamais visible à l'usage
+  // normal, mais évite un chevauchement silencieux si une future
+  // modification ajoute un champ sans revoir cet espacement.
+  if (py > RULE_Y - 10 && console && console.warn) {
+    console.warn("[CARTE] Contenu du recto proche du bloc ancré du bas — vérifier l'espacement.");
+  }
+
+  ctx.restore(); // clip carte
+
+  return canvas;
+}
+
+/* ==================================================================
+   VERSO — mentions légales, vérification, signature du PDG
+   ------------------------------------------------------------------
+   Convention standard sur une carte officielle : le recto reste
+   personnel (photo, identité, formation), le verso porte tout ce qui
+   authentifie le document — QR de vérification, RCCM/IFU, signature +
+   cachet du PDG, coordonnées du centre — plus la devise de la marque.
+================================================================== */
+async function genererCarteVersoCanvas(apprenant, token) {
+  await _chargerPoliceScriptCarte();
+
+  const C = CARTE_C;
+  const L = CARTE_LAYOUT;
+
+  const canvas = document.createElement("canvas");
+  canvas.width  = C.W;
+  canvas.height = C.H;
+  const ctx = canvas.getContext("2d");
+
+  const CARTE_VERIF_URL = "https://qualitededieuservice.com/verifier-document";
+  const lienVerif = token ? `${CARTE_VERIF_URL}?t=${encodeURIComponent(token)}` : CARTE_VERIF_URL;
+
+  const [logo, qr, signature, cachet] = await Promise.all([
+    _carteLoadImg(CARTE_ENTREPRISE.LOGO_URL),
+    _carteChargerQR(lienVerif),
+    _carteLoadImg(CARTE_ENTREPRISE.SIGNATURE_PDG_URL),
+    _carteLoadImg(CARTE_ENTREPRISE.CACHET_URL),
+  ]);
+
+  // ----- fond + bordure -----
+  _carteFillRoundRect(ctx, 0, 0, C.W, C.H, L.RAYON, C.BLANC);
+  ctx.save();
+  _carteRoundRect(ctx, 2, 2, C.W - 4, C.H - 4, L.RAYON - 2);
+  ctx.strokeStyle = C.BORDER;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  _carteRoundRect(ctx, 0, 0, C.W, C.H, L.RAYON);
+  ctx.clip();
+
+  // ----- bandeau haut, plus discret qu'au recto -----
+  const HDR_H = 74;
+  _carteFillRoundRect(ctx, 0, 0, C.W, HDR_H, 0, C.TEAL);
+  ctx.fillStyle = C.ORANGE;
+  ctx.fillRect(0, HDR_H - 4, C.W, 4);
+
+  if (logo) {
+    const LD = 44;
+    ctx.save();
+    _carteRoundRect(ctx, L.MARGE, (HDR_H - LD) / 2 - 2, LD, LD, 9);
+    ctx.clip();
+    _carteDrawImageCover(ctx, logo, L.MARGE, (HDR_H - LD) / 2 - 2, LD, LD);
+    ctx.restore();
+  }
+  _carteFont(ctx, 15, "800", "DM Sans");
+  ctx.fillStyle = C.BLANC;
+  ctx.fillText(CARTE_ENTREPRISE.NOM, L.MARGE + 58, HDR_H / 2 - 3);
+  _carteFont(ctx, 11, "normal", "DM Sans");
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.fillText("Carte d'apprentissage — Verso", L.MARGE + 58, HDR_H / 2 + 15);
+
+  _carteFont(ctx, 11, "700", "DM Mono, monospace");
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  ctx.textAlign = "right";
+  ctx.fillText(`Réf. ${apprenant.id || ""}`, C.W - L.MARGE, HDR_H / 2 + 4);
+  ctx.textAlign = "left";
+
+  // ----- colonne gauche : QR de vérification -----
+  const QR_D = 148;
+  const QR_X = L.MARGE, QR_Y = HDR_H + 26;
+  _carteFillRoundRect(ctx, QR_X - 8, QR_Y - 8, QR_D + 16, QR_D + 16, 12, C.BLANC);
+  ctx.save();
+  ctx.strokeStyle = C.BORDER; ctx.lineWidth = 1.5;
+  _carteRoundRect(ctx, QR_X - 8, QR_Y - 8, QR_D + 16, QR_D + 16, 12);
+  ctx.stroke();
+  ctx.restore();
+  if (qr) {
+    ctx.drawImage(qr, QR_X, QR_Y, QR_D, QR_D);
+  } else {
+    // Repli si le service de génération de QR est injoignable (coupure
+    // réseau côté navigateur) — jamais un cadre vide sans explication à
+    // côté d'un texte qui dit "scannez ceci".
+    _carteFont(ctx, 11, "normal", "DM Sans");
+    ctx.fillStyle = C.TEXTE_3;
+    ctx.textAlign = "center";
+    ctx.fillText("QR indisponible", QR_X + QR_D / 2, QR_Y + QR_D / 2 - 6);
+    ctx.fillText("(hors ligne)", QR_X + QR_D / 2, QR_Y + QR_D / 2 + 10);
+    ctx.textAlign = "left";
+  }
+  _carteFont(ctx, 11.5, "800", "DM Sans");
+  ctx.fillStyle = C.TEAL_MID;
+  ctx.textAlign = "center";
+  ctx.fillText("SCANNER POUR VÉRIFIER", QR_X + QR_D / 2, QR_Y + QR_D + 26);
+  _carteFont(ctx, 10, "normal", "DM Sans");
+  ctx.fillStyle = C.TEXTE_3;
+  ctx.fillText("l'authenticité de ce document", QR_X + QR_D / 2, QR_Y + QR_D + 42);
+  ctx.textAlign = "left";
+
+  // ----- colonne droite : identité légale + contact -----
+  const COL_X = QR_X + QR_D + 34;
+  const COL_W = C.W - COL_X - L.MARGE;
+  let py = HDR_H + 46;
+
+  _carteFont(ctx, 15, "800", "DM Sans");
+  ctx.fillStyle = C.TEAL;
+  ctx.fillText(CARTE_ENTREPRISE.NOM + " SARL", COL_X, py);
+  py += 20;
+  _carteFont(ctx, 12, "normal", "DM Sans");
+  ctx.fillStyle = C.TEXTE_2;
+  ctx.fillText("Centre de formation professionnelle", COL_X, py);
+  py += 24;
+
+  _carteFont(ctx, 11.5, "normal", "DM Sans");
+  ctx.fillStyle = C.TEXTE_2;
+  py = _carteWrap(ctx, CARTE_ENTREPRISE.ADRESSE, COL_X, py, COL_W, 16);
+  py += 4;
+  ctx.fillText(CARTE_ENTREPRISE.TEL, COL_X, py);
+  py += 22;
+
+  // Mentions légales — mêmes numéros que sur l'attestation, réponse
+  // directe à "faut-il les mettre" : oui, mais ici au verso plutôt que
+  // sur le recto déjà chargé (voir échange avec le PDG, 22/09/2026).
+  ctx.fillStyle = C.BORDER;
+  ctx.fillRect(COL_X, py, COL_W, 1.5);
+  py += 20;
+  _carteFont(ctx, 11, "700", "DM Sans");
+  ctx.fillStyle = C.TEXTE_3;
+  ctx.fillText(`RCCM ${CARTE_ENTREPRISE.RCCM}`, COL_X, py);
+  py += 18;
+  ctx.fillText(`IFU ${CARTE_ENTREPRISE.IFU}`, COL_X, py);
+  py += 30;
+
+  // ----- signature + cachet PDG -----
+  const SIG_W = 190, SIG_BOTTOM = py + 96;
+  ctx.save();
+  ctx.strokeStyle = C.BORDER; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(COL_X, SIG_BOTTOM); ctx.lineTo(COL_X + SIG_W, SIG_BOTTOM); ctx.stroke();
+  ctx.restore();
+
+  if (cachet) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(cachet, COL_X + SIG_W - 74, py - 6, 96, 96);
+    ctx.restore();
+  }
+  if (signature) {
+    const ratio = signature.height / signature.width;
+    const sigW = 130, sigH = Math.min(Math.round(sigW * ratio), 60);
+    ctx.drawImage(signature, COL_X + 6, SIG_BOTTOM - sigH - 4, sigW, sigH);
+  }
+
+  _carteFont(ctx, 12, "700", "DM Sans");
+  ctx.fillStyle = C.TEAL;
+  ctx.fillText(CARTE_ENTREPRISE.SIGNATAIRE_PDG, COL_X, SIG_BOTTOM + 18);
   _carteFont(ctx, 10.5, "normal", "DM Sans");
   ctx.fillStyle = C.TEXTE_3;
-  ctx.fillText("qualitededieuservice.com", COL_X, C.H - L.MARGE + 4);
+  ctx.fillText(CARTE_ENTREPRISE.SIGNATAIRE_TITRE, COL_X, SIG_BOTTOM + 34);
+
+  // ----- bandeau bas : devise, ancré comme au recto -----
+  // Empilé depuis la limite basse de sécurité (C.H - MARGE) vers le
+  // haut, jamais l'inverse — sinon le texte le plus bas déborde dans la
+  // marge de sécurité et risque d'être rogné à la découpe/plastification.
+  const BAS_SECURITE  = C.H - L.MARGE;
+  const MENTION_Y = BAS_SECURITE - 6;
+  const DEVISE_Y  = MENTION_Y - 24;
+  const RULE_Y    = DEVISE_Y - 26;
+
+  ctx.fillStyle = C.ORANGE;
+  ctx.fillRect(C.W / 2 - 60, RULE_Y, 120, 1.5);
+
+  const policeDevise = document.fonts.check("24px 'Great Vibes'")
+    ? "24px 'Great Vibes'"
+    : "italic 16px Georgia, serif";
+  ctx.font = policeDevise;
+  ctx.fillStyle = C.TEAL_MID;
+  ctx.textAlign = "center";
+  ctx.fillText("« Plus de compétences pour un meilleur demain »", C.W / 2, DEVISE_Y);
+  ctx.textAlign = "left";
+
+  _carteFont(ctx, 9.5, "normal", "DM Sans");
+  ctx.fillStyle = C.TEXTE_3;
+  ctx.textAlign = "center";
+  ctx.fillText("Cette carte demeure la propriété de LES QUALITÉS DE DIEU SERVICE — en cas de perte, contacter le centre.", C.W / 2, MENTION_Y);
+  ctx.textAlign = "left";
 
   ctx.restore(); // clip carte
 
@@ -402,25 +647,38 @@ async function afficherCarteCanvas(apprenant, token) {
     <div style="text-align:center;padding:2.5rem;">
       <div style="display:inline-block;width:44px;height:44px;border:3px solid rgba(245,166,35,0.3);
            border-top-color:#F5A623;border-radius:50%;animation:pk-spin 0.8s linear infinite;"></div>
-      <p style="margin-top:1rem;font-size:0.9rem;opacity:0.7;">Génération de la carte...</p>
+      <p style="margin-top:1rem;font-size:0.9rem;opacity:0.7;">Génération de la carte (recto + verso)...</p>
     </div>`;
 
   try {
-    const canvas  = await genererCarteCanvas(apprenant, token);
-    const dataURL = canvas.toDataURL("image/png");
+    const [rectoCanvas, versoCanvas] = await Promise.all([
+      genererCarteCanvas(apprenant, token),
+      genererCarteVersoCanvas(apprenant, token),
+    ]);
+    const rectoURL = rectoCanvas.toDataURL("image/png");
+    const versoURL = versoCanvas.toDataURL("image/png");
 
     preview.innerHTML = `
       <div style="text-align:center;background:#12241f;padding:18px 10px;border-radius:8px;">
-        <img src="${dataURL}" style="max-width:100%;height:auto;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,0.4);" alt="Aperçu carte d'apprentissage (format CR80)" />
-        <p style="margin-top:12px;font-size:0.78rem;color:rgba(255,255,255,0.55);">
-          Format carte de poche CR80 (85,6 x 54 mm) — prête à imprimer et plastifier.
+        <div style="display:grid;grid-template-columns:1fr;gap:14px;max-width:460px;margin:0 auto;">
+          <div>
+            <p style="font-size:0.72rem;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px;">Recto</p>
+            <img src="${rectoURL}" style="width:100%;height:auto;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,0.4);" alt="Recto de la carte d'apprentissage" />
+          </div>
+          <div>
+            <p style="font-size:0.72rem;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px;">Verso</p>
+            <img src="${versoURL}" style="width:100%;height:auto;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,0.4);" alt="Verso de la carte d'apprentissage" />
+          </div>
+        </div>
+        <p style="margin-top:14px;font-size:0.78rem;color:rgba(255,255,255,0.55);">
+          Format carte de poche CR80 (85,6 x 54 mm) — recto/verso prêts à imprimer et plastifier.
         </p>
       </div>`;
 
     const btnPDF = document.getElementById("btn-telecharger-carte-pdf");
-    if (btnPDF) btnPDF.onclick = () => telechargerCarte(canvas, apprenant.id, "pdf");
+    if (btnPDF) btnPDF.onclick = () => telechargerCarte(rectoCanvas, versoCanvas, apprenant.id, "pdf");
     const btnPNG = document.getElementById("btn-telecharger-carte-png");
-    if (btnPNG) btnPNG.onclick = () => telechargerCarte(canvas, apprenant.id, "png");
+    if (btnPNG) btnPNG.onclick = () => telechargerCarte(rectoCanvas, versoCanvas, apprenant.id, "png");
 
   } catch (err) {
     preview.innerHTML = `
@@ -431,15 +689,28 @@ async function afficherCarteCanvas(apprenant, token) {
   }
 }
 
-async function telechargerCarte(canvas, id, format = "pdf") {
+// `rectoCanvas` + `versoCanvas` : les deux faces sont TOUJOURS livrées
+// ensemble — une carte imprimée sans son verso perd la vérification, les
+// mentions légales et la signature du PDG, ce qui viderait le travail
+// fait sur le verso de son sens.
+async function telechargerCarte(rectoCanvas, versoCanvas, id, format = "pdf") {
   const dateISO = new Date().toISOString().split("T")[0];
 
   if (format === "png") {
-    const a = document.createElement("a");
-    a.href = canvas.toDataURL("image/png");
-    a.download = `Carte-apprentissage_${id}_${dateISO}.png`;
-    a.click();
-    if (window.showToast) showToast("Image téléchargée", "success");
+    // Deux fichiers séparés (pas un montage recto+verso dans une seule
+    // image) : une plastifieuse/imprimante veut deux images distinctes
+    // pour un recto-verso, pas une image composite.
+    const a1 = document.createElement("a");
+    a1.href = rectoCanvas.toDataURL("image/png");
+    a1.download = `Carte-apprentissage_${id}_${dateISO}_recto.png`;
+    a1.click();
+    setTimeout(() => {
+      const a2 = document.createElement("a");
+      a2.href = versoCanvas.toDataURL("image/png");
+      a2.download = `Carte-apprentissage_${id}_${dateISO}_verso.png`;
+      a2.click();
+    }, 400);
+    if (window.showToast) showToast("Images téléchargées (recto + verso)", "success");
     return;
   }
 
@@ -455,25 +726,28 @@ async function telechargerCarte(canvas, id, format = "pdf") {
 
   try {
     const { jsPDF } = window.jspdf;
-    const imgData = canvas.toDataURL("image/png");
     // Format réel CR80 (85,6 x 54 mm), taille exacte d'impression — pas
-    // une feuille A5 avec la carte dedans : le PDF EST la carte, prête à
-    // découper/plastifier directement. `format` en tableau [largeur,
-    // hauteur] force jsPDF à une page sur mesure plutôt qu'un format
-    // standard.
+    // une feuille A5 avec la carte dedans : chaque page du PDF EST une
+    // face de la carte, prête à découper/plastifier directement.
+    // 2 pages : page 1 = recto, page 2 = verso — impression recto-verso
+    // standard (la plupart des imprimantes/logiciels d'impression
+    // proposent "recto-verso" directement depuis un PDF multi-pages).
     const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [85.6, 54] });
-    pdf.addImage(imgData, "PNG", 0, 0, 85.6, 54);
+    pdf.addImage(rectoCanvas.toDataURL("image/png"), "PNG", 0, 0, 85.6, 54);
+    pdf.addPage([85.6, 54], "landscape");
+    pdf.addImage(versoCanvas.toDataURL("image/png"), "PNG", 0, 0, 85.6, 54);
     pdf.save(`Carte-apprentissage_${id}_${dateISO}.pdf`);
-    if (window.showToast) showToast("PDF téléchargé avec succès (format CR80, prêt à imprimer)", "success");
+    if (window.showToast) showToast("PDF téléchargé avec succès (2 pages, recto + verso, format CR80)", "success");
   } catch (err) {
     if (window.showToast) showToast("Erreur PDF : " + err.message, "error");
     const a = document.createElement("a");
-    a.href = canvas.toDataURL("image/png");
-    a.download = `Carte-apprentissage_${id}_${dateISO}.png`;
+    a.href = rectoCanvas.toDataURL("image/png");
+    a.download = `Carte-apprentissage_${id}_${dateISO}_recto.png`;
     a.click();
   }
 }
 
-window.genererCarteCanvas  = genererCarteCanvas;
-window.afficherCarteCanvas = afficherCarteCanvas;
+window.genererCarteCanvas      = genererCarteCanvas;
+window.genererCarteVersoCanvas = genererCarteVersoCanvas;
+window.afficherCarteCanvas     = afficherCarteCanvas;
 window.telechargerCarte    = telechargerCarte;
