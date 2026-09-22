@@ -431,26 +431,38 @@ function verifierAccesTelechargement(data) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
 
+  // 'attestation' par défaut si le frontend n'envoie rien (anciens
+  // appels) — c'est le document le plus strict, donc le repli le plus
+  // sûr si jamais le type se perd en route.
+  const type = String(data.type || 'attestation').trim();
+
   const trouve = _trouverLigneInscription(id);
   if (!trouve) return reponseJSON({ status: 'error', message: 'Dossier introuvable.' });
 
-  // L'attestation ne se télécharge qu'après la fin réelle de la formation
-  // — pas avant, même si le dossier est déjà marqué "Confirmé" (ce qui
-  // n'atteste que l'inscription/le paiement initial, pas l'assiduité).
-  const dateFinBrute = String(trouve.row[25] || '').trim();
-  if (dateFinBrute) {
-    const dateFin = new Date(dateFinBrute);
-    if (!isNaN(dateFin.getTime())) {
-      const aujourdHui = new Date();
-      aujourdHui.setHours(0, 0, 0, 0);
-      dateFin.setHours(0, 0, 0, 0);
-      if (aujourdHui < dateFin) {
-        return reponseJSON({
-          status: 'success',
-          accesAutorise: false,
-          formationEnCours: true,
-          dateFin: dateFinBrute
-        });
+  // Cette barrière "formation pas encore terminée" ne concerne QUE
+  // l'attestation (preuve officielle de fin de formation). La carte
+  // d'apprenant, elle, doit être téléchargeable dès le premier jour
+  // d'inscription — sa date de validité imprimée EST la date de fin de
+  // formation, donc la carte reste auto-descriptive même téléchargée en
+  // cours de cursus (l'apprenant peut la plastifier immédiatement).
+  // Avant ce correctif, les deux documents partageaient le même verrou
+  // par erreur — signalé par le PDG le 22/09/2026.
+  if (type === 'attestation') {
+    const dateFinBrute = String(trouve.row[25] || '').trim();
+    if (dateFinBrute) {
+      const dateFin = new Date(dateFinBrute);
+      if (!isNaN(dateFin.getTime())) {
+        const aujourdHui = new Date();
+        aujourdHui.setHours(0, 0, 0, 0);
+        dateFin.setHours(0, 0, 0, 0);
+        if (aujourdHui < dateFin) {
+          return reponseJSON({
+            status: 'success',
+            accesAutorise: false,
+            formationEnCours: true,
+            dateFin: dateFinBrute
+          });
+        }
       }
     }
   }

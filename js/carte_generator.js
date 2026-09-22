@@ -97,6 +97,18 @@ function _carteDrawImageCover(ctx, img, x, y, w, h, topBias = 0.5) {
   else { sw = img.width; sh = sw / boxRatio; sx = 0; sy = (img.height - sh) * topBias; }
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
+// Filigrane discret du logo en fond de carte — même principe que sur
+// l'attestation (alpha très faible, cercle clippé). Ajouté le 22/09/2026
+// à la demande du PDG : dessiné avant le reste du contenu (recto ET
+// verso) pour rester DERRIÈRE le texte/la photo, jamais par-dessus.
+function _carteFiligraneLogo(ctx, logo, cx, cy, rayon) {
+  if (!logo) return;
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.beginPath(); ctx.arc(cx, cy, rayon, 0, Math.PI * 2); ctx.clip();
+  _carteDrawImageCover(ctx, logo, cx - rayon, cy - rayon, rayon * 2, rayon * 2);
+  ctx.restore();
+}
 function _carteLoadImg(src) {
   return new Promise(resolve => {
     if (!src) return resolve(null);
@@ -274,6 +286,8 @@ async function genererCarteCanvas(apprenant, token) {
   _carteFont(ctx, 15, "italic", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   ctx.fillText("Carte d'apprentissage officielle", BRAND_X, LOGO_Y + 82);
+
+  _carteFiligraneLogo(ctx, logo, C.W / 2, HDR_H + (C.H - HDR_H) / 2, 240);
 
   // ----- colonne gauche : photo -----
   // Le QR déménage au verso (voir genererCarteVersoCanvas) — c'est la
@@ -554,6 +568,8 @@ async function genererCarteVersoCanvas(apprenant, token) {
   ctx.textAlign = "right";
   ctx.fillText(`Réf. ${apprenant.id || ""}`, C.W - L.MARGE, HDR_H / 2 + 4);
   ctx.textAlign = "left";
+
+  _carteFiligraneLogo(ctx, logo, C.W / 2, HDR_H + (C.H - HDR_H) / 2, 240);
 
   // ----- colonne gauche : QR de vérification -----
   const QR_D = 148;

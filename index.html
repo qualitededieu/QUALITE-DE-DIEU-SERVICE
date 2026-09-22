@@ -2421,7 +2421,11 @@ async function ouvrirDocument(type) {
       const resp = await fetch(GAS_WEBAPP_URL, {
         method:  'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body:    JSON.stringify({ action: 'verifier_acces_telechargement', id: apprenant.id })
+        // 'type' transmis explicitement — voir verifierAccesTelechargement
+        // dans GAS/carte.gs : seule l'attestation est bloquée tant que la
+        // formation n'est pas terminée, la carte doit rester
+        // téléchargeable dès le premier jour d'inscription.
+        body:    JSON.stringify({ action: 'verifier_acces_telechargement', id: apprenant.id, type: type })
       });
       const result = await resp.json();
 
@@ -2437,7 +2441,7 @@ async function ouvrirDocument(type) {
         fetch(GAS_WEBAPP_URL, {
           method:  'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id })
+          body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: type })
         }).catch(() => {});
       } else if (result.formationEnCours) {
         afficherFormationEnCours(result.dateFin, type);
