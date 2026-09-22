@@ -8,7 +8,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Great+Vibes&display=swap" rel="stylesheet"/>
   <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
   <style>
     /* ===============================================================
@@ -206,250 +206,318 @@
 
     .id-card {
       background: var(--white);
-      border-radius: var(--radius);
+      border-radius: 22px;
       box-shadow: var(--shadow);
       overflow: hidden;
       border: 1px solid var(--border);
+      position: relative;
     }
 
-    /* Bandeau de marque — même identité visuelle que les documents
-       officiels (attestation, fiche, badge) : marine + liseré or. */
-    .id-card-top {
+    /* ---------------------------------------------------------------
+       EN-TÊTE — bandeau marine, pastille logo blanche, liseré or en
+       diagonale (identité visuelle "carte officielle" demandée).
+    --------------------------------------------------------------- */
+    .id-card-header {
       background: var(--teal);
-      padding: 18px 24px;
+      padding: 22px 24px 26px;
+      position: relative;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border-bottom: 3px solid var(--orange);
-      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 14px;
+      overflow: hidden;
     }
 
-    .id-card-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .id-card-header::after {
+      content: "";
+      position: absolute;
+      top: -40%;
+      right: -18%;
+      width: 220px;
+      height: 220px;
+      background: linear-gradient(135deg, var(--orange) 0%, rgba(245,166,35,0.35) 55%, transparent 70%);
+      border-radius: 40% 60% 55% 45%;
+      opacity: 0.9;
+      pointer-events: none;
     }
 
-    .id-card-brand img {
-      width: 38px;
-      height: 38px;
+    .header-logo-badge {
+      flex-shrink: 0;
+      background: var(--white);
+      border-radius: 14px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 78px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-logo-badge img {
+      width: 34px;
+      height: 34px;
       border-radius: 8px;
       object-fit: cover;
-      flex-shrink: 0;
     }
 
-    .id-card-brand strong {
-      display: block;
-      font-size: 12.5px;
-      font-weight: 700;
-      color: #FFF;
-      letter-spacing: 0.02em;
-      line-height: 1.3;
-    }
-
-    .id-card-brand span {
-      display: block;
-      font-size: 10.5px;
-      color: rgba(255,255,255,0.6);
+    .header-logo-badge strong {
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--teal);
       letter-spacing: 0.03em;
-    }
-
-    .id-card-seal {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(245,166,35,0.15);
-      border: 1px solid rgba(245,166,35,0.4);
-      color: var(--orange);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 6px 12px;
-      border-radius: 20px;
       white-space: nowrap;
     }
 
-    .id-card-seal iconify-icon { font-size: 15px; }
-
-    .id-card-seal .valide-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--orange);
-      animation: pulse 1.5s ease infinite;
-      flex-shrink: 0;
+    .header-logo-badge span {
+      font-size: 7px;
+      color: var(--text-3);
+      font-style: italic;
+      white-space: nowrap;
     }
 
-    /* Zone identité */
-    .id-card-identite {
+    .header-brand-text {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+      padding-top: 4px;
+    }
+
+    .header-brand-text strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 800;
+      color: #FFF;
+      letter-spacing: 0.01em;
+      line-height: 1.25;
+    }
+
+    .header-brand-text .header-tagline {
+      display: block;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--orange);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin: 5px 0;
+    }
+
+    .header-brand-text em {
+      display: block;
+      font-style: italic;
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.75);
+    }
+
+    /* ---------------------------------------------------------------
+       PHOTO + IDENTITÉ — centrées, grande photo, nom sur deux niveaux
+       (prénom(s) puis nom de famille flanqué de tirets or).
+    --------------------------------------------------------------- */
+    .id-card-photo-wrap {
       display: flex;
-      gap: 20px;
-      align-items: center;
-      padding: 28px 28px 22px;
+      justify-content: center;
+      margin-top: -34px;
+      position: relative;
+      z-index: 2;
     }
 
-    .photo-wrap {
-      flex-shrink: 0;
-      width: 84px;
-      height: 100px;
-      border-radius: 10px;
+    .id-card-photo {
+      width: 128px;
+      height: 128px;
+      border-radius: 18px;
       overflow: hidden;
       background: var(--bg);
-      border: 2px solid var(--border);
+      border: 4px solid var(--white);
+      outline: 2px solid var(--orange);
+      box-shadow: 0 6px 18px rgba(4,52,44,0.18);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .photo-wrap img {
+    .id-card-photo img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    .photo-wrap .no-photo {
-      font-size: 32px;
+    .id-card-photo .no-photo {
+      font-size: 46px;
       color: var(--text-3);
     }
 
-    .id-card-identite-info {
-      flex: 1;
-      min-width: 0;
+    .id-card-identite {
+      text-align: center;
+      padding: 14px 28px 4px;
     }
 
-    .apprenant-nom {
+    .apprenant-prenom {
       font-family: 'DM Serif Display', serif;
-      font-size: 23px;
+      font-size: 25px;
       color: var(--teal);
-      line-height: 1.2;
-      margin-bottom: 8px;
+      line-height: 1.25;
       word-break: break-word;
+    }
+
+    .apprenant-nomfamille {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--teal-mid);
+    }
+
+    .apprenant-nomfamille .rule {
+      width: 34px;
+      height: 2px;
+      background: var(--orange);
+      flex-shrink: 0;
     }
 
     .apprenant-id {
       font-family: 'DM Mono', monospace;
       font-size: 11.5px;
       color: var(--text-3);
-      background: var(--bg);
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
+      margin-top: 10px;
       letter-spacing: 0.02em;
     }
 
-    .filiere-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(4,52,44,0.07);
-      color: var(--teal-mid);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 5px 12px;
-      border-radius: 20px;
+    .apprenant-id strong { color: var(--text-2); font-weight: 700; }
+
+    /* ---------------------------------------------------------------
+       PANNEAU D'INFOS — deux lignes (Formation / Statut) + ligne
+       secondaire (Début) sous un séparateur, chacune avec pastille
+       d'icône colorée à gauche.
+    --------------------------------------------------------------- */
+    .id-card-panel {
+      padding: 22px 28px 10px;
     }
 
-    /* Bande statut formation — remplace les anciens champs Sexe/Date de
-       naissance, hors-sujet sur un badge de formation professionnelle. */
-    .id-card-statut-row {
-      margin: 0 28px 22px;
+    .info-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 14px;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
+      border-radius: 14px;
+      padding: 13px 16px;
+      margin-bottom: 12px;
     }
 
-    .id-card-statut-row iconify-icon { font-size: 20px; flex-shrink: 0; }
+    .info-icon {
+      flex-shrink: 0;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFF;
+      font-size: 18px;
+    }
 
-    .id-card-statut-row .statut-pill {
-      font-size: 11px;
+    .info-icon.teal { background: var(--teal-mid); }
+    .info-icon.gold { background: var(--orange); }
+
+    .info-text { flex: 1; min-width: 0; }
+
+    .info-label {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 15px;
       font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .info-sub {
+      font-size: 11.5px;
+      color: var(--text-2);
+      margin-top: 1px;
+    }
+
+    .statut-pill {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      padding: 4px 11px;
+      padding: 6px 13px;
       border-radius: 20px;
       white-space: nowrap;
     }
 
-    .statut-pill.en-cours { background: rgba(245,166,35,0.15); color: #B4740F; }
-    .statut-pill.termine  { background: rgba(15,110,86,0.12); color: var(--teal-mid); }
+    .statut-pill.en-cours { background: rgba(245,166,35,0.18); color: #B4740F; }
+    .statut-pill.termine  { background: rgba(15,110,86,0.14); color: var(--teal-mid); }
 
-    .id-card-statut-row .statut-texte {
-      font-size: 13px;
-      color: var(--text-2);
-      flex: 1;
-      min-width: 0;
-    }
-
-    /* Grille infos */
-    .infos-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1px;
+    .id-card-divider {
+      height: 1px;
       background: var(--border);
-      border-top: 1px solid var(--border);
+      margin: 6px 0 14px;
     }
 
-    .info-cell {
-      background: var(--white);
-      padding: 16px 20px;
-    }
-
-    .info-cell:nth-child(odd) { background: #FAFCFB; }
-
-    .info-label {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--text-3);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .info-row.compact {
+      background: transparent;
+      border: none;
+      padding: 0 2px;
       margin-bottom: 4px;
     }
 
-    .info-value {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
+    .info-row.compact .info-icon {
+      width: 30px;
+      height: 30px;
+      font-size: 15px;
+      background: rgba(4,52,44,0.08);
+      color: var(--teal-mid);
     }
 
-    .info-value.accent { color: var(--red); font-weight: 700; }
-    .info-value.empty  { color: var(--text-3); font-style: italic; }
+    .info-row.compact .info-value { font-size: 13.5px; }
 
-    /* Pied de carte */
-    .id-card-footer {
-      padding: 16px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      background: var(--teal);
-      flex-wrap: wrap;
+    /* ---------------------------------------------------------------
+       RUBAN DÉCORATIF — coin bas-droit, écho du liseré or de l'en-tête,
+       signature cursive de marque.
+    --------------------------------------------------------------- */
+    .id-card-ribbon-wrap {
+      position: relative;
+      height: 58px;
+      margin-top: 8px;
+      overflow: hidden;
     }
 
-    .id-card-footer .footer-text {
-      font-size: 10.5px;
-      color: rgba(255,255,255,0.55);
-      line-height: 1.6;
+    .id-card-ribbon-wrap::before {
+      content: "";
+      position: absolute;
+      right: -10%;
+      bottom: -60%;
+      width: 260px;
+      height: 200px;
+      background: linear-gradient(135deg, var(--orange) 0%, var(--teal) 62%);
+      border-radius: 45% 55% 60% 40%;
+      transform: rotate(-8deg);
     }
 
-    .id-card-footer .footer-text strong {
-      color: var(--accent);
-      display: block;
-      font-size: 11.5px;
-      margin-bottom: 2px;
-    }
-
-    .emis-date {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: rgba(255,255,255,0.4);
+    .id-card-ribbon {
+      position: absolute;
+      right: 22px;
+      bottom: 12px;
+      font-family: 'Great Vibes', cursive;
+      font-size: 19px;
+      line-height: 1.15;
+      color: #FFF;
       text-align: right;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.15);
     }
 
     /* Bouton téléchargement PDF */
@@ -587,10 +655,11 @@
        RESPONSIVE
     =============================================================== */
     @media (max-width: 480px) {
-      .infos-grid       { grid-template-columns: 1fr; }
-      .id-card-identite { flex-direction: column; align-items: center; text-align: center; }
-      .apprenant-nom    { font-size: 20px; }
-      .id-card-top      { flex-direction: column; align-items: flex-start; }
+      .apprenant-prenom  { font-size: 21px; }
+      .header-brand-text strong { font-size: 13px; }
+      .id-card-header    { padding: 20px 18px 24px; }
+      .id-card-panel     { padding: 20px 18px 8px; }
+      .id-card-identite  { padding: 14px 18px 4px; }
     }
   </style>
 </head>
@@ -805,8 +874,7 @@
         ? `<img src="${esc(a.photoUrl)}" alt="Photo" onerror="this.parentElement.innerHTML='<iconify-icon icon=\\'tabler:user\\' class=\\"no-photo\\"></iconify-icon>'"/>`
         : `<iconify-icon icon="tabler:user" class="no-photo"></iconify-icon>`;
 
-      const maintenant   = new Date();
-      const dateEmission = maintenant.toLocaleDateString('fr-BJ', { day: '2-digit', month: 'long', year: 'numeric' });
+      const maintenant = new Date();
 
       // Sexe et date de naissance retirés du rendu — ce sont des mentions
       // d'état civil, hors de propos sur un badge professionnel dont le
@@ -815,15 +883,44 @@
       // pour qui consulte cette page (employeur, tiers).
       const dateFinObj = a.dateFin ? new Date(a.dateFin) : null;
       const enCours     = dateFinObj && !isNaN(dateFinObj.getTime()) && maintenant < dateFinObj;
-      const statutTexte = estStage
-        ? (enCours ? 'Stage en cours à la date de vérification.' : 'Stage terminé.')
-        : (enCours ? 'Formation en cours à la date de vérification.' : 'Formation terminée.');
+
+      // Le nom d'affichage d'une formation/pack (CONFIG.NOMS_AFFICHAGE_
+      // PUBLIC côté GAS) peut porter un sous-titre séparé par un tiret
+      // cadratin, ex. "Pack 3 Filières — Bureautique, Graphisme &
+      // Sérigraphie" : on le scinde ici en (titre en gras / sous-titre
+      // gris) pour retrouver la mise en page à deux niveaux de la
+      // maquette. Un parcours multi-filières (séparateur ' | ') est
+      // simplement rejoint en une liste lisible, sans sous-titre.
+      function _formatFiliereCarte(filiereStr) {
+        const brut = String(filiereStr || '');
+        if (brut.includes(' | ')) {
+          return { titre: brut.split(' | ').map(s => s.trim()).join(', '), sousTitre: '' };
+        }
+        const sepIdx = brut.indexOf(' — ');
+        if (sepIdx > -1) {
+          return { titre: brut.slice(0, sepIdx), sousTitre: brut.slice(sepIdx + 3) };
+        }
+        return { titre: brut, sousTitre: '' };
+      }
+      const filiereFmt = _formatFiliereCarte(a.filiere);
 
       const ligneNiveau = a.niveauAtteint ? `
-              <div class="info-cell" style="grid-column: 1 / -1;">
+            <div class="info-row compact">
+              <div class="info-icon"><iconify-icon icon="tabler:certificate"></iconify-icon></div>
+              <div class="info-text">
                 <div class="info-label">Niveau atteint</div>
                 <div class="info-value">${esc(a.niveauAtteint)}</div>
-              </div>` : '';
+              </div>
+            </div>` : '';
+
+      const ligneFin = a.dateFin ? `
+            <div class="info-row compact">
+              <div class="info-icon"><iconify-icon icon="tabler:calendar-due"></iconify-icon></div>
+              <div class="info-text">
+                <div class="info-label">${estStage ? 'Fin de stage' : 'Fin de validité'}</div>
+                <div class="info-value">${formatDate(a.dateFin)}</div>
+              </div>
+            </div>` : '';
 
       const boutonRetour = simplifie ? `
           <button class="btn-verifier" style="background:var(--white);color:var(--teal);border:1.5px solid var(--border);margin-top:12px;" onclick="renderFormulaire()">
@@ -835,61 +932,67 @@
 
           <div class="id-card" id="carte-body">
 
-            <div class="id-card-top">
-              <div class="id-card-brand">
+            <div class="id-card-header">
+              <div class="header-logo-badge">
                 <img src="icons/logoqds.jpg" alt="LQD Service"/>
-                <div>
-                  <strong>LES QUALITÉS DE DIEU SERVICE</strong>
-                  <span>Carte d'apprentissage officielle</span>
-                </div>
+                <strong>LQD SERVICE</strong>
+                <span>Former pour bâtir</span>
               </div>
-              <div class="id-card-seal">
-                <span class="valide-dot"></span>
-                <iconify-icon icon="tabler:rosette-discount-check-filled"></iconify-icon>
-                Authentifié
+              <div class="header-brand-text">
+                <strong>LES QUALITÉS DE DIEU SERVICE</strong>
+                <span class="header-tagline">Formation&nbsp;|&nbsp;Compétences&nbsp;|&nbsp;Avenir</span>
+                <em>Carte d'apprentissage officielle</em>
               </div>
             </div>
+
+            ${simplifie ? '' : `
+            <div class="id-card-photo-wrap">
+              <div class="id-card-photo">${photoHtml}</div>
+            </div>`}
 
             <div class="id-card-identite">
-              ${simplifie ? '' : `<div class="photo-wrap">${photoHtml}</div>`}
-              <div class="id-card-identite-info">
-                <div class="apprenant-nom">${esc(a.prenom)} ${esc(a.nom)}</div>
-                <div class="apprenant-id">Réf. ${esc(a.id)}</div>
-                <div class="filiere-tag">
-                  <iconify-icon icon="${estStage ? 'tabler:briefcase' : 'tabler:school'}"></iconify-icon>
-                  ${esc(a.filiere)}
+              <div class="apprenant-prenom">${esc(a.prenom)}</div>
+              <div class="apprenant-nomfamille"><span class="rule"></span>${esc(a.nom).toUpperCase()}<span class="rule"></span></div>
+              <div class="apprenant-id">Réf. : <strong>${esc(a.id)}</strong></div>
+            </div>
+
+            <div class="id-card-panel">
+
+              <div class="info-row">
+                <div class="info-icon teal"><iconify-icon icon="${estStage ? 'tabler:briefcase' : 'tabler:school'}"></iconify-icon></div>
+                <div class="info-text">
+                  <div class="info-label">${estStage ? 'Stage' : 'Formation'}</div>
+                  <div class="info-value">${esc(filiereFmt.titre)}</div>
+                  ${filiereFmt.sousTitre ? `<div class="info-sub">${esc(filiereFmt.sousTitre)}</div>` : ''}
                 </div>
               </div>
-            </div>
 
-            <div class="id-card-statut-row">
-              <iconify-icon icon="${enCours ? 'tabler:hourglass-high' : 'tabler:circle-check'}" style="color:${enCours ? '#B4740F' : 'var(--teal-mid)'};"></iconify-icon>
-              <span class="statut-texte">${statutTexte}</span>
-              <span class="statut-pill ${enCours ? 'en-cours' : 'termine'}">${enCours ? 'En cours' : 'Terminé'}</span>
-            </div>
+              <div class="info-row">
+                <div class="info-icon gold"><iconify-icon icon="${enCours ? 'tabler:hourglass-high' : 'tabler:circle-check'}"></iconify-icon></div>
+                <div class="info-text">
+                  <div class="info-label">Statut</div>
+                  <div class="info-value">${estStage ? (enCours ? 'Stage en cours' : 'Stage terminé') : (enCours ? 'Formation en cours' : 'Formation terminée')}</div>
+                  <div class="info-sub">${enCours ? 'à la date de vérification.' : ''}</div>
+                </div>
+                <span class="statut-pill ${enCours ? 'en-cours' : 'termine'}">${enCours ? 'En cours' : 'Terminé'}</span>
+              </div>
 
-            <div class="infos-grid">
-              <div class="info-cell">
-                <div class="info-label">${estStage ? 'Début de stage' : 'Début de formation'}</div>
-                <div class="info-value">${formatDate(a.dateEntree)}</div>
+              <div class="id-card-divider"></div>
+
+              <div class="info-row compact">
+                <div class="info-icon"><iconify-icon icon="tabler:calendar"></iconify-icon></div>
+                <div class="info-text">
+                  <div class="info-label">${estStage ? 'Début de stage' : 'Début de formation'}</div>
+                  <div class="info-value">${formatDate(a.dateEntree)}</div>
+                </div>
               </div>
-              <div class="info-cell">
-                <div class="info-label">${estStage ? 'Fin de stage' : 'Fin de validité'}</div>
-                <div class="info-value accent">${formatDate(a.dateFin)}</div>
-              </div>
+              ${ligneFin}
               ${ligneNiveau}
-              <div class="info-cell" style="grid-column: 1 / -1;">
-                <div class="info-label">Établissement</div>
-                <div class="info-value">Les Qualités de Dieu Service SARL — Comé, Bénin</div>
-              </div>
+
             </div>
 
-            <div class="id-card-footer">
-              <div class="footer-text">
-                <strong>LQD Service — Système officiel</strong>
-                Vérification authentique du document
-              </div>
-              <div class="emis-date">Vérifié le<br/>${dateEmission}</div>
+            <div class="id-card-ribbon-wrap">
+              <div class="id-card-ribbon">Plus de compétences<br/>pour un meilleur demain</div>
             </div>
 
           </div>
