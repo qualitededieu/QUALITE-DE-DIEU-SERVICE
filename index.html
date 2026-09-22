@@ -105,8 +105,13 @@
     .nav-mobile.open{display:flex}
 
     /* RETOUR EN HAUT */
+    /* Volontairement à GAUCHE : le widget de chat (js/chat-widget.js,
+       #pkc-launcher) occupe déjà le coin bas-droit à bottom:22px/right:22px,
+       et son panneau ouvert (#pkc-panel) monte jusqu'à bottom:92px sur ce
+       même côté — n'importe quelle position empilée à droite finit par
+       chevaucher l'un des deux états du chat. Le coin bas-gauche est libre. */
     #btnRetourHaut{
-      position:fixed;right:20px;bottom:24px;z-index:999;
+      position:fixed;left:20px;bottom:24px;z-index:999;
       width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
       background:var(--teal-700);color:var(--white);
       display:flex;align-items:center;justify-content:center;font-size:22px;
@@ -116,7 +121,7 @@
     }
     #btnRetourHaut.visible{opacity:1;visibility:visible;transform:translateY(0)}
     #btnRetourHaut:hover{background:var(--teal-800)}
-    @media (max-width:640px){ #btnRetourHaut{right:14px;bottom:18px;width:42px;height:42px;font-size:20px} }
+    @media (max-width:640px){ #btnRetourHaut{left:14px;bottom:18px;width:42px;height:42px;font-size:20px} }
 
     /* HERO */
     #hero{min-height:100vh;background:linear-gradient(145deg,var(--teal-900) 0%,var(--teal-700) 55%,#0A5F6B 100%);display:flex;align-items:center;padding-top:68px;position:relative;overflow:hidden}

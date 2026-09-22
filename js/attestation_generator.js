@@ -323,7 +323,11 @@ async function genererAttestationCanvas(apprenant, token) {
     _loadImg(apprenant.photoUrl),
     _loadImg(typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png?v=2"),
     _loadImg(typeof SIGNATURE_PDG_DATA       !== "undefined" ? SIGNATURE_PDG_DATA       : "icons/signature-pdg.png?v=2"),
-    _loadImg(typeof CACHET_DATA              !== "undefined" ? CACHET_DATA              : "icons/cachet.png?v=2"),
+    // Cachet du Formateur Principal (toi) — distinct du cachet institutionnel
+    // du PDG. Décision confirmée le 22/09/2026 : ce cachet accompagne
+    // TOUJOURS le bloc Formateur, jamais le bloc PDG (dont la signature
+    // intègre déjà son propre cachet dans signature-pdg.png).
+    _loadImg(typeof CACHET_FORMATEUR_DATA    !== "undefined" ? CACHET_FORMATEUR_DATA    : "icons/cachet-formateur.png?v=1"),
   ]);
 
   _rect(ctx, 0, 0, ATT.W, ATT.H, ATT.CREME);

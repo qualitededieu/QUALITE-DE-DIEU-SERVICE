@@ -108,6 +108,11 @@ async function genererFicheApprenant(apprenant, token) {
   const LOGO_URL = FICHE_ENTREPRISE.LOGO_URL;
   const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=2";
   const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png?v=2";
+  // Second bloc signataire : le Formateur Principal, avec son propre cachet
+  // (distinct de celui du PDG) — ajouté le 22/09/2026 à la demande du PDG,
+  // la fiche n'avait jusque-là qu'un seul signataire.
+  const SIG_FORMATEUR_SRC    = typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png?v=2";
+  const CACHET_FORMATEUR_SRC = typeof CACHET_FORMATEUR_DATA    !== "undefined" ? CACHET_FORMATEUR_DATA    : "icons/cachet-formateur.png?v=1";
   const FICHE_VERIF_URL = `https://${FICHE_ENTREPRISE.SITE}/verifier-document`;
   const lienVerif = token
     ? `${FICHE_VERIF_URL}?t=${encodeURIComponent(token)}`
@@ -127,8 +132,9 @@ async function genererFicheApprenant(apprenant, token) {
     ["contacts", "mdi:phone-alert-outline", FICHE.OR_LIGHT],
   ]);
 
-  const [logo, photo, qr, sig, cachet] = await Promise.all([
+  const [logo, photo, qr, sig, cachet, sigFormateur, cachetFormateur] = await Promise.all([
     _fLoadImg(LOGO_URL), _fLoadImg(apprenant.photoUrl), _fLoadImg(QR_URL), _fLoadImg(SIG_SRC), _fLoadImg(CACHET_SRC),
+    _fLoadImg(SIG_FORMATEUR_SRC), _fLoadImg(CACHET_FORMATEUR_SRC),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -298,6 +304,28 @@ async function genererFicheApprenant(apprenant, token) {
   _fFont(ctx, 17, "500"); ctx.fillStyle = FICHE.GRIS;
   const titreTxt = "Président Directeur Général";
   ctx.fillText(titreTxt, blocSigCentreX - _fMw(ctx, titreTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, titreTxt) / 2, SIG_Y + 220);
+
+  // ----- 2e bloc signataire : le Formateur Principal, en miroir à droite -----
+  // Ajouté le 22/09/2026 : la fiche n'avait qu'un seul signataire (le PDG) ;
+  // le cachet du Formateur Principal ne doit jamais se substituer à celui
+  // du PDG, d'où un bloc séparé plutôt qu'un remplacement.
+  ctx.save();
+  ctx.strokeStyle = "rgba(245,166,35,0.35)"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
+  ctx.beginPath(); ctx.moveTo(W / 2, SIG_Y); ctx.lineTo(W / 2, SIG_Y + 236); ctx.stroke();
+  ctx.restore();
+
+  const SIG2_X = W / 2 + 60;
+  _fFont(ctx, 20, "700"); ctx.fillStyle = FICHE.OR;
+  ctx.fillText("SIGNATURE ET CACHET DU FORMATEUR", SIG2_X, SIG_Y + 40);
+  if (sigFormateur) { const ratio = sigFormateur.height / sigFormateur.width; const sigH = Math.min(Math.round(SIG_W * ratio), 84); ctx.drawImage(sigFormateur, SIG2_X, SIG_Y + 54, SIG_W, sigH); }
+  if (cachetFormateur) { ctx.save(); ctx.globalAlpha = 0.92; ctx.drawImage(cachetFormateur, SIG2_X + 140, SIG_Y + 30, 150, 150); ctx.restore(); }
+  const blocSig2CentreX = SIG2_X + 145;
+  _fFont(ctx, 22, "700"); ctx.fillStyle = FICHE.MARINE;
+  const nomTxt2 = "M. TOSSOU C. Philippe";
+  ctx.fillText(nomTxt2, blocSig2CentreX - _fMw(ctx, nomTxt2) / 2 < SIG2_X ? SIG2_X : blocSig2CentreX - _fMw(ctx, nomTxt2) / 2, SIG_Y + 196);
+  _fFont(ctx, 17, "500"); ctx.fillStyle = FICHE.GRIS;
+  const titreTxt2 = "Le Formateur";
+  ctx.fillText(titreTxt2, blocSig2CentreX - _fMw(ctx, titreTxt2) / 2 < SIG2_X ? SIG2_X : blocSig2CentreX - _fMw(ctx, titreTxt2) / 2, SIG_Y + 220);
 
   // Bande agrandie (70 → 128px) pour loger la ligne d'authentification
   // manuelle et les mentions légales en plus des infos existantes —

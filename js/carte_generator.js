@@ -57,6 +57,13 @@ const CARTE_ENTREPRISE = {
   CACHET_URL:        "icons/cachet.png?v=2",
   SIGNATAIRE_PDG:    "M. ATO Blaise",
   SIGNATAIRE_TITRE:  "Président Directeur Général",
+  // Second signataire, ajouté le 22/09/2026 : le Formateur Principal a son
+  // propre cachet (icons/cachet-formateur.png), distinct de celui du PDG —
+  // jamais l'un à la place de l'autre.
+  SIGNATURE_FORMATEUR_URL: "icons/signature-formateur.png?v=2",
+  CACHET_FORMATEUR_URL:    "icons/cachet-formateur.png?v=1",
+  SIGNATAIRE_FORMATEUR:       "M. TOSSOU C. Philippe",
+  SIGNATAIRE_FORMATEUR_TITRE: "Le Formateur",
 };
 
 function _carteFont(ctx, size, style = "normal", family = "DM Sans") {
@@ -475,12 +482,15 @@ async function genererCarteCanvas(apprenant, token) {
 }
 
 /* ==================================================================
-   VERSO — mentions légales, vérification, signature du PDG
+   VERSO — mentions légales, vérification, signatures PDG + Formateur
    ------------------------------------------------------------------
    Convention standard sur une carte officielle : le recto reste
    personnel (photo, identité, formation), le verso porte tout ce qui
-   authentifie le document — QR de vérification, RCCM/IFU, signature +
-   cachet du PDG, coordonnées du centre — plus la devise de la marque.
+   authentifie le document — QR de vérification, RCCM/IFU, signatures +
+   cachets du PDG ET du Formateur Principal, coordonnées du centre —
+   plus la devise de la marque. Deux signataires (pas un seul) depuis
+   le 22/09/2026 : le cachet du Formateur Principal ne remplace jamais
+   celui du PDG, il s'y ajoute dans un second bloc.
 ================================================================== */
 async function genererCarteVersoCanvas(apprenant, token) {
   await _chargerPoliceScriptCarte();
@@ -496,11 +506,13 @@ async function genererCarteVersoCanvas(apprenant, token) {
   const CARTE_VERIF_URL = "https://qualitededieuservice.com/verifier-document";
   const lienVerif = token ? `${CARTE_VERIF_URL}?t=${encodeURIComponent(token)}` : CARTE_VERIF_URL;
 
-  const [logo, qr, signature, cachet] = await Promise.all([
+  const [logo, qr, signature, cachet, signatureFormateur, cachetFormateur] = await Promise.all([
     _carteLoadImg(CARTE_ENTREPRISE.LOGO_URL),
     _carteChargerQR(lienVerif),
     _carteLoadImg(CARTE_ENTREPRISE.SIGNATURE_PDG_URL),
     _carteLoadImg(CARTE_ENTREPRISE.CACHET_URL),
+    _carteLoadImg(CARTE_ENTREPRISE.SIGNATURE_FORMATEUR_URL),
+    _carteLoadImg(CARTE_ENTREPRISE.CACHET_FORMATEUR_URL),
   ]);
 
   // ----- fond + bordure -----
@@ -608,39 +620,49 @@ async function genererCarteVersoCanvas(apprenant, token) {
   ctx.fillText(`IFU ${CARTE_ENTREPRISE.IFU}`, COL_X, py);
   py += 30;
 
-  // ----- signature + cachet PDG -----
+  // ----- signatures + cachets : PDG et Formateur Principal, côte à côte -----
+  // Deux signataires distincts depuis le 22/09/2026 — le cachet du Formateur
+  // (icons/cachet-formateur.png) ne remplace jamais celui du PDG, voir le
+  // commentaire en tête de cette fonction.
   const SIG_W = 190, SIG_BOTTOM = py + 96;
-  ctx.save();
-  ctx.strokeStyle = C.BORDER; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
-  ctx.beginPath(); ctx.moveTo(COL_X, SIG_BOTTOM); ctx.lineTo(COL_X + SIG_W, SIG_BOTTOM); ctx.stroke();
-  ctx.restore();
+  const SIG2_X = COL_X + SIG_W + 40;
 
-  if (cachet) {
-    // Le cachet est presque toujours une image non carrée (tampon rond ou
-    // ovale sur fond souvent rectangulaire) : un drawImage forcé en 96x96
-    // l'écrase/l'étire. On l'inscrit ici dans une boîte MAX de 96x96 en
-    // conservant son ratio natif, comme pour la signature juste en dessous.
-    const CACHET_MAX = 96;
-    const ratioC = cachet.height / cachet.width;
-    let cW = CACHET_MAX, cH = Math.round(CACHET_MAX * ratioC);
-    if (cH > CACHET_MAX) { cH = CACHET_MAX; cW = Math.round(CACHET_MAX / ratioC); }
+  function _carteDessinerSignataire(x, sigImg, cachetImg, nom, titre) {
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.drawImage(cachet, COL_X + SIG_W - cW, py - 6 + (CACHET_MAX - cH) / 2, cW, cH);
+    ctx.strokeStyle = C.BORDER; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(x, SIG_BOTTOM); ctx.lineTo(x + SIG_W, SIG_BOTTOM); ctx.stroke();
     ctx.restore();
-  }
-  if (signature) {
-    const ratio = signature.height / signature.width;
-    const sigW = 130, sigH = Math.min(Math.round(sigW * ratio), 60);
-    ctx.drawImage(signature, COL_X + 6, SIG_BOTTOM - sigH - 4, sigW, sigH);
+
+    if (cachetImg) {
+      // Le cachet est presque toujours une image non carrée (tampon rond ou
+      // ovale sur fond souvent rectangulaire) : un drawImage forcé en 96x96
+      // l'écrase/l'étire. On l'inscrit ici dans une boîte MAX de 96x96 en
+      // conservant son ratio natif, comme pour la signature juste en dessous.
+      const CACHET_MAX = 96;
+      const ratioC = cachetImg.height / cachetImg.width;
+      let cW = CACHET_MAX, cH = Math.round(CACHET_MAX * ratioC);
+      if (cH > CACHET_MAX) { cH = CACHET_MAX; cW = Math.round(CACHET_MAX / ratioC); }
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(cachetImg, x + SIG_W - cW, py - 6 + (CACHET_MAX - cH) / 2, cW, cH);
+      ctx.restore();
+    }
+    if (sigImg) {
+      const ratio = sigImg.height / sigImg.width;
+      const sigW = 130, sigH = Math.min(Math.round(sigW * ratio), 60);
+      ctx.drawImage(sigImg, x + 6, SIG_BOTTOM - sigH - 4, sigW, sigH);
+    }
+
+    _carteFont(ctx, 12, "700", "DM Sans");
+    ctx.fillStyle = C.TEAL;
+    ctx.fillText(nom, x, SIG_BOTTOM + 18);
+    _carteFont(ctx, 10.5, "normal", "DM Sans");
+    ctx.fillStyle = C.TEXTE_3;
+    ctx.fillText(titre, x, SIG_BOTTOM + 34);
   }
 
-  _carteFont(ctx, 12, "700", "DM Sans");
-  ctx.fillStyle = C.TEAL;
-  ctx.fillText(CARTE_ENTREPRISE.SIGNATAIRE_PDG, COL_X, SIG_BOTTOM + 18);
-  _carteFont(ctx, 10.5, "normal", "DM Sans");
-  ctx.fillStyle = C.TEXTE_3;
-  ctx.fillText(CARTE_ENTREPRISE.SIGNATAIRE_TITRE, COL_X, SIG_BOTTOM + 34);
+  _carteDessinerSignataire(COL_X, signature, cachet, CARTE_ENTREPRISE.SIGNATAIRE_PDG, CARTE_ENTREPRISE.SIGNATAIRE_TITRE);
+  _carteDessinerSignataire(SIG2_X, signatureFormateur, cachetFormateur, CARTE_ENTREPRISE.SIGNATAIRE_FORMATEUR, CARTE_ENTREPRISE.SIGNATAIRE_FORMATEUR_TITRE);
 
   // ----- bandeau bas : devise, ancré comme au recto -----
   // Empilé depuis la limite basse de sécurité (C.H - MARGE) vers le
