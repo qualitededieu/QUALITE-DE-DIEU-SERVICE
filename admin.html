@@ -1688,8 +1688,12 @@ function renderModalDossier(d) {
       </div>
       <div>
         <label class="auth-label" style="margin-bottom:6px;">Niveau atteint</label>
-        <input type="text" class="modal-select" id="input-niveau-atteint" placeholder="Ex. Niveau 2 — Photoshop avancé" value="${(d.niveauAtteint || '').replace(/"/g, '&quot;')}" />
+        <select class="modal-select" id="input-niveau-atteint"></select>
       </div>
+    </div>
+    <div id="input-niveau-atteint-autre-wrap" style="display:none;margin:-8px 0 16px;">
+      <label class="auth-label" style="margin-bottom:6px;">Précisez le niveau</label>
+      <input type="text" class="modal-select" id="input-niveau-atteint-autre" placeholder="Ex. Niveau 2 — Photoshop avancé" />
     </div>
     <button class="btn btn-ghost btn-sm" onclick="apercuAttestation('${d.id}')" style="margin-bottom:16px;">
       <span class="iconify" data-icon="tabler:certificate"></span> Aperçu de l'attestation
@@ -1726,6 +1730,8 @@ function renderModalDossier(d) {
       </div>
     </div>`;
 
+  _initNiveauAtteintSelect(d.niveauAtteint || '');
+
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="fermerModal('modal-dossier')">Fermer</button>
     <button class="btn btn-sm" style="background:var(--teal-dim);color:var(--teal-l);" onclick="envoyerCarte('${d.id}')">
@@ -1742,12 +1748,78 @@ function renderModalDossier(d) {
     </button>`;
 }
 
+// Options pré-définies pour "Niveau atteint". TOUS les groupes sont
+// proposés : un dossier admin peut porter plusieurs filières à la fois
+// (multi-sélection à l'inscription, ou Pack), donc pas de filière unique
+// à partir de laquelle filtrer. Les intitulés "Pack 3 Filières" reprennent
+// celui déjà utilisé sur l'attestation (ATT_NOMS_AFFICHAGE, attestation_generator.js).
+const NIVEAU_OPTIONS_ADMIN = {
+  'Informatique & Bureautique': [
+    'Niveau 1 — Bureautique de base',
+    'Niveau 2 — Word, Excel, PowerPoint avancés',
+  ],
+  'Graphisme & PAO': [
+    'Niveau 1 — Photoshop & Illustrator',
+    'Niveau 2 — Maquette professionnelle',
+  ],
+  'Sérigraphie': [
+    'Niveau 1 — Impression textile',
+    'Niveau 2 — Multi-supports & finitions',
+  ],
+  'Création de sites web & Application Mobile': [
+    'Niveau 1 — Site vitrine HTML/CSS',
+    'Niveau 2 — Site dynamique + hébergement',
+  ],
+  'Pack 3 Filières': [
+    'Technicien Polyvalent — 3 filières validées',
+  ],
+};
+
+function _initNiveauAtteintSelect(valeurActuelle) {
+  const select = document.getElementById('input-niveau-atteint');
+  const autreWrap  = document.getElementById('input-niveau-atteint-autre-wrap');
+  const autreInput = document.getElementById('input-niveau-atteint-autre');
+
+  const optgroups = Object.entries(NIVEAU_OPTIONS_ADMIN).map(([filiere, options]) =>
+    `<optgroup label="${filiere}">${options.map(o =>
+      `<option value="${o.replace(/"/g, '&quot;')}">${o}</option>`).join('')}</optgroup>`
+  ).join('');
+
+  select.innerHTML = '<option value="">— Aucun / à définir —</option>'
+    + optgroups
+    + '<option value="__autre__">Autre (personnalisé)</option>';
+
+  const optionExiste = [...select.options].some(o => o.value === valeurActuelle);
+  if (valeurActuelle && optionExiste) {
+    select.value = valeurActuelle;
+    autreWrap.style.display = 'none';
+  } else if (valeurActuelle) {
+    // Valeur existante (ancien champ texte libre, ou saisie hors liste)
+    // qui ne correspond à aucune option pré-définie — on la préserve
+    // plutôt que de la perdre silencieusement.
+    select.value = '__autre__';
+    autreInput.value = valeurActuelle;
+    autreWrap.style.display = 'block';
+  } else {
+    select.value = '';
+    autreWrap.style.display = 'none';
+  }
+
+  select.onchange = function() {
+    autreWrap.style.display = this.value === '__autre__' ? 'block' : 'none';
+    if (this.value !== '__autre__') autreInput.value = '';
+  };
+}
+
 async function sauvegarderStatuts(id) {
   const statutDossier  = document.getElementById('select-statut-dossier').value;
   const statutPaiement = document.getElementById('select-statut-paiement').value;
   const dateEntree     = document.getElementById('input-date-entree').value;
   const dateFin        = document.getElementById('input-date-fin').value;
-  const niveauAtteint  = document.getElementById('input-niveau-atteint').value.trim();
+  const selectNiveau   = document.getElementById('input-niveau-atteint');
+  const niveauAtteint  = selectNiveau.value === '__autre__'
+    ? document.getElementById('input-niveau-atteint-autre').value.trim()
+    : selectNiveau.value;
   try {
     const [r1, r2, r3] = await Promise.all([
       apiCall('admin_update_statut',   { id, statut: statutDossier }),

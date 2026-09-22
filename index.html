@@ -1239,7 +1239,7 @@
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <button class="btn-doc-espace" onclick="ouvrirCarteApprenant()">
+          <button class="btn-doc-espace" onclick="ouvrirDocument('carte')">
             <span class="iconify" data-icon="tabler:id-badge-2"></span> Ma carte
           </button>
           <button class="btn-doc-espace" onclick="ouvrirDocument('attestation')">
@@ -1267,6 +1267,24 @@
     </div>
   </div>
 </section>
+
+<div class="pk-modal-overlay" id="modal-carte">
+  <div class="pk-modal-box">
+    <div class="pk-modal-header">
+      <span>Carte d'apprentissage</span>
+      <button onclick="PK.closeModal('modal-carte')" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="pk-modal-body" id="carte-preview"></div>
+    <div class="pk-modal-footer">
+      <button class="btn-modal-secondary" id="btn-telecharger-carte-png">
+        <span class="iconify" data-icon="tabler:photo"></span> PNG
+      </button>
+      <button class="btn-modal-primary" id="btn-telecharger-carte-pdf">
+        <span class="iconify" data-icon="tabler:file-type-pdf"></span> Télécharger le PDF
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="pk-modal-overlay" id="modal-attestation">
   <div class="pk-modal-box">
@@ -2339,18 +2357,34 @@ function reinitialiserEspace() {
   document.getElementById('carte-tel').value = '';
 }
 
-function ouvrirCarteApprenant() {
-  if (!_espaceApprenant) return;
-  window.open('verifier.html?t=' + encodeURIComponent(_espaceApprenant.token), '_blank');
-}
+// Métadonnées communes aux documents soumis au contrôle d'accès
+// (verifier_acces_telechargement / enregistrer_telechargement) : carte
+// ET attestation passent désormais TOUTES DEUX par ce même filtre —
+// avant, seule l'attestation était gatée et la carte s'ouvrait
+// directement via verifier.html, sans vérification ni décompte de quota.
+const DOC_TELECHARGEMENT_META = {
+  attestation: {
+    modalId:   'modal-attestation',
+    previewId: 'attestation-preview',
+    label:     'votre attestation',
+    afficher:  (apprenant, token) => afficherAttestationCanvas(apprenant, token),
+  },
+  carte: {
+    modalId:   'modal-carte',
+    previewId: 'carte-preview',
+    label:     'votre carte d\'apprentissage',
+    afficher:  (apprenant, token) => afficherCarteCanvas(apprenant, token),
+  },
+};
 
 async function ouvrirDocument(type) {
   if (!_espaceApprenant) return;
   const { apprenant, token } = _espaceApprenant;
 
-  if (type === 'attestation') {
-    PK.openModal('modal-attestation');
-    const preview = document.getElementById('attestation-preview');
+  if (type === 'attestation' || type === 'carte') {
+    const meta = DOC_TELECHARGEMENT_META[type];
+    PK.openModal(meta.modalId);
+    const preview = document.getElementById(meta.previewId);
     preview.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--gray-500);">Vérification de l\'accès...</div>';
 
     try {
@@ -2367,7 +2401,7 @@ async function ouvrirDocument(type) {
       }
 
       if (result.accesAutorise) {
-        afficherAttestationCanvas(apprenant, token);
+        meta.afficher(apprenant, token);
         // Décrément après affichage réussi — ne bloque jamais l'utilisateur
         // si cet appel échoue, c'est purement du suivi côté serveur.
         fetch(GAS_WEBAPP_URL, {
@@ -2376,9 +2410,9 @@ async function ouvrirDocument(type) {
           body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id })
         }).catch(() => {});
       } else if (result.formationEnCours) {
-        afficherFormationEnCours(result.dateFin);
+        afficherFormationEnCours(result.dateFin, type);
       } else {
-        afficherPromptPaiementTelechargement(apprenant, result.montant);
+        afficherPromptPaiementTelechargement(apprenant, result.montant, type);
       }
     } catch (e) {
       preview.innerHTML = '<div style="text-align:center;padding:2.5rem;color:#c0392b;">Erreur réseau. Réessayez.</div>';
@@ -2394,8 +2428,11 @@ async function ouvrirDocument(type) {
 
 // Écran affiché quand la formation n'est pas encore terminée — aucun
 // paiement n'est même proposé tant que la date de fin n'est pas atteinte.
-function afficherFormationEnCours(dateFin) {
-  const preview = document.getElementById('attestation-preview');
+// `type` sélectionne le bon conteneur d'aperçu (attestation ou carte —
+// voir DOC_TELECHARGEMENT_META) : ce même écran est réutilisé pour les
+// deux documents plutôt que dupliqué.
+function afficherFormationEnCours(dateFin, type = 'attestation') {
+  const preview = document.getElementById(DOC_TELECHARGEMENT_META[type].previewId);
   const dateTxt = dateFin
     ? new Date(dateFin).toLocaleDateString('fr-BJ', { day: 'numeric', month: 'long', year: 'numeric' })
     : '';
@@ -2404,24 +2441,28 @@ function afficherFormationEnCours(dateFin) {
       <span class="iconify" data-icon="tabler:hourglass-high" style="font-size:48px;color:var(--teal-600);"></span>
       <h3 style="margin:16px 0 8px;">Formation en cours</h3>
       <p style="color:var(--gray-500);max-width:380px;margin:0 auto;line-height:1.6;">
-        Votre attestation sera disponible au téléchargement à partir du
+        ${DOC_TELECHARGEMENT_META[type].label.charAt(0).toUpperCase() + DOC_TELECHARGEMENT_META[type].label.slice(1)}
+        sera disponible au téléchargement à partir du
         <strong>${dateTxt}</strong>, une fois votre formation terminée.
       </p>
     </div>`;
 }
 
-// Écran affiché à la place de l'attestation quand le palier de
-// téléchargements gratuits est épuisé.
-function afficherPromptPaiementTelechargement(apprenant, montant) {
-  const preview = document.getElementById('attestation-preview');
+// Écran affiché à la place du document quand le palier de
+// téléchargements gratuits est épuisé. Même remarque que ci-dessus :
+// un seul écran, paramétré par `type`, pour attestation ET carte — le
+// quota/paiement est partagé entre les deux documents côté GAS.
+function afficherPromptPaiementTelechargement(apprenant, montant, type = 'attestation') {
+  const meta = DOC_TELECHARGEMENT_META[type];
+  const preview = document.getElementById(meta.previewId);
   preview.innerHTML = `
     <div style="text-align:center;padding:2.5rem 1.5rem;">
       <span class="iconify" data-icon="tabler:lock" style="font-size:48px;color:var(--orange-500);"></span>
-      <h3 style="margin:16px 0 8px;">Débloquer votre attestation</h3>
+      <h3 style="margin:16px 0 8px;">Débloquer ${meta.label}</h3>
       <p style="color:var(--gray-500);margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.6;">
-        Le téléchargement de votre attestation nécessite un paiement unique de ${formatFCFA(montant)} via Mobile Money. Ce paiement débloque 6 téléchargements, celui-ci inclus.
+        Le téléchargement de ${meta.label} nécessite un paiement unique de ${formatFCFA(montant)} via Mobile Money. Ce paiement débloque 6 téléchargements (attestation et carte confondues), celui-ci inclus.
       </p>
-      <button class="btn-primary" id="btn-payer-telechargement" onclick="payerTelechargementAttestation('${apprenant.id}', ${montant})">
+      <button class="btn-primary" id="btn-payer-telechargement" onclick="payerTelechargementAttestation('${apprenant.id}', ${montant}, '${type}')">
         <span class="iconify" data-icon="tabler:device-mobile"></span> Payer ${formatFCFA(montant)} via Mobile Money
       </button>
       <p style="font-size:.78rem;color:var(--gray-400);margin-top:20px;line-height:1.6;max-width:380px;margin-left:auto;margin-right:auto;">
@@ -2434,7 +2475,7 @@ function afficherPromptPaiementTelechargement(apprenant, montant) {
     </div>`;
 }
 
-async function payerTelechargementAttestation(id, montant) {
+async function payerTelechargementAttestation(id, montant, type = 'attestation') {
   const btn = document.getElementById('btn-payer-telechargement');
   const libelleInitial = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = 'Ouverture du paiement...'; }
@@ -2451,7 +2492,7 @@ async function payerTelechargementAttestation(id, montant) {
     locale: 'fr',
     transaction: {
       amount: montant,
-      description: 'LQD Service — Déblocage téléchargements attestation',
+      description: 'LQD Service — Déblocage téléchargements documents',
       custom_metadata: { id }
     },
     currency: { iso: 'XOF' },
@@ -2471,7 +2512,7 @@ async function payerTelechargementAttestation(id, montant) {
         resultat.id ||
         null;
 
-      attendreConfirmationPaiement(id, transactionId);
+      attendreConfirmationPaiement(id, transactionId, 1, type);
     }
   });
   widget.open();
@@ -2496,9 +2537,10 @@ async function payerTelechargementAttestation(id, montant) {
 // plusieurs fois avec un délai croissant, puis on bascule sur un écran
 // de contact support (jamais un nouveau bouton de paiement) si le
 // déblocage n'est toujours pas arrivé.
-async function attendreConfirmationPaiement(id, transactionId, tentative = 1) {
+async function attendreConfirmationPaiement(id, transactionId, tentative = 1, type = 'attestation') {
   const MAX_TENTATIVES = 5;
-  const preview = document.getElementById('attestation-preview');
+  const meta = DOC_TELECHARGEMENT_META[type];
+  const preview = document.getElementById(meta.previewId);
   preview.innerHTML = `
     <div style="text-align:center;padding:2.5rem;">
       <span class="iconify" data-icon="tabler:clock" style="font-size:40px;color:var(--teal-600);"></span>
@@ -2517,7 +2559,7 @@ async function attendreConfirmationPaiement(id, transactionId, tentative = 1) {
       });
       const resultActive = await respActive.json();
       if (resultActive.status === 'success') {
-        ouvrirDocument('attestation');
+        ouvrirDocument(type);
         return;
       }
     } catch (e) {
@@ -2536,7 +2578,7 @@ async function attendreConfirmationPaiement(id, transactionId, tentative = 1) {
 
     if (result.status === 'success' && result.accesAutorise) {
       // Débloqué — on relance le flux normal d'ouverture du document.
-      ouvrirDocument('attestation');
+      ouvrirDocument(type);
       return;
     }
   } catch (e) {
@@ -2544,7 +2586,7 @@ async function attendreConfirmationPaiement(id, transactionId, tentative = 1) {
   }
 
   if (tentative < MAX_TENTATIVES) {
-    attendreConfirmationPaiement(id, transactionId, tentative + 1);
+    attendreConfirmationPaiement(id, transactionId, tentative + 1, type);
     return;
   }
 
@@ -2559,10 +2601,9 @@ async function attendreConfirmationPaiement(id, transactionId, tentative = 1) {
       <p style="color:var(--gray-500);max-width:380px;margin:0 auto 20px;line-height:1.6;">
         Votre paiement a bien été reçu par FedaPay, mais la confirmation
         automatique met plus de temps que prévu. Contactez-nous avec votre
-        numéro de dossier <strong>${id}</strong>, nous débloquons votre
-        attestation manuellement.
+        numéro de dossier <strong>${id}</strong>, nous débloquons ${meta.label} manuellement.
       </p>
-      <a href="https://wa.me/22997951230?text=${encodeURIComponent('Bonjour, mon paiement pour débloquer mon attestation (dossier ' + id + ') ne s\'est pas confirmé automatiquement.')}"
+      <a href="https://wa.me/22997951230?text=${encodeURIComponent('Bonjour, mon paiement pour débloquer ' + meta.label + ' (dossier ' + id + ') ne s\'est pas confirmé automatiquement.')}"
          target="_blank" rel="noopener" class="btn-primary" style="display:inline-flex;">
         <span class="iconify" data-icon="tabler:brand-whatsapp"></span> Contacter le support WhatsApp
       </a>
@@ -2654,6 +2695,7 @@ async function inscrireNewsletter(evt) {
   <script src="js/attestation_generator.js"></script>
   <script src="js/fiche_apprenant_generator.js"></script>
   <script src="js/badge_certification_generator.js"></script>
+  <script src="js/carte_generator.js"></script>
   <script src="js/chat-widget.js" defer></script>
 </body>
 </html>
