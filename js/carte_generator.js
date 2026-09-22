@@ -655,8 +655,15 @@ async function genererCarteVersoCanvas(apprenant, token) {
       // l'image ressortait aplatie/ovale. Signalé par le PDG le
       // 22/09/2026 (visible sur la carte ET sur les attestations avant
       // ce correctif).
+      // Plafond de hauteur aligné sur celui du cachet juste au-dessus (96)
+      // — avec l'ancien plafond de 60, le cachet du PDG (intégré dans la
+      // signature) ressortait correct mais minuscule à côté du cachet du
+      // Formateur (96px) une fois le ratio respecté. Largeur plafonnée à
+      // SIG_W, toute la colonne étant disponible puisque ce bloc n'a pas
+      // de cachet séparé (cachetImg est vide pour le PDG). Signalé par le
+      // PDG le 22/09/2026.
       const ratio = sigImg.height / sigImg.width;
-      const SIG_MAX_W = 130, SIG_MAX_H = 60;
+      const SIG_MAX_W = SIG_W, SIG_MAX_H = 96;
       let sigW = SIG_MAX_W, sigH = Math.round(SIG_MAX_W * ratio);
       if (sigH > SIG_MAX_H) { sigH = SIG_MAX_H; sigW = Math.round(SIG_MAX_H / ratio); }
       ctx.drawImage(sigImg, x + 6, SIG_BOTTOM - sigH - 4, sigW, sigH);

@@ -334,7 +334,7 @@ async function genererFicheApprenant(apprenant, token) {
   _fFont(ctx, 20, "700"); ctx.fillStyle = FICHE.OR;
   ctx.fillText("SIGNATURE ET CACHET DU PDG", M, SIG_Y + 40);
   const SIG_W = 190;
-  if (sig) { const [sigW, sigH] = _fAjusterBoite(sig, SIG_W, 84); ctx.drawImage(sig, M, SIG_Y + 54, sigW, sigH); }
+  if (sig) { const [sigW, sigH] = _fAjusterBoite(sig, SIG_W, 120); ctx.drawImage(sig, M, SIG_Y + 54, sigW, sigH); }
   if (cachet) { ctx.save(); ctx.globalAlpha = 0.92; const [cW, cH] = _fAjusterBoite(cachet, 150, 150); ctx.drawImage(cachet, M + 140, SIG_Y + 30, cW, cH); ctx.restore(); }
   const blocSigCentreX = M + 145;
   _fFont(ctx, 22, "700"); ctx.fillStyle = FICHE.MARINE;
@@ -356,7 +356,7 @@ async function genererFicheApprenant(apprenant, token) {
   const SIG2_X = W / 2 + 60;
   _fFont(ctx, 20, "700"); ctx.fillStyle = FICHE.OR;
   ctx.fillText("SIGNATURE ET CACHET DU FORMATEUR", SIG2_X, SIG_Y + 40);
-  if (sigFormateur) { const [sigW, sigH] = _fAjusterBoite(sigFormateur, SIG_W, 84); ctx.drawImage(sigFormateur, SIG2_X, SIG_Y + 54, sigW, sigH); }
+  if (sigFormateur) { const [sigW, sigH] = _fAjusterBoite(sigFormateur, SIG_W, 120); ctx.drawImage(sigFormateur, SIG2_X, SIG_Y + 54, sigW, sigH); }
   if (cachetFormateur) { ctx.save(); ctx.globalAlpha = 0.92; const [cW2, cH2] = _fAjusterBoite(cachetFormateur, 150, 150); ctx.drawImage(cachetFormateur, SIG2_X + 140, SIG_Y + 30, cW2, cH2); ctx.restore(); }
   const blocSig2CentreX = SIG2_X + 145;
   _fFont(ctx, 22, "700"); ctx.fillStyle = FICHE.MARINE;
