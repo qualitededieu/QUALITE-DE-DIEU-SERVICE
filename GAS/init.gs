@@ -602,6 +602,18 @@ function marquerFormationsTerminees() {
       if (aujourdHui >= dateFin) {
         feuille.getRange(i + 1, 29).setValue('Terminé'); // Colonne 29 = Statut dossier
         compteur++;
+
+        // Notification "attestation prête" — envoyée UNE SEULE FOIS, au
+        // moment précis de la bascule Confirmé -> Terminé (jamais aux
+        // exécutions suivantes, puisque le statut ne repassera plus par
+        // "Confirmé" pour ce dossier). Ne bloque jamais le passage à
+        // "Terminé" si l'envoi échoue (email invalide, quota Gmail...) —
+        // signalé par le PDG le 23/09/2026.
+        try {
+          _envoyerEmailAttestationPrete(row);
+        } catch (err) {
+          console.error(`[Auto-Terminé] Échec envoi email attestation prête (${row[0]}) :`, err);
+        }
       }
     }
 
@@ -610,6 +622,68 @@ function marquerFormationsTerminees() {
   });
 
   console.log(`[Auto-Terminé] Terminé : ${total} dossier(s) au total.`);
+}
+
+// Prévient l'apprenant par e-mail dès que sa formation bascule sur
+// "Terminé" (voir marquerFormationsTerminees ci-dessus) : son attestation
+// ET sa carte sont désormais disponibles dans son Espace apprenant.
+// `row` suit l'ordre ENTETES_INSCRIPTION (code.gs) — index 0 = ID,
+// 2 = Prénom, 3 = Nom, 10 = Email.
+function _envoyerEmailAttestationPrete(row) {
+  const email   = String(row[10] || '').trim();
+  if (!email) return; // Dossier sans e-mail renseigné — rien à envoyer.
+
+  const id      = String(row[0]  || '').trim();
+  const prenom  = nettoyer(row[2]);
+  const nom     = nettoyer(row[3]);
+  const annee   = new Date().getFullYear();
+  const lienEspace = `${CONFIG.SITE_URL}/#carte`;
+
+  const htmlBody = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#FFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <tr><td style="background:#04342C;padding:28px 36px;text-align:center;">
+    <img src="${CONFIG.LOGO_URL}" width="60" style="border-radius:8px;margin:0 auto 12px;display:block;"/>
+    <h1 style="margin:0;font-size:18px;color:#FFF;font-weight:700;">Les Qualités de Dieu Service</h1>
+    <p style="margin:6px 0 0;font-size:13px;color:#A7C4BC;">Formation terminée</p>
+  </td></tr>
+  <tr><td style="padding:32px 36px;">
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.75;">
+      Bonjour <strong>${prenom} ${nom}</strong>,<br/><br/>
+      Félicitations, votre formation est arrivée à son terme ! Votre <strong>attestation de fin de formation</strong>
+      et votre <strong>carte d'apprentissage</strong> sont désormais disponibles au téléchargement
+      dans votre Espace apprenant.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:14px;margin-bottom:24px;">
+      <tr style="background:#F9FAFB;">
+        <td style="padding:10px 16px;color:#6B7280;font-weight:600;width:40%;">Référence</td>
+        <td style="padding:10px 16px;color:#111827;font-family:monospace;">${id}</td>
+      </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:8px;">
+      <a href="${lienEspace}" style="display:inline-block;background:#04342C;color:#FFF;padding:14px 32px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">Accéder à mon Espace apprenant</a>
+    </td></tr></table>
+    <p style="margin:20px 0 0;font-size:13px;color:#6B7280;line-height:1.7;">
+      Munissez-vous de votre référence (${id}) et de votre numéro de téléphone pour vous connecter.
+    </p>
+  </td></tr>
+  <tr><td style="background:#F3F4F6;padding:18px 36px;text-align:center;">
+    <p style="margin:0;font-size:12px;color:#9CA3AF;">© ${annee} Les Qualités de Dieu Service SARL — Comé, Bénin</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  GmailApp.sendEmail(
+    email,
+    `Votre attestation est prête — LQD Service (${id})`,
+    `Bonjour ${prenom}, votre formation est terminée. Votre attestation et votre carte d'apprentissage sont disponibles dans votre Espace apprenant : ${lienEspace} (référence ${id}).`,
+    { htmlBody, name: CONFIG.EXPEDITEUR_NOM, replyTo: CONFIG.ADMIN_EMAIL }
+  );
 }
 
 // À exécuter UNE SEULE FOIS pour installer le déclencheur quotidien.

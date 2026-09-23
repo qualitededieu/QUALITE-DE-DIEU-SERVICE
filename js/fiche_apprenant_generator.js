@@ -69,8 +69,8 @@ function _fLoadImg(src) {
 // Inscrit une image (signature, cachet) dans une boîte MAX en conservant
 // son ratio natif : recalcule l'AUTRE dimension quand l'une des deux
 // bute contre son plafond, au lieu de la forcer et d'écraser l'image.
-// Bug réel : signature-pdg.png (389x234, cachet du PDG déjà intégré dans
-// le fichier) ressortait aplatie/ovale sur la fiche et sur la carte, car
+// Bug réel : signature-pdg.png (cachet du PDG déjà intégré dans le
+// fichier, format large) ressortait aplatie/ovale sur la fiche et sur la carte, car
 // seule la hauteur était plafonnée (largeur figée à SIG_W) — signalé par
 // le PDG le 22/09/2026.
 function _fAjusterBoite(img, maxW, maxH) {
@@ -131,7 +131,7 @@ function _fLigne(ctx, icone, x, y, label, valeur, tailleLabel = 22, tailleValeur
 
 async function genererFicheApprenant(apprenant, token) {
   const LOGO_URL = FICHE_ENTREPRISE.LOGO_URL;
-  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=2";
+  const SIG_SRC    = typeof SIGNATURE_PDG_DATA !== "undefined" ? SIGNATURE_PDG_DATA : "icons/signature-pdg.png?v=3";
   const CACHET_SRC = typeof CACHET_DATA    !== "undefined" ? CACHET_DATA    : "icons/cachet.png?v=2";
   // Second bloc signataire : le Formateur Principal, avec son propre cachet
   // (distinct de celui du PDG) — ajouté le 22/09/2026 à la demande du PDG,
@@ -331,20 +331,26 @@ async function genererFicheApprenant(apprenant, token) {
   ctx.beginPath(); ctx.moveTo(M, SIG_Y); ctx.lineTo(W - M, SIG_Y); ctx.stroke();
   ctx.restore();
 
+  // Ordre des deux blocs aligné sur l'attestation (Formateur à GAUCHE,
+  // PDG à DROITE) — avant ce correctif, la fiche et la carte avaient
+  // l'ordre inversé par rapport à l'attestation. Signalé par le PDG le
+  // 23/09/2026 : la position à gauche est une question de mise en page/
+  // protocole de lecture, pas de hiérarchie — le centre reste la
+  // propriété du PDG quel que soit l'ordre d'affichage des signatures.
   _fFont(ctx, 20, "700"); ctx.fillStyle = FICHE.OR;
-  ctx.fillText("SIGNATURE ET CACHET DU PDG", M, SIG_Y + 40);
+  ctx.fillText("SIGNATURE ET CACHET DU FORMATEUR", M, SIG_Y + 40);
   const SIG_W = 190;
-  if (sig) { const [sigW, sigH] = _fAjusterBoite(sig, SIG_W, 120); ctx.drawImage(sig, M, SIG_Y + 54, sigW, sigH); }
-  if (cachet) { ctx.save(); ctx.globalAlpha = 0.92; const [cW, cH] = _fAjusterBoite(cachet, 150, 150); ctx.drawImage(cachet, M + 140, SIG_Y + 30, cW, cH); ctx.restore(); }
+  if (sigFormateur) { const [sigW, sigH] = _fAjusterBoite(sigFormateur, SIG_W, 120); ctx.drawImage(sigFormateur, M, SIG_Y + 54, sigW, sigH); }
+  if (cachetFormateur) { ctx.save(); ctx.globalAlpha = 0.92; const [cW, cH] = _fAjusterBoite(cachetFormateur, 150, 150); ctx.drawImage(cachetFormateur, M + 140, SIG_Y + 30, cW, cH); ctx.restore(); }
   const blocSigCentreX = M + 145;
   _fFont(ctx, 22, "700"); ctx.fillStyle = FICHE.MARINE;
-  const nomTxt = "M. ATO Blaise";
+  const nomTxt = "M. TOSSOU C. Philippe";
   ctx.fillText(nomTxt, blocSigCentreX - _fMw(ctx, nomTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, nomTxt) / 2, SIG_Y + 196);
   _fFont(ctx, 17, "500"); ctx.fillStyle = FICHE.GRIS;
-  const titreTxt = "Président Directeur Général";
+  const titreTxt = "Le Formateur";
   ctx.fillText(titreTxt, blocSigCentreX - _fMw(ctx, titreTxt) / 2 < 0 ? M : blocSigCentreX - _fMw(ctx, titreTxt) / 2, SIG_Y + 220);
 
-  // ----- 2e bloc signataire : le Formateur Principal, en miroir à droite -----
+  // ----- 2e bloc signataire : le PDG, en miroir à droite -----
   // Ajouté le 22/09/2026 : la fiche n'avait qu'un seul signataire (le PDG) ;
   // le cachet du Formateur Principal ne doit jamais se substituer à celui
   // du PDG, d'où un bloc séparé plutôt qu'un remplacement.
@@ -355,15 +361,15 @@ async function genererFicheApprenant(apprenant, token) {
 
   const SIG2_X = W / 2 + 60;
   _fFont(ctx, 20, "700"); ctx.fillStyle = FICHE.OR;
-  ctx.fillText("SIGNATURE ET CACHET DU FORMATEUR", SIG2_X, SIG_Y + 40);
-  if (sigFormateur) { const [sigW, sigH] = _fAjusterBoite(sigFormateur, SIG_W, 120); ctx.drawImage(sigFormateur, SIG2_X, SIG_Y + 54, sigW, sigH); }
-  if (cachetFormateur) { ctx.save(); ctx.globalAlpha = 0.92; const [cW2, cH2] = _fAjusterBoite(cachetFormateur, 150, 150); ctx.drawImage(cachetFormateur, SIG2_X + 140, SIG_Y + 30, cW2, cH2); ctx.restore(); }
+  ctx.fillText("SIGNATURE ET CACHET DU PDG", SIG2_X, SIG_Y + 40);
+  if (sig) { const [sigW, sigH] = _fAjusterBoite(sig, SIG_W, 120); ctx.drawImage(sig, SIG2_X, SIG_Y + 54, sigW, sigH); }
+  if (cachet) { ctx.save(); ctx.globalAlpha = 0.92; const [cW2, cH2] = _fAjusterBoite(cachet, 150, 150); ctx.drawImage(cachet, SIG2_X + 140, SIG_Y + 30, cW2, cH2); ctx.restore(); }
   const blocSig2CentreX = SIG2_X + 145;
   _fFont(ctx, 22, "700"); ctx.fillStyle = FICHE.MARINE;
-  const nomTxt2 = "M. TOSSOU C. Philippe";
+  const nomTxt2 = "M. ATO Blaise";
   ctx.fillText(nomTxt2, blocSig2CentreX - _fMw(ctx, nomTxt2) / 2 < SIG2_X ? SIG2_X : blocSig2CentreX - _fMw(ctx, nomTxt2) / 2, SIG_Y + 196);
   _fFont(ctx, 17, "500"); ctx.fillStyle = FICHE.GRIS;
-  const titreTxt2 = "Le Formateur";
+  const titreTxt2 = "Président Directeur Général";
   ctx.fillText(titreTxt2, blocSig2CentreX - _fMw(ctx, titreTxt2) / 2 < SIG2_X ? SIG2_X : blocSig2CentreX - _fMw(ctx, titreTxt2) / 2, SIG_Y + 220);
 
   // Bande agrandie (70 → 128px) pour loger la ligne d'authentification

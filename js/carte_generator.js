@@ -53,7 +53,7 @@ const CARTE_ENTREPRISE = {
   // fiche_apprenant_generator.js) est ABSENT de ce projet au moment où
   // ce fichier est écrit — le chargement échoue proprement (_carteLoadImg
   // renvoie null) et le cachet est simplement omis, jamais un blocage.
-  SIGNATURE_PDG_URL: "icons/signature-pdg.png?v=2",
+  SIGNATURE_PDG_URL: "icons/signature-pdg.png?v=3",
   CACHET_URL:        "icons/cachet.png?v=2",
   SIGNATAIRE_PDG:    "M. ATO Blaise",
   SIGNATAIRE_TITRE:  "Président Directeur Général",
@@ -693,8 +693,12 @@ async function genererCarteVersoCanvas(apprenant, token) {
     ctx.fillText(titre, x, SIG_BOTTOM + 34);
   }
 
-  _carteDessinerSignataire(COL_X, signature, cachet, CARTE_ENTREPRISE.SIGNATAIRE_PDG, CARTE_ENTREPRISE.SIGNATAIRE_TITRE);
-  _carteDessinerSignataire(SIG2_X, signatureFormateur, cachetFormateur, CARTE_ENTREPRISE.SIGNATAIRE_FORMATEUR, CARTE_ENTREPRISE.SIGNATAIRE_FORMATEUR_TITRE);
+  // Formateur à GAUCHE, PDG à DROITE — aligné sur l'ordre de l'attestation
+  // (attestation_generator.js : _dessinerSignataire(CX, sigFormateur, ...)
+  // puis le PDG à droite). Avant ce correctif, la carte avait l'ordre
+  // inversé par rapport à l'attestation. Signalé par le PDG le 23/09/2026.
+  _carteDessinerSignataire(COL_X, signatureFormateur, cachetFormateur, CARTE_ENTREPRISE.SIGNATAIRE_FORMATEUR, CARTE_ENTREPRISE.SIGNATAIRE_FORMATEUR_TITRE);
+  _carteDessinerSignataire(SIG2_X, signature, cachet, CARTE_ENTREPRISE.SIGNATAIRE_PDG, CARTE_ENTREPRISE.SIGNATAIRE_TITRE);
 
   // ----- bandeau bas : devise, ancré comme au recto -----
   // Empilé depuis la limite basse de sécurité (C.H - MARGE) vers le
