@@ -2493,8 +2493,8 @@ function initEditeurSimple(selectorId, contenuInitial, hauteur) {
       menubar:     false,
       branding:    false,
       promotion:   false,
-      plugins:     'lists advlist link autolink wordcount',
-      toolbar:     'undo redo | bold italic underline | forecolor | bullist numlist | link | removeformat',
+      plugins:     'lists advlist link autolink code wordcount',
+      toolbar:     'undo redo | bold italic underline | forecolor | bullist numlist | link | removeformat | code',
       content_style: "body { font-family: 'Poppins', Arial, sans-serif; font-size: 14px; line-height: 1.65; color: #1A1A2E; padding: 8px; }",
       setup: (editor) => { editor.on('init', () => resolve(editor)); },
     });
