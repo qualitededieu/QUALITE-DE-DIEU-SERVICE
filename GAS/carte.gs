@@ -467,6 +467,16 @@ function verifierAccesTelechargement(data) {
     }
   }
 
+  // Palier payant lui aussi réservé à l'attestation — la carte et la
+  // fiche restent gratuites et illimitées quelle que soit la filière.
+  // Avant ce correctif, un apprenant "Initiation rapide (1 mois)" pouvait
+  // se voir réclamer les 3000 F même pour retélécharger sa simple carte,
+  // ce qui contredit la politique annoncée aux apprenants (carte/fiche
+  // toujours gratuites) — signalé par le PDG le 23/09/2026.
+  if (type !== 'attestation') {
+    return reponseJSON({ status: 'success', accesAutorise: true });
+  }
+
   const filiere = String(trouve.row[22] || '');
   if (!filiere.includes(CONFIG.FORMATION_COURTE.NOM)) {
     // Filières longues : accès illimité, non concernées par ce palier.
@@ -493,6 +503,13 @@ function verifierAccesTelechargement(data) {
 function enregistrerTelechargement(data) {
   const id = String(data.id || '').trim();
   if (!id) return reponseJSON({ status: 'error', message: 'ID manquant.' });
+
+  // Même portée que verifierAccesTelechargement : seul un téléchargement
+  // d'ATTESTATION consomme le palier payant — la carte/fiche restant
+  // gratuites et illimitées, elles ne doivent jamais entamer le quota
+  // (23/09/2026).
+  const type = String(data.type || 'attestation').trim();
+  if (type !== 'attestation') return reponseJSON({ status: 'success' });
 
   try {
     const trouve = _trouverLigneInscription(id);
