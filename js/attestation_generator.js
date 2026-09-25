@@ -727,23 +727,26 @@ async function genererAttestationCanvas(apprenant, token) {
       const dW = _mw(ctx, domaineTxt);
       const baselineY = posY + 14;
       ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, baselineY);
-      // Marge sous la ligne de base. Première tentative : se fier uniquement
-      // à actualBoundingBoxDescent (jambage réellement mesuré). Ca n'a PAS
-      // suffi en conditions réelles (chevauchement encore signalé par le PDG
-      // le 25/09/2026 après déploiement du correctif "mesuré") : ce métrique
-      // canvas est documenté comme peu fiable sur certains moteurs de rendu
-      // pour des polices web décoratives chargées via FontFace (valeur trop
-      // faible ou golfée). On ne fait donc plus confiance à la seule mesure :
-      // on prend le MAX entre la mesure et un minimum garanti, calculé à
-      // partir de la taille de police et calibré large pour les jambages
-      // profonds de Great Vibes (y, g, p, j, souvent 60 à 65% du corps de
-      // police pour cette police précise). Si la mesure est bonne, elle ne
-      // change rien (le plancher est en dessous) ; si elle est sous-évaluée
-      // ou nulle, le plancher rattrape le coup.
+      // Marge sous la ligne de base — 3e itération. Historique : (1) marge
+      // fixe 34px → chevauchement (34px trop court pour les jambages) ;
+      // (2) confiance totale en actualBoundingBoxDescent seul → toujours
+      // signalé en chevauchement le 25/09/2026 (mesure non fiable ou
+      // déploiement non à jour, jamais tranché) ; (3) plancher à 68% de la
+      // taille de police pour ne plus dépendre de la mesure → cette fois
+      // signalé TROP ÉLOIGNÉ le 25/09/2026 (capture PDG à l'appui : les
+      // jambages réels s'arrêtent nettement, la ligne se retrouve à ~2×
+      // cette profondeur, quasi collée au paragraphe suivant). Le plancher
+      // à 68% était donc lui-même le problème, pas la mesure.
+      // On revient à la mesure comme source principale (elle capture
+      // correctement où s'arrêtent les jambages, la capture le confirme),
+      // avec un plancher BAS — garde-fou uniquement contre une mesure
+      // nulle ou aberrante (retour 0 ou quasi 0), plus une marge fixe
+      // modeste pour détacher visuellement le filet sans l'éloigner.
       const metrics = ctx.measureText(domaineTxt);
-      const jambagePlancher = Math.round(taille * 0.68);
-      const jambage = Math.max(metrics.actualBoundingBoxDescent || 0, jambagePlancher);
-      const ruleY = baselineY + jambage + 14; // +14 : filet visuellement détaché, jamais collé
+      const mesure = metrics.actualBoundingBoxDescent || 0;
+      const jambagePlancher = Math.round(taille * 0.22);
+      const jambage = mesure > jambagePlancher ? mesure : jambagePlancher;
+      const ruleY = baselineY + jambage + 8; // +8 : filet visuellement détaché, sans excès
       _rect(ctx, CENTRE_HAUT - dW / 2 - 40, ruleY, dW + 80, 6, ATT.OR);
       posY = ruleY + _g(76);
     }
@@ -880,12 +883,13 @@ async function genererAttestationCanvas(apprenant, token) {
       const iW = _mw(ctx, intitule);
       const baselineY = posY + 20;
       ctx.fillText(intitule, CENTRE_HAUT_COURT - iW / 2, baselineY);
-      // Même logique que le gabarit long (voir plus haut) : max(mesure, plancher
-      // garanti) au lieu de se fier uniquement à actualBoundingBoxDescent.
+      // Même logique que le gabarit long (voir plus haut) : la mesure est la
+      // source principale, le plancher n'est qu'un garde-fou bas.
       const metrics = ctx.measureText(intitule);
-      const jambagePlancher = Math.round(120 * 0.68);
-      const jambage = Math.max(metrics.actualBoundingBoxDescent || 0, jambagePlancher);
-      const ruleY = baselineY + jambage + 14;
+      const mesure = metrics.actualBoundingBoxDescent || 0;
+      const jambagePlancher = Math.round(120 * 0.22);
+      const jambage = mesure > jambagePlancher ? mesure : jambagePlancher;
+      const ruleY = baselineY + jambage + 8;
       _rect(ctx, CENTRE_HAUT_COURT - iW / 2 - 40, ruleY, iW + 80, 6, ATT.OR);
       posY = ruleY + 70;
     }
