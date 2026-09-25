@@ -203,6 +203,9 @@ function doPost(e) {
   if (action === 'verifier_ancien_apprenant') return verifierAncienApprenant(data);
   if (action === 'newsletter_inscrire') return inscrireAbonneNewsletter(data);
   if (action === 'annonces_list_publiees') return annoncesListPubliees(data);
+  if (action === 'cours_lister_apprenant') return coursListerApprenant(data);
+  if (action === 'forum_poster_question') return forumPosterQuestion(data);
+  if (action === 'forum_lister') return forumLister(data);
     return traiterInscription(data);
 
   } catch (err) {

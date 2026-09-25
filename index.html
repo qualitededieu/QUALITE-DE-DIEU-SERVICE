@@ -1263,19 +1263,53 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <button class="btn-doc-espace" onclick="ouvrirDocument('carte')">
-            <span class="iconify" data-icon="tabler:id-badge-2"></span> Ma carte
+        <div class="espace-tabs">
+          <button class="espace-tab active" data-tab="documents" onclick="basculerOngletEspace('documents')">
+            <span class="iconify" data-icon="tabler:files"></span> Documents
           </button>
-          <button class="btn-doc-espace" onclick="ouvrirDocument('attestation')">
-            <span class="iconify" data-icon="tabler:certificate"></span> Attestation
+          <button class="espace-tab" data-tab="cours" onclick="basculerOngletEspace('cours')">
+            <span class="iconify" data-icon="tabler:book-2"></span> Mes cours
           </button>
-          <button class="btn-doc-espace" onclick="ouvrirDocument('fiche')">
-            <span class="iconify" data-icon="tabler:file-description"></span> Fiche apprenant
+          <button class="espace-tab" data-tab="forum" onclick="basculerOngletEspace('forum')">
+            <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions
           </button>
-          <button class="btn-doc-espace" onclick="ouvrirDocument('badge')">
-            <span class="iconify" data-icon="tabler:award"></span> Badge
-          </button>
+        </div>
+
+        <div id="espace-tab-documents" class="espace-tab-panel">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <button class="btn-doc-espace" onclick="ouvrirDocument('carte')">
+              <span class="iconify" data-icon="tabler:id-badge-2"></span> Ma carte
+            </button>
+            <button class="btn-doc-espace" onclick="ouvrirDocument('attestation')">
+              <span class="iconify" data-icon="tabler:certificate"></span> Attestation
+            </button>
+            <button class="btn-doc-espace" onclick="ouvrirDocument('fiche')">
+              <span class="iconify" data-icon="tabler:file-description"></span> Fiche apprenant
+            </button>
+            <button class="btn-doc-espace" onclick="ouvrirDocument('badge')">
+              <span class="iconify" data-icon="tabler:award"></span> Badge
+            </button>
+          </div>
+        </div>
+
+        <div id="espace-tab-cours" class="espace-tab-panel" style="display:none;">
+          <div id="cours-liste" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="cours-vide" style="display:none;text-align:center;color:#7A9E95;font-size:13px;padding:20px 0;">
+            Aucun support disponible pour votre filière pour le moment.
+          </div>
+        </div>
+
+        <div id="espace-tab-forum" class="espace-tab-panel" style="display:none;">
+          <div style="margin-bottom:16px;">
+            <textarea id="forum-question" rows="3" placeholder="Posez votre question au Formateur..."
+              style="width:100%;padding:12px 14px;border:1.5px solid #D4E4DF;border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"></textarea>
+            <div id="forum-msg" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+            <button id="forum-btn" onclick="poserQuestionForum()"
+              style="margin-top:10px;width:100%;padding:12px;background:#0D7A8A;color:#FFF;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+              Envoyer ma question
+            </button>
+          </div>
+          <div id="forum-liste" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
 
         <button onclick="reinitialiserEspace()" style="margin-top:18px;width:100%;background:none;border:none;color:#7A9E95;font-size:13px;cursor:pointer;font-family:inherit;">
@@ -1288,6 +1322,20 @@
           font-family:inherit;font-size:13px;font-weight:600;color:#04342C;transition:all .2s;}
         .btn-doc-espace .iconify{font-size:24px;color:#0D7A8A;}
         .btn-doc-espace:hover{background:#E1F5EE;border-color:#0D7A8A;}
+        .espace-tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1.5px solid #E1E8E5;}
+        .espace-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 6px;
+          background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;font-family:inherit;
+          font-size:12.5px;font-weight:700;color:#7A9E95;transition:all .2s;}
+        .espace-tab .iconify{font-size:16px;}
+        .espace-tab.active{color:#04342C;border-bottom-color:#0D7A8A;}
+        .cours-item{background:#F0F4F2;border-radius:10px;padding:14px 16px;}
+        .cours-item .cours-titre{font-weight:700;color:#04342C;font-size:14px;margin-bottom:2px;}
+        .cours-item .cours-desc{font-size:12.5px;color:#5A6C66;margin-bottom:8px;}
+        .cours-item a{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#0D7A8A;text-decoration:none;}
+        .forum-item{background:#F0F4F2;border-radius:10px;padding:14px 16px;}
+        .forum-item .forum-question{font-size:13.5px;color:#04342C;font-weight:600;margin-bottom:6px;}
+        .forum-item .forum-reponse{font-size:13px;color:#1F4F45;background:#E1F5EE;border-radius:8px;padding:10px 12px;margin-top:8px;}
+        .forum-item .forum-statut{font-size:11px;color:#B9862E;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
       </style>
     </div>
   </div>
@@ -2321,6 +2369,25 @@
 ================================================================ */
 let _espaceApprenant = null; // { apprenant, token } — rempli après identification réussie
 
+// Localisation approximative (pays/ville) à des fins de suivi admin
+// UNIQUEMENT — jamais de position GPS précise (aucune permission
+// navigateur n'est demandée à l'apprenant). Résolue une seule fois par
+// visite et mise en cache ; un échec (réseau bloqué, service indisponible)
+// ne doit jamais empêcher un téléchargement, d'où le repli silencieux.
+let _geoInfoCache = null;
+async function obtenirGeoInfo() {
+  if (_geoInfoCache) return _geoInfoCache;
+  try {
+    const delai = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000));
+    const resp  = await Promise.race([fetch('https://ipapi.co/json/'), delai]);
+    const d     = await resp.json();
+    _geoInfoCache = { pays: d.country_name || '', ville: d.city || '' };
+  } catch (e) {
+    _geoInfoCache = { pays: '', ville: '' };
+  }
+  return _geoInfoCache;
+}
+
 async function obtenirCarte() {
   const id  = document.getElementById('carte-id').value.trim();
   const tel = document.getElementById('carte-tel').value.trim();
@@ -2377,6 +2444,7 @@ function afficherDashboardEspace(apprenant) {
   document.getElementById('espace-dashboard').style.display = 'block';
   document.getElementById('espace-nom').textContent     = `${apprenant.prenom} ${apprenant.nom}`;
   document.getElementById('espace-filiere').textContent = apprenant.filiere || '—';
+  basculerOngletEspace('documents');
 }
 
 function reinitialiserEspace() {
@@ -2438,11 +2506,11 @@ async function ouvrirDocument(type) {
         meta.afficher(apprenant, token);
         // Décrément après affichage réussi — ne bloque jamais l'utilisateur
         // si cet appel échoue, c'est purement du suivi côté serveur.
-        fetch(GAS_WEBAPP_URL, {
+        obtenirGeoInfo().then(geo => fetch(GAS_WEBAPP_URL, {
           method:  'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: type })
-        }).catch(() => {});
+          body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: type, geo })
+        })).catch(() => {});
       } else if (result.formationEnCours) {
         afficherFormationEnCours(result.dateFin, type);
       } else {
@@ -2454,9 +2522,154 @@ async function ouvrirDocument(type) {
   } else if (type === 'fiche') {
     PK.openModal('modal-fiche-apprenant');
     afficherFicheApprenant(apprenant, token);
+    obtenirGeoInfo().then(geo => fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: 'fiche', geo })
+    })).catch(() => {});
   } else if (type === 'badge') {
     PK.openModal('modal-badge-certification');
     afficherBadgeCertification(apprenant, token);
+    obtenirGeoInfo().then(geo => fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: 'badge', geo })
+    })).catch(() => {});
+  }
+}
+
+/* ================================================================
+   ESPACE APPRENANT — onglets (Documents / Mes cours / Questions)
+================================================================ */
+function basculerOngletEspace(nom) {
+  document.querySelectorAll('.espace-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === nom));
+  document.querySelectorAll('.espace-tab-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('espace-tab-' + nom).style.display = 'block';
+  if (nom === 'cours') chargerCoursEspace();
+  if (nom === 'forum') chargerForumEspace();
+}
+
+function _iconeTypeCours(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'vidéo' || t === 'video') return 'tabler:video';
+  if (t === 'pdf') return 'tabler:file-type-pdf';
+  return 'tabler:link';
+}
+
+async function chargerCoursEspace() {
+  if (!_espaceApprenant) return;
+  const liste = document.getElementById('cours-liste');
+  const vide  = document.getElementById('cours-vide');
+  liste.innerHTML = '<div style="text-align:center;padding:16px;color:#7A9E95;font-size:13px;">Chargement...</div>';
+  vide.style.display = 'none';
+
+  try {
+    const resp = await fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'cours_lister_apprenant', token: _espaceApprenant.token })
+    });
+    const result = await resp.json();
+    if (result.status !== 'success') {
+      liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${result.message || 'Erreur.'}</div>`;
+      return;
+    }
+    if (!result.cours.length) {
+      liste.innerHTML = '';
+      vide.style.display = 'block';
+      return;
+    }
+    liste.innerHTML = result.cours.map(c => `
+      <div class="cours-item">
+        <div class="cours-titre">${c.titre}</div>
+        ${c.description ? `<div class="cours-desc">${c.description}</div>` : ''}
+        <a href="${c.url}" target="_blank" rel="noopener">
+          <span class="iconify" data-icon="${_iconeTypeCours(c.type)}"></span> Ouvrir (${c.type})
+        </a>
+      </div>
+    `).join('');
+  } catch (e) {
+    liste.innerHTML = '<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">Erreur réseau. Réessayez.</div>';
+  }
+}
+
+async function poserQuestionForum() {
+  if (!_espaceApprenant) return;
+  const zone = document.getElementById('forum-question');
+  const msg  = document.getElementById('forum-msg');
+  const btn  = document.getElementById('forum-btn');
+  const question = zone.value.trim();
+
+  msg.style.display = 'none';
+  if (question.length < 10) {
+    msg.style.display = 'block';
+    msg.style.background = '#FDEDEC';
+    msg.style.color = '#C0392B';
+    msg.textContent = 'Précisez un peu plus votre question (10 caractères minimum).';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Envoi...';
+  try {
+    const resp = await fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'forum_poster_question', token: _espaceApprenant.token, question })
+    });
+    const result = await resp.json();
+    msg.style.display = 'block';
+    if (result.status === 'success') {
+      msg.style.background = '#E1F5EE';
+      msg.style.color = '#0D7A8A';
+      msg.textContent = 'Votre question a été envoyée au Formateur. Vous serez informé dès la réponse.';
+      zone.value = '';
+      chargerForumEspace();
+    } else {
+      msg.style.background = '#FDEDEC';
+      msg.style.color = '#C0392B';
+      msg.textContent = result.message || 'Erreur — réessayez.';
+    }
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.style.background = '#FDEDEC';
+    msg.style.color = '#C0392B';
+    msg.textContent = 'Erreur réseau. Réessayez.';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Envoyer ma question';
+}
+
+async function chargerForumEspace() {
+  if (!_espaceApprenant) return;
+  const liste = document.getElementById('forum-liste');
+  liste.innerHTML = '<div style="text-align:center;padding:16px;color:#7A9E95;font-size:13px;">Chargement...</div>';
+
+  try {
+    const resp = await fetch(GAS_WEBAPP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'forum_lister', token: _espaceApprenant.token })
+    });
+    const result = await resp.json();
+    if (result.status !== 'success') {
+      liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${result.message || 'Erreur.'}</div>`;
+      return;
+    }
+    if (!result.questions.length) {
+      liste.innerHTML = '<div style="text-align:center;padding:16px;color:#7A9E95;font-size:13px;">Aucune question pour le moment — posez la vôtre ci-dessus.</div>';
+      return;
+    }
+    liste.innerHTML = result.questions.map(q => `
+      <div class="forum-item">
+        <div class="forum-question">${q.question}</div>
+        ${q.statut === 'repondu'
+          ? `<div class="forum-reponse"><strong>Réponse du Formateur :</strong> ${q.reponse}</div>`
+          : `<div class="forum-statut">En attente de réponse</div>`}
+      </div>
+    `).join('');
+  } catch (e) {
+    liste.innerHTML = '<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">Erreur réseau. Réessayez.</div>';
   }
 }
 

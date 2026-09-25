@@ -509,6 +509,14 @@ function enregistrerTelechargement(data) {
   // gratuites et illimitées, elles ne doivent jamais entamer le quota
   // (23/09/2026).
   const type = String(data.type || 'attestation').trim();
+
+  // Journal de suivi (admin) — TOUS les types de documents, contrairement
+  // au quota ci-dessous qui ne concerne que l'attestation. `geo` est
+  // fourni par le navigateur (voir index.html) : {pays, ville}, jamais de
+  // position GPS (voir suivi.gs pour le pourquoi). Best-effort, ne bloque
+  // jamais la suite en cas d'échec.
+  _journaliserTelechargement(id, type, data.geo || {});
+
   if (type !== 'attestation') return reponseJSON({ status: 'success' });
 
   try {

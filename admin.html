@@ -520,6 +520,18 @@
         <span class="iconify" data-icon="tabler:mail-forward"></span> Newsletter
       </button>
 
+      <div class="nav-section-label">Suivi apprenants</div>
+      <button class="nav-item" onclick="naviguer('suivi')">
+        <span class="iconify" data-icon="tabler:activity-heartbeat"></span> Téléchargements &amp; paiements
+      </button>
+      <button class="nav-item" onclick="naviguer('cours')">
+        <span class="iconify" data-icon="tabler:book-2"></span> Cours (Espace apprenant)
+      </button>
+      <button class="nav-item" onclick="naviguer('forum')">
+        <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions apprenants
+        <span class="nav-badge" id="badge-forum">0</span>
+      </button>
+
       <div class="nav-section-label">Outils</div>
       <button class="nav-item" onclick="exporterCSV()">
         <span class="iconify" data-icon="tabler:table-export"></span> Exporter CSV
@@ -756,6 +768,123 @@
           </button>
         </div>
         <div id="campagnes-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-suivi">
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title">
+            <span class="iconify" data-icon="tabler:alert-triangle" style="color:var(--orange-500,#F97316);"></span>
+            Apprenants "Initiation rapide (1 mois)" non payés
+          </span>
+          <span id="suivi-attente-count" style="font-size:12px;color:var(--text-3);"></span>
+        </div>
+        <p style="padding:0 20px 12px;font-size:12.5px;color:var(--text-3);line-height:1.6;">
+          Compteur de téléchargements d'attestation à zéro — bloqués tant que les 3 000 F n'ont pas été réglés
+          (carte et fiche restent accessibles, ce blocage ne concerne qu'eux).
+        </p>
+        <div id="suivi-attente-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Journal des téléchargements</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="suivi-journal-count" style="font-size:12px;color:var(--text-3);"></span>
+            <button class="btn btn-ghost btn-sm" onclick="chargerSuiviTelechargements()">
+              <span class="iconify" data-icon="tabler:refresh"></span>
+            </button>
+          </div>
+        </div>
+        <p style="padding:0 20px 12px;font-size:12px;color:var(--text-3);line-height:1.6;">
+          Pays/ville résolus côté navigateur de l'apprenant au moment du téléchargement (aucune position GPS
+          précise n'est demandée) — absents (« — ») si le service de localisation était indisponible.
+        </p>
+        <div id="suivi-journal-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-cours">
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title">
+            <span class="iconify" data-icon="tabler:circle-plus"></span> Ajouter un support de cours
+          </span>
+        </div>
+        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <label class="auth-label" for="cours-filiere">Filière</label>
+            <select id="cours-filiere" class="auth-input">
+              <option value="Informatique &amp; Bureautique">Informatique &amp; Bureautique</option>
+              <option value="Graphisme &amp; PAO">Graphisme &amp; PAO</option>
+              <option value="Sérigraphie">Sérigraphie</option>
+              <option value="Création de sites web">Création de sites web</option>
+              <option value="Initiation rapide (1 mois)">Initiation rapide (1 mois)</option>
+              <option value="Tous">Tous (support commun)</option>
+            </select>
+          </div>
+          <div>
+            <label class="auth-label" for="cours-type">Type</label>
+            <select id="cours-type" class="auth-input">
+              <option value="PDF">PDF</option>
+              <option value="Vidéo">Vidéo</option>
+              <option value="Lien">Lien</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label class="auth-label" for="cours-titre">Titre</label>
+            <input type="text" id="cours-titre" class="auth-input" placeholder="Ex. Module 1 — Prise en main de Word" maxlength="150" />
+          </div>
+          <div style="grid-column:1/-1;">
+            <label class="auth-label" for="cours-url">Lien (Google Drive, YouTube...)</label>
+            <input type="text" id="cours-url" class="auth-input" placeholder="https://..." />
+          </div>
+          <div style="grid-column:1/-1;">
+            <label class="auth-label" for="cours-description">Description (optionnel)</label>
+            <input type="text" id="cours-description" class="auth-input" maxlength="300" />
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px;">
+          <button class="btn btn-primary btn-sm" onclick="ajouterCoursAdmin()" id="btn-cours-ajouter">
+            <span class="iconify" data-icon="tabler:plus"></span> Ajouter
+          </button>
+          <div class="auth-error" id="err-cours"></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Supports déjà en ligne</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerCoursAdmin()">
+            <span class="iconify" data-icon="tabler:refresh"></span>
+          </button>
+        </div>
+        <div id="cours-table-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-forum">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Questions des apprenants</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerForumAdmin()">
+            <span class="iconify" data-icon="tabler:refresh"></span>
+          </button>
+        </div>
+        <p style="padding:12px 20px 0;font-size:12px;color:var(--text-3);line-height:1.6;">
+          Une question répondue devient visible aux autres apprenants de la même filière — les questions en
+          attente restent privées à leur auteur.
+        </p>
+        <div id="forum-table-container" style="padding:16px 20px;">
           <div class="loading-overlay"><div class="spinner"></div></div>
         </div>
       </div>
@@ -1367,6 +1496,7 @@ function ouvrirSession(token, email) {
   document.getElementById('sidebar-email').textContent = email;
   demarrerSurveillanceInactivite();
   chargerDashboard();
+  actualiserBadgeForum();
 }
 
 function deconnecter() {
@@ -1386,6 +1516,7 @@ function deconnecter() {
     document.getElementById('sidebar-email').textContent = email;
     demarrerSurveillanceInactivite();
     chargerDashboard();
+    actualiserBadgeForum();
   }
 })();
 
@@ -1398,7 +1529,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -1407,6 +1538,9 @@ function naviguer(page, filtre = '') {
   if (page === 'actualites')      { chargerActualitesAdmin(); chargerBandeauAdmin(); chargerModePaiementAdmin(); chargerAccesEspaceApprenant(); }
   if (page === 'messages')        chargerBoiteMessages();
   if (page === 'newsletter')      { chargerNewsletterAbonnes(); chargerCampagnesNewsletter(); }
+  if (page === 'suivi')           chargerSuiviTelechargements();
+  if (page === 'cours')           chargerCoursAdmin();
+  if (page === 'forum')           chargerForumAdmin();
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -3123,6 +3257,224 @@ async function debloquerTelechargement(id) {
   } catch (e) {
     toast('Erreur réseau.', 'error');
   }
+}
+
+/* ================================================================
+   SUIVI APPRENANTS — journal des téléchargements + paiements en attente
+================================================================ */
+async function chargerSuiviTelechargements() {
+  const attenteEl = document.getElementById('suivi-attente-container');
+  const journalEl = document.getElementById('suivi-journal-container');
+  attenteEl.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  journalEl.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+
+  try {
+    const result = await apiCall('admin_get_suivi_telechargements');
+    if (result.status !== 'success') throw new Error(result.message);
+
+    document.getElementById('suivi-attente-count').textContent = `${result.enAttentePaiement.length} en attente`;
+    if (!result.enAttentePaiement.length) {
+      attenteEl.innerHTML = '<div class="empty-state"><p>Aucun apprenant en attente de paiement.</p></div>';
+    } else {
+      attenteEl.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Nom</th><th>Téléphone</th><th>Statut dossier</th><th></th></tr></thead>
+          <tbody>${result.enAttentePaiement.map(a => `
+            <tr>
+              <td>${a.id}</td>
+              <td>${a.nom}</td>
+              <td>${a.telephone}</td>
+              <td>${a.statut}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="debloquerTelechargement('${a.id}')">
+                <span class="iconify" data-icon="tabler:lock-open"></span> Débloquer (paiement reçu)
+              </button></td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+
+    document.getElementById('suivi-journal-count').textContent = `${result.journal.length} mouvement(s)`;
+    if (!result.journal.length) {
+      journalEl.innerHTML = '<div class="empty-state"><p>Aucun téléchargement enregistré pour le moment.</p></div>';
+    } else {
+      journalEl.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>ID</th><th>Nom</th><th>Filière</th><th>Document</th><th>Pays</th><th>Ville</th><th>Statut paiement</th></tr></thead>
+          <tbody>${result.journal.map(j => `
+            <tr>
+              <td>${new Date(j.date).toLocaleString('fr-FR')}</td>
+              <td>${j.id}</td>
+              <td>${j.nom}</td>
+              <td>${j.filiere}</td>
+              <td>${j.type}</td>
+              <td>${j.pays || '—'}</td>
+              <td>${j.ville || '—'}</td>
+              <td>${j.statutPaiement}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+  } catch (e) {
+    attenteEl.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+    journalEl.innerHTML = '';
+  }
+}
+
+/* ================================================================
+   COURS — supports de l'Espace apprenant
+================================================================ */
+async function chargerCoursAdmin() {
+  const container = document.getElementById('cours-table-container');
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_cours_lister');
+    if (result.status !== 'success') throw new Error(result.message);
+    if (!result.cours.length) {
+      container.innerHTML = '<div class="empty-state"><p>Aucun support ajouté pour le moment.</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>Filière</th><th>Titre</th><th>Type</th><th>Ajouté le</th><th></th></tr></thead>
+        <tbody>${result.cours.map(c => `
+          <tr>
+            <td>${c.filiere}</td>
+            <td><a href="${c.url}" target="_blank" rel="noopener">${c.titre}</a></td>
+            <td>${c.type}</td>
+            <td>${new Date(c.dateAjout).toLocaleDateString('fr-FR')}</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="supprimerCoursAdmin('${c.id}')">
+              <span class="iconify" data-icon="tabler:trash"></span>
+            </button></td>
+          </tr>`).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+  }
+}
+
+async function ajouterCoursAdmin() {
+  const filiere     = document.getElementById('cours-filiere').value;
+  const type        = document.getElementById('cours-type').value;
+  const titre       = document.getElementById('cours-titre').value.trim();
+  const url         = document.getElementById('cours-url').value.trim();
+  const description = document.getElementById('cours-description').value.trim();
+  const errEl       = document.getElementById('err-cours');
+  const btn         = document.getElementById('btn-cours-ajouter');
+
+  errEl.classList.remove('show'); errEl.textContent = '';
+  if (!titre || !url) {
+    errEl.textContent = 'Titre et lien sont obligatoires.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    const result = await apiCall('admin_cours_ajouter', { filiere, type, titre, url, description });
+    if (result.status === 'success') {
+      toast('Support ajouté.', 'success');
+      document.getElementById('cours-titre').value = '';
+      document.getElementById('cours-url').value = '';
+      document.getElementById('cours-description').value = '';
+      chargerCoursAdmin();
+    } else {
+      errEl.textContent = result.message || 'Erreur.';
+      errEl.classList.add('show');
+    }
+  } catch (e) {
+    toast('Erreur réseau.', 'error');
+  }
+  btn.disabled = false;
+}
+
+async function supprimerCoursAdmin(id) {
+  confirmer('Supprimer ce support', 'Les apprenants n\'y auront plus accès. Confirmer ?', async () => {
+    try {
+      const result = await apiCall('admin_cours_supprimer', { id });
+      if (result.status === 'success') { toast('Support supprimé.', 'success'); chargerCoursAdmin(); }
+      else toast(result.message || 'Erreur.', 'error');
+    } catch (e) {
+      toast('Erreur réseau.', 'error');
+    }
+  });
+}
+
+/* ================================================================
+   FORUM — questions des apprenants
+================================================================ */
+async function actualiserBadgeForum() {
+  try {
+    const result = await apiCall('admin_forum_lister');
+    if (result.status !== 'success') return;
+    const enAttente = result.questions.filter(q => q.statut === 'en_attente').length;
+    const badge = document.getElementById('badge-forum');
+    if (badge) badge.textContent = enAttente;
+  } catch (e) { /* silencieux — simple badge de notification */ }
+}
+
+async function chargerForumAdmin() {
+  const container = document.getElementById('forum-table-container');
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_forum_lister');
+    if (result.status !== 'success') throw new Error(result.message);
+
+    const badge = document.getElementById('badge-forum');
+    if (badge) badge.textContent = result.questions.filter(q => q.statut === 'en_attente').length;
+
+    if (!result.questions.length) {
+      container.innerHTML = '<div class="empty-state"><p>Aucune question pour le moment.</p></div>';
+      return;
+    }
+    container.innerHTML = result.questions.map(q => `
+      <div class="table-card" style="margin-bottom:12px;${q.statut === 'en_attente' ? 'border:1px solid var(--orange-500,#F97316);' : ''}">
+        <div style="padding:14px 18px;">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">
+            ${q.nom} — ${q.filiere} — ${new Date(q.dateQuestion).toLocaleString('fr-FR')}
+          </div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:10px;">${q.question}</div>
+          ${q.statut === 'repondu'
+            ? `<div style="background:var(--teal-dim,#E1F5EE);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:10px;">
+                 <strong>Réponse (${q.reponduPar}) :</strong> ${q.reponse}
+               </div>`
+            : `<div style="display:flex;gap:8px;align-items:flex-start;">
+                 <textarea id="reponse-${q.id}" rows="2" placeholder="Votre réponse..." class="auth-input" style="flex:1;"></textarea>
+                 <button class="btn btn-primary btn-sm" onclick="repondreForumAdmin('${q.id}')">
+                   <span class="iconify" data-icon="tabler:send"></span>
+                 </button>
+               </div>`}
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="supprimerForumAdmin('${q.id}')">
+            <span class="iconify" data-icon="tabler:trash"></span> Supprimer
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+  }
+}
+
+async function repondreForumAdmin(id) {
+  const zone    = document.getElementById('reponse-' + id);
+  const reponse = zone.value.trim();
+  if (!reponse) { toast('Écrivez une réponse avant d\'envoyer.', 'error'); return; }
+  try {
+    const result = await apiCall('admin_forum_repondre', { id, reponse });
+    if (result.status === 'success') { toast('Réponse envoyée.', 'success'); chargerForumAdmin(); }
+    else toast(result.message || 'Erreur.', 'error');
+  } catch (e) {
+    toast('Erreur réseau.', 'error');
+  }
+}
+
+async function supprimerForumAdmin(id) {
+  confirmer('Supprimer cette question', 'Cette action est irréversible. Confirmer ?', async () => {
+    try {
+      const result = await apiCall('admin_forum_supprimer', { id });
+      if (result.status === 'success') { toast('Question supprimée.', 'success'); chargerForumAdmin(); }
+      else toast(result.message || 'Erreur.', 'error');
+    } catch (e) {
+      toast('Erreur réseau.', 'error');
+    }
+  });
 }
 </script>
 <script src="js/attestation_generator.js"></script>

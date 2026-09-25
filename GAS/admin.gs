@@ -72,6 +72,16 @@ function routerAdmin(data, action) {
       case 'admin_envoyer_newsletter':       return requireAuth(data, adminEnvoyerNewsletter);
       case 'admin_get_campagnes_newsletter': return requireAuth(data, adminGetCampagnesNewsletter);
 
+      case 'admin_get_suivi_telechargements': return requireAuth(data, adminGetSuiviTelechargements);
+
+      case 'admin_cours_lister':    return requireAuth(data, adminCoursLister);
+      case 'admin_cours_ajouter':   return requireAuth(data, adminCoursAjouter);
+      case 'admin_cours_supprimer': return requireAuth(data, adminCoursSupprimer);
+
+      case 'admin_forum_lister':    return requireAuth(data, adminForumLister);
+      case 'admin_forum_repondre':  return requireAuth(data, adminForumRepondre);
+      case 'admin_forum_supprimer': return requireAuth(data, adminForumSupprimer);
+
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
     }
