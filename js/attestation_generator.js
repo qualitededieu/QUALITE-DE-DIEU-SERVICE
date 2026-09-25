@@ -725,10 +725,22 @@ async function genererAttestationCanvas(apprenant, token) {
       }
       ctx.fillStyle = COULEUR_PRINCIPALE;
       const dW = _mw(ctx, domaineTxt);
-      ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, posY + 14);
-      posY += _g(34);
-      _rect(ctx, CENTRE_HAUT - dW / 2 - 40, posY + 10, dW + 80, 6, ATT.OR);
-      posY += _g(76);
+      const baselineY = posY + 14;
+      ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, baselineY);
+      // Marge sous la ligne de base = jambage RÉELLEMENT mesuré du texte
+      // rendu (Canvas 2D expose actualBoundingBoxDescent pour ça), pas une
+      // estimation au pifomètre — Great Vibes a des jambages (y, g, p, j)
+      // bien plus profonds qu'une police normale, et leur profondeur varie
+      // aussi selon les lettres réellement présentes dans l'intitulé. Une
+      // marge fixe (34px) finissait par être traversée par ces jambages sur
+      // les intitulés longs (ex. "Technicien Polyvalent en Bureautique,
+      // Graphisme & Sérigraphie") — chevauchement constaté sur une vraie
+      // attestation, signalé par le PDG le 25/09/2026.
+      const metrics = ctx.measureText(domaineTxt);
+      const jambage = metrics.actualBoundingBoxDescent || Math.round(taille * 0.5);
+      const ruleY = baselineY + jambage + 8; // +8 : filet visuellement détaché, jamais collé
+      _rect(ctx, CENTRE_HAUT - dW / 2 - 40, ruleY, dW + 80, 6, ATT.OR);
+      posY = ruleY + _g(76);
     }
 
     _font(ctx, 44, "normal");
@@ -854,16 +866,23 @@ async function genererAttestationCanvas(apprenant, token) {
     posY += 80;
 
     const intitule = _intituleAffichage(apprenant.filiere, estStage, apprenant.sexe);
-    ctx.font = document.fonts.check("120px 'Great Vibes'")
+    const policeIntitule = document.fonts.check("120px 'Great Vibes'")
       ? "120px 'Great Vibes'"
       : "italic bold 90px 'Times New Roman', Times, serif";
+    ctx.font = policeIntitule;
     ctx.fillStyle = COULEUR_PRINCIPALE;
     {
       const iW = _mw(ctx, intitule);
-      ctx.fillText(intitule, CENTRE_HAUT_COURT - iW / 2, posY + 20);
-      posY += 40;
-      _rect(ctx, CENTRE_HAUT_COURT - iW / 2 - 40, posY + 12, iW + 80, 6, ATT.OR);
-      posY += 70;
+      const baselineY = posY + 20;
+      ctx.fillText(intitule, CENTRE_HAUT_COURT - iW / 2, baselineY);
+      // Même correctif mesuré que le gabarit long (voir plus haut, même
+      // date de signalement) : marge = jambage réel du texte rendu, jamais
+      // une estimation fixe.
+      const metrics = ctx.measureText(intitule);
+      const jambage = metrics.actualBoundingBoxDescent || 60;
+      const ruleY = baselineY + jambage + 8;
+      _rect(ctx, CENTRE_HAUT_COURT - iW / 2 - 40, ruleY, iW + 80, 6, ATT.OR);
+      posY = ruleY + 70;
     }
 
     _font(ctx, 38, "italic");

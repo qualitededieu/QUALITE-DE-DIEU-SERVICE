@@ -1497,6 +1497,7 @@ function ouvrirSession(token, email) {
   demarrerSurveillanceInactivite();
   chargerDashboard();
   actualiserBadgeForum();
+  _demarrerPollingBadgeForum();
 }
 
 function deconnecter() {
@@ -1517,6 +1518,7 @@ function deconnecter() {
     demarrerSurveillanceInactivite();
     chargerDashboard();
     actualiserBadgeForum();
+    _demarrerPollingBadgeForum();
   }
 })();
 
@@ -3408,6 +3410,19 @@ async function actualiserBadgeForum() {
     const badge = document.getElementById('badge-forum');
     if (badge) badge.textContent = enAttente;
   } catch (e) { /* silencieux — simple badge de notification */ }
+}
+
+// Nouvelle question apprenant "en direct" côté admin, sans exiger une
+// actualisation manuelle : on ne rafraîchit QUE le badge de compteur en
+// tâche de fond (jamais le contenu de la page Forum elle-même — un
+// admin peut être en train de taper une réponse au moment du poll, et
+// remplacer le HTML sous ses doigts effacerait sa saisie).
+let _pollingBadgeForumId = null;
+function _demarrerPollingBadgeForum() {
+  if (_pollingBadgeForumId) return;
+  _pollingBadgeForumId = setInterval(() => {
+    if (!document.hidden && state.token) actualiserBadgeForum();
+  }, 20000);
 }
 
 async function chargerForumAdmin() {

@@ -452,7 +452,7 @@
           <li><a href="#blog"           class="nav-link">Actualités</a></li>
           <li><a href="#contact"        class="nav-link">Contact</a></li>
            <li><a href="/postuler"               class="nav-link">Postuler</a></li>
-          <li><a href="#carte"          class="nav-link">Espace apprenant</a></li>
+          <li><a href="espace-apprenant.html" class="nav-link">Espace apprenant</a></li>
           <li><a href="#inscription"    class="btn-nav-cta">S'inscrire</a></li>
         </ul>
         <button class="nav-burger" id="navBurger" aria-label="Menu">
@@ -467,7 +467,7 @@
         <li><a href="#blog"          onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="#contact"       onclick="closeMobileNav()">Contact</a></li>
          <li><a href="/postuler"              onclick="closeMobileNav()">Postuler</a></li>
-        <li><a href="#carte"         onclick="closeMobileNav()">Espace apprenant</a></li>
+        <li><a href="espace-apprenant.html" onclick="closeMobileNav()">Espace apprenant</a></li>
         <li><a href="#inscription"   onclick="closeMobileNav()" style="color:var(--teal-600);font-weight:700;">S'inscrire maintenant</a></li>
       </ul>
     </div>
@@ -1214,129 +1214,20 @@
   <div class="container">
     <div class="section-header reveal">
       <span class="section-tag">Espace apprenant</span>
-      <h2 class="section-title">Vos documents officiels</h2>
+      <h2 class="section-title">Vos documents et vos cours, dans votre propre espace</h2>
       <p class="section-subtitle">
-        Carte d'apprentissage, attestation de fin de formation, fiche apprenant et badge de
-        certification. Saisissez votre numéro de dossier et votre téléphone pour y accéder.
+        Carte d'apprentissage, attestation de fin de formation, fiche apprenant, badge de
+        certification, supports de cours et questions au Formateur — tout est réuni dans un
+        espace personnel accessible avec votre numéro de dossier et votre téléphone.
       </p>
     </div>
 
-    <div style="max-width:460px;margin:0 auto;" class="reveal">
-      <div id="espace-form-card" style="background:#FFF;border-radius:16px;padding:32px;box-shadow:0 8px 40px rgba(4,52,44,0.10);">
-
-        <div id="carte-msg" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:14px;"></div>
-
-        <div style="margin-bottom:18px;">
-          <label style="display:block;font-size:12px;font-weight:700;color:#7A9E95;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">
-            Numéro de dossier
-          </label>
-          <input id="carte-id" type="text" placeholder="LQD-XXXXXX-XXXX"
-            style="width:100%;padding:12px 16px;border:1.5px solid #D4E4DF;border-radius:10px;font-size:14px;font-family:monospace;outline:none;transition:border .2s;"
-            onfocus="this.style.borderColor='#04342C'" onblur="this.style.borderColor='#D4E4DF'"/>
-        </div>
-
-        <div style="margin-bottom:24px;">
-          <label style="display:block;font-size:12px;font-weight:700;color:#7A9E95;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">
-            Numéro de téléphone
-          </label>
-          <input id="carte-tel" type="tel" placeholder="+229 01 XX XX XX XX"
-            style="width:100%;padding:12px 16px;border:1.5px solid #D4E4DF;border-radius:10px;font-size:14px;outline:none;transition:border .2s;"
-            onfocus="this.style.borderColor='#04342C'" onblur="this.style.borderColor='#D4E4DF'"/>
-        </div>
-
-        <button id="carte-btn" onclick="obtenirCarte()"
-          style="width:100%;padding:14px;background:#04342C;color:#FFF;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;transition:background .2s;">
-          <span class="iconify" data-icon="tabler:id-badge-2"></span>
-          Accéder à mes documents
-        </button>
-
-      </div>
-
-      <div id="espace-dashboard" style="display:none;background:#FFF;border-radius:16px;padding:28px;box-shadow:0 8px 40px rgba(4,52,44,0.10);">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
-          <div style="width:44px;height:44px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <span class="iconify" data-icon="tabler:user-check" style="font-size:22px;color:#0D7A8A;"></span>
-          </div>
-          <div>
-            <div id="espace-nom" style="font-weight:700;color:#04342C;font-size:15px;"></div>
-            <div id="espace-filiere" style="font-size:12px;color:#7A9E95;"></div>
-          </div>
-        </div>
-
-        <div class="espace-tabs">
-          <button class="espace-tab active" data-tab="documents" onclick="basculerOngletEspace('documents')">
-            <span class="iconify" data-icon="tabler:files"></span> Documents
-          </button>
-          <button class="espace-tab" data-tab="cours" onclick="basculerOngletEspace('cours')">
-            <span class="iconify" data-icon="tabler:book-2"></span> Mes cours
-          </button>
-          <button class="espace-tab" data-tab="forum" onclick="basculerOngletEspace('forum')">
-            <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions
-          </button>
-        </div>
-
-        <div id="espace-tab-documents" class="espace-tab-panel">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <button class="btn-doc-espace" onclick="ouvrirDocument('carte')">
-              <span class="iconify" data-icon="tabler:id-badge-2"></span> Ma carte
-            </button>
-            <button class="btn-doc-espace" onclick="ouvrirDocument('attestation')">
-              <span class="iconify" data-icon="tabler:certificate"></span> Attestation
-            </button>
-            <button class="btn-doc-espace" onclick="ouvrirDocument('fiche')">
-              <span class="iconify" data-icon="tabler:file-description"></span> Fiche apprenant
-            </button>
-            <button class="btn-doc-espace" onclick="ouvrirDocument('badge')">
-              <span class="iconify" data-icon="tabler:award"></span> Badge
-            </button>
-          </div>
-        </div>
-
-        <div id="espace-tab-cours" class="espace-tab-panel" style="display:none;">
-          <div id="cours-liste" style="display:flex;flex-direction:column;gap:10px;"></div>
-          <div id="cours-vide" style="display:none;text-align:center;color:#7A9E95;font-size:13px;padding:20px 0;">
-            Aucun support disponible pour votre filière pour le moment.
-          </div>
-        </div>
-
-        <div id="espace-tab-forum" class="espace-tab-panel" style="display:none;">
-          <div style="margin-bottom:16px;">
-            <textarea id="forum-question" rows="3" placeholder="Posez votre question au Formateur..."
-              style="width:100%;padding:12px 14px;border:1.5px solid #D4E4DF;border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"></textarea>
-            <div id="forum-msg" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
-            <button id="forum-btn" onclick="poserQuestionForum()"
-              style="margin-top:10px;width:100%;padding:12px;background:#0D7A8A;color:#FFF;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
-              Envoyer ma question
-            </button>
-          </div>
-          <div id="forum-liste" style="display:flex;flex-direction:column;gap:12px;"></div>
-        </div>
-
-        <button onclick="reinitialiserEspace()" style="margin-top:18px;width:100%;background:none;border:none;color:#7A9E95;font-size:13px;cursor:pointer;font-family:inherit;">
-          &larr; Changer de dossier
-        </button>
-      </div>
-      <style>
-        .btn-doc-espace{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 10px;
-          background:#F0F4F2;border:1.5px solid transparent;border-radius:12px;cursor:pointer;
-          font-family:inherit;font-size:13px;font-weight:600;color:#04342C;transition:all .2s;}
-        .btn-doc-espace .iconify{font-size:24px;color:#0D7A8A;}
-        .btn-doc-espace:hover{background:#E1F5EE;border-color:#0D7A8A;}
-        .espace-tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1.5px solid #E1E8E5;}
-        .espace-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 6px;
-          background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;font-family:inherit;
-          font-size:12.5px;font-weight:700;color:#7A9E95;transition:all .2s;}
-        .espace-tab .iconify{font-size:16px;}
-        .espace-tab.active{color:#04342C;border-bottom-color:#0D7A8A;}
-        .cours-item{background:#F0F4F2;border-radius:10px;padding:14px 16px;}
-        .cours-item .cours-titre{font-weight:700;color:#04342C;font-size:14px;margin-bottom:2px;}
-        .cours-item .cours-desc{font-size:12.5px;color:#5A6C66;margin-bottom:8px;}
-        .cours-item a{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#0D7A8A;text-decoration:none;}
-        .forum-item{background:#F0F4F2;border-radius:10px;padding:14px 16px;}
-        .forum-item .forum-question{font-size:13.5px;color:#04342C;font-weight:600;margin-bottom:6px;}
-        .forum-item .forum-reponse{font-size:13px;color:#1F4F45;background:#E1F5EE;border-radius:8px;padding:10px 12px;margin-top:8px;}
-        .forum-item .forum-statut{font-size:11px;color:#B9862E;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
-      </style>
+    <div style="max-width:420px;margin:0 auto;text-align:center;" class="reveal">
+      <a href="espace-apprenant.html"
+        style="display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:#04342C;color:#FFF;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;font-family:inherit;transition:background .2s;">
+        <span class="iconify" data-icon="tabler:login-2"></span>
+        Me connecter à mon espace
+      </a>
     </div>
   </div>
 </section>
