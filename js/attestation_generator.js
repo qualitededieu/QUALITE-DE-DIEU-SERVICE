@@ -727,18 +727,23 @@ async function genererAttestationCanvas(apprenant, token) {
       const dW = _mw(ctx, domaineTxt);
       const baselineY = posY + 14;
       ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, baselineY);
-      // Marge sous la ligne de base = jambage RÉELLEMENT mesuré du texte
-      // rendu (Canvas 2D expose actualBoundingBoxDescent pour ça), pas une
-      // estimation au pifomètre — Great Vibes a des jambages (y, g, p, j)
-      // bien plus profonds qu'une police normale, et leur profondeur varie
-      // aussi selon les lettres réellement présentes dans l'intitulé. Une
-      // marge fixe (34px) finissait par être traversée par ces jambages sur
-      // les intitulés longs (ex. "Technicien Polyvalent en Bureautique,
-      // Graphisme & Sérigraphie") — chevauchement constaté sur une vraie
-      // attestation, signalé par le PDG le 25/09/2026.
+      // Marge sous la ligne de base. Première tentative : se fier uniquement
+      // à actualBoundingBoxDescent (jambage réellement mesuré). Ca n'a PAS
+      // suffi en conditions réelles (chevauchement encore signalé par le PDG
+      // le 25/09/2026 après déploiement du correctif "mesuré") : ce métrique
+      // canvas est documenté comme peu fiable sur certains moteurs de rendu
+      // pour des polices web décoratives chargées via FontFace (valeur trop
+      // faible ou golfée). On ne fait donc plus confiance à la seule mesure :
+      // on prend le MAX entre la mesure et un minimum garanti, calculé à
+      // partir de la taille de police et calibré large pour les jambages
+      // profonds de Great Vibes (y, g, p, j, souvent 60 à 65% du corps de
+      // police pour cette police précise). Si la mesure est bonne, elle ne
+      // change rien (le plancher est en dessous) ; si elle est sous-évaluée
+      // ou nulle, le plancher rattrape le coup.
       const metrics = ctx.measureText(domaineTxt);
-      const jambage = metrics.actualBoundingBoxDescent || Math.round(taille * 0.5);
-      const ruleY = baselineY + jambage + 8; // +8 : filet visuellement détaché, jamais collé
+      const jambagePlancher = Math.round(taille * 0.68);
+      const jambage = Math.max(metrics.actualBoundingBoxDescent || 0, jambagePlancher);
+      const ruleY = baselineY + jambage + 14; // +14 : filet visuellement détaché, jamais collé
       _rect(ctx, CENTRE_HAUT - dW / 2 - 40, ruleY, dW + 80, 6, ATT.OR);
       posY = ruleY + _g(76);
     }
@@ -875,12 +880,12 @@ async function genererAttestationCanvas(apprenant, token) {
       const iW = _mw(ctx, intitule);
       const baselineY = posY + 20;
       ctx.fillText(intitule, CENTRE_HAUT_COURT - iW / 2, baselineY);
-      // Même correctif mesuré que le gabarit long (voir plus haut, même
-      // date de signalement) : marge = jambage réel du texte rendu, jamais
-      // une estimation fixe.
+      // Même logique que le gabarit long (voir plus haut) : max(mesure, plancher
+      // garanti) au lieu de se fier uniquement à actualBoundingBoxDescent.
       const metrics = ctx.measureText(intitule);
-      const jambage = metrics.actualBoundingBoxDescent || 60;
-      const ruleY = baselineY + jambage + 8;
+      const jambagePlancher = Math.round(120 * 0.68);
+      const jambage = Math.max(metrics.actualBoundingBoxDescent || 0, jambagePlancher);
+      const ruleY = baselineY + jambage + 14;
       _rect(ctx, CENTRE_HAUT_COURT - iW / 2 - 40, ruleY, iW + 80, 6, ATT.OR);
       posY = ruleY + 70;
     }
