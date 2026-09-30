@@ -890,7 +890,7 @@ function afficherPromptPaiementTelechargement(apprenant, montant, type = 'attest
     let _pollingForumId = null;
     function _demarrerPollingForum() {
       _arreterPollingForum();
-      _pollingForumId = setInterval(() => chargerForumEspace(true), 6000);
+      _pollingForumId = setInterval(() => chargerForumEspace(true), 30000); // 30 s : chaque appel coûte du temps d'exécution GAS (quota partagé par tout le site)
     }
     function _arreterPollingForum() {
       if (_pollingForumId) { clearInterval(_pollingForumId); _pollingForumId = null; }

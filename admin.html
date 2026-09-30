@@ -1261,7 +1261,16 @@ async function apiCall(action, extra = {}) {
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload)
   });
-  const result = await resp.json();
+  // GAS surchargé (trop d'exécutions simultanées, quota) : il renvoie une
+  // page HTML d'erreur au lieu de JSON. On le signale clairement au lieu
+  // d'un "Erreur réseau" trompeur.
+  const texte = await resp.text();
+  let result;
+  try { result = JSON.parse(texte); }
+  catch (e) {
+    console.error('[apiCall] Réponse non JSON pour', action, ':', texte.slice(0, 300));
+    throw new Error('Serveur momentanément surchargé. Patientez quelques secondes puis réessayez.');
+  }
   if (result.status === 'auth_error') {
     gererSessionExpiree();
     throw new Error(result.message || 'Session expirée.');
@@ -1272,7 +1281,7 @@ async function apiCall(action, extra = {}) {
 /* ================================================================
    EXPIRATION DE SESSION — déconnexion propre + retour direct à /admin
    (côté serveur, via requireAuth) et inactivité côté client (voir
-   plus bas : compte à rebours de 15s après 3 min sans interaction).
+   plus bas : compte à rebours de 15s après 60 min sans interaction).
 ================================================================ */
 function gererSessionExpiree() {
   arreterSurveillanceInactivite();
@@ -1283,12 +1292,13 @@ function gererSessionExpiree() {
 
 /* ================================================================
    INACTIVITÉ — avertissement 15s avant déconnexion automatique
-   après 3 minutes sans interaction (souris, clavier, tactile).
+   après 60 minutes sans interaction (souris, clavier, tactile) —
+   durée portée de 3 à 60 minutes le 30/09/2026.
    Le minuteur d'inactivité se réinitialise à chaque geste tant que
    l'avertissement n'est pas déclenché ; une fois affiché, seul le
    bouton "Rester connecté" (ou une nouvelle interaction) l'annule.
 ================================================================ */
-const INACTIVITE_AVANT_ALERTE_MS = 3 * 60 * 1000 - 15 * 1000; // 2 min 45 s
+const INACTIVITE_AVANT_ALERTE_MS = 60 * 60 * 1000 - 15 * 1000; // 59 min 45 s
 const INACTIVITE_COMPTE_A_REBOURS_S = 15;
 
 let _minuteurInactivite   = null;
@@ -1514,7 +1524,7 @@ async function handleGoogleCredential(response) {
     const result = await apiCall('admin_verify_google', { googleToken: response.credential });
     if (result.status === 'success') { ouvrirSession(result.token, result.email); }
     else { errEl.textContent = result.message || 'Accès refusé.'; errEl.classList.add('show'); }
-  } catch(e) { errEl.textContent = 'Erreur réseau.'; errEl.classList.add('show'); }
+  } catch(e) { errEl.textContent = e.message && e.message.indexOf('surchargé') !== -1 ? e.message : 'Erreur réseau.'; errEl.classList.add('show'); }
 }
 
 function ouvrirSession(token, email) {
@@ -1537,7 +1547,15 @@ function deconnecter() {
   });
 }
 
-(function() {
+// Restauration de session après rechargement de la page.
+// CORRECTIF (30/09/2026) : exécutée au DOMContentLoaded, c'est-à-dire
+// APRÈS l'initialisation de toutes les variables du script. Lancée
+// immédiatement (comme avant), elle touchait _pollingBadgeForumId avant
+// sa déclaration : l'erreur interrompait le script, et toutes les
+// constantes suivantes (dont NIVEAU_OPTIONS_ADMIN) restaient
+// inaccessibles — d'où "Cannot access ... before initialization" à
+// l'ouverture d'un dossier après un rechargement.
+document.addEventListener('DOMContentLoaded', function() {
   const token = sessionStorage.getItem('lqd_token');
   const email = sessionStorage.getItem('lqd_email');
   if (token && email) {
@@ -1550,7 +1568,7 @@ function deconnecter() {
     actualiserBadgeForum();
     _demarrerPollingBadgeForum();
   }
-})();
+});
 
 /* ================================================================
    NAVIGATION
@@ -3488,7 +3506,7 @@ function _demarrerPollingBadgeForum() {
   if (_pollingBadgeForumId) return;
   _pollingBadgeForumId = setInterval(() => {
     if (!document.hidden && state.token) actualiserBadgeForum();
-  }, 20000);
+  }, 60000);
 }
 
 async function chargerForumAdmin() {

@@ -58,6 +58,12 @@ function _temEtoiles(note) {
   return wrap;
 }
 
+// Noms souvent saisis en MAJUSCULES dans le tableur : affichage en
+// casse normale ("COSSI PHILIPPE T." -> "Cossi Philippe T.").
+function _temCasseNom(nom) {
+  return String(nom || '').toLowerCase().replace(/(^|[\s'-])([a-zà-ÿ])/g, (m, sep, l) => sep + l.toUpperCase());
+}
+
 function _temInitiales(nom) {
   return String(nom || '?').split(' ').filter(Boolean).slice(0, 2).map(m => m.charAt(0).toUpperCase()).join('');
 }
@@ -92,7 +98,7 @@ function _temCarte(t) {
 
   const infos = document.createElement('div');
   const nom = document.createElement('strong');
-  nom.textContent = t.nom;
+  nom.textContent = _temCasseNom(t.nom);
   const fil = document.createElement('span');
   fil.textContent = t.filiere;
   const badge = document.createElement('span');
