@@ -413,6 +413,41 @@
       .footer-grid{grid-template-columns:1fr}
       .footer-brand{grid-column:span 1}
     }
+
+    /* TÉMOIGNAGES (30/09/2026) */
+    .tem-resume{display:none;align-items:center;gap:10px;margin-top:18px;background:var(--white);border:1px solid var(--gray-100);border-radius:50px;padding:8px 18px;font-size:14px;font-weight:600;color:var(--gray-700);box-shadow:var(--shadow-card)}
+    .tem-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+    .tem-card{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:16px}
+    .tem-etoiles{display:inline-flex;gap:2px;color:var(--orange-500);font-size:18px}
+    .tem-texte{font-size:15px;line-height:1.75;color:var(--gray-700);flex:1;white-space:pre-line;word-break:break-word}
+    .tem-auteur{display:flex;align-items:center;gap:12px;border-top:1px solid var(--gray-100);padding-top:16px}
+    .tem-auteur strong{display:block;font-size:14px;color:var(--gray-900)}
+    .tem-auteur span{display:block;font-size:12px;color:var(--gray-500)}
+    .tem-auteur .tem-badge{display:inline-flex;align-items:center;gap:4px;margin-top:4px;color:var(--teal-700);font-weight:700}
+    .tem-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--orange-100)}
+    .tem-avatar-texte{display:flex;align-items:center;justify-content:center;background:var(--teal-50);color:var(--teal-700);font-weight:800;font-family:'Sora',sans-serif}
+    .tem-vide{grid-column:1/-1;text-align:center;color:var(--gray-500);padding:30px 16px;line-height:1.7}
+    .tem-cta{text-align:center;margin-top:40px}
+    .tem-form-bloc{display:none;max-width:680px;margin:40px auto 0;background:var(--white);border-radius:var(--radius-lg);padding:30px;box-shadow:var(--shadow-card);border:1px solid var(--gray-100)}
+    .tem-form-bloc h3{font-size:1.25rem;margin-bottom:6px}
+    .tem-form-bloc .tem-intro{font-size:14px;color:var(--gray-500);margin-bottom:22px;line-height:1.6}
+    .tem-note-choix{display:flex;gap:6px}
+    .tem-note-choix button{background:none;border:none;cursor:pointer;font-size:30px;color:var(--gray-300);padding:2px;line-height:1}
+    .tem-note-choix button.actif{color:var(--orange-500)}
+    .tem-note-choix button:focus-visible{outline:2px solid var(--teal-600);border-radius:4px}
+    .tem-compteur{display:block;text-align:right;font-size:12px;color:var(--gray-500);margin-top:4px}
+    .tem-compteur.insuffisant{color:var(--red-500)}
+    .tem-radios{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--gray-700)}
+    .tem-radios label{display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer}
+    .tem-photo-apercu img{margin-top:10px;width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--orange-100)}
+    .tem-consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--gray-700);line-height:1.6;margin:6px 0 16px}
+    .tem-consent input{margin-top:3px;flex-shrink:0}
+    .tem-msg{display:none;margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);font-size:14px;line-height:1.6}
+    .tem-msg.show{display:block}
+    .tem-msg.ok{background:var(--green-50);color:var(--teal-800)}
+    .tem-msg.err{background:var(--red-50);color:#9B2C2C}
+    .tem-legal{font-size:12px;color:var(--gray-500);margin-top:12px;line-height:1.6}
+    @media (max-width:600px){.tem-form-bloc{padding:22px 16px}.tem-card{padding:20px}.tem-form-bloc .form-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -449,6 +484,7 @@
           <li><a href="#services"       class="nav-link">Services</a></li>
           <li><a href="#renseignement"  class="nav-link">Renseignements</a></li>
           <li><a href="#galerie"        class="nav-link">Galerie</a></li>
+          <li><a href="#temoignages"    class="nav-link">Témoignages</a></li>
           <li><a href="#blog"           class="nav-link">Actualités</a></li>
           <li><a href="#contact"        class="nav-link">Contact</a></li>
            <li><a href="/postuler"               class="nav-link">Postuler</a></li>
@@ -464,6 +500,7 @@
         <li><a href="#services"      onclick="closeMobileNav()">Services</a></li>
         <li><a href="#renseignement" onclick="closeMobileNav()">Renseignements</a></li>
         <li><a href="#galerie"       onclick="closeMobileNav()">Galerie</a></li>
+        <li><a href="#temoignages"   onclick="closeMobileNav()">Témoignages</a></li>
         <li><a href="#blog"          onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="#contact"       onclick="closeMobileNav()">Contact</a></li>
          <li><a href="/postuler"              onclick="closeMobileNav()">Postuler</a></li>
@@ -1152,6 +1189,95 @@
       <p style="text-align:center;font-size:11px;color:var(--gray-400);margin-top:14px;">
         Photos : <a href="https://unsplash.com" target="_blank" rel="noopener" style="color:var(--teal-600);">Unsplash</a> — Licence libre d'utilisation
       </p>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       TÉMOIGNAGES — uniquement des anciens apprenants vérifiés
+       (ID de dossier + téléphone, formation terminée), publiés après
+       validation admin. Voir js/temoignages.js et GAS/temoignages.gs.
+  ================================================================ -->
+  <section id="temoignages" class="section">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag">Témoignages</span>
+        <h2 class="section-title">Ils ont été formés chez nous</h2>
+        <p class="section-subtitle">Des avis déposés uniquement par nos apprenants certifiés, vérifiés par le centre.</p>
+        <div class="tem-resume" id="tem-resume"></div>
+      </div>
+
+      <div class="tem-grille" id="tem-grille">
+        <p class="tem-vide">
+          <span class="iconify" data-icon="tabler:loader-2" style="animation:spin 1s linear infinite;font-size:20px;"></span>
+          Chargement des témoignages...
+        </p>
+      </div>
+
+      <div class="tem-cta">
+        <button type="button" class="btn-primary" onclick="ouvrirFormulaireTemoignage()">
+          <span class="iconify" data-icon="tabler:message-heart"></span> Ancien apprenant ? Laissez votre témoignage
+        </button>
+      </div>
+
+      <div class="tem-form-bloc" id="tem-form-bloc">
+        <h3>Partagez votre expérience</h3>
+        <p class="tem-intro">Réservé aux apprenants ayant terminé leur formation. Votre numéro de dossier figure sur votre attestation et votre carte d'apprentissage. Votre témoignage sera publié après validation par le centre.</p>
+
+        <form id="tem-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tem-id">Numéro de dossier <span class="req">*</span></label>
+              <input type="text" id="tem-id" class="form-control" placeholder="LQD-250312-AB12" maxlength="30" autocomplete="off" required style="text-transform:uppercase;" />
+            </div>
+            <div class="form-group">
+              <label for="tem-tel">Téléphone du dossier <span class="req">*</span></label>
+              <input type="tel" id="tem-tel" class="form-control" placeholder="01 97 95 12 30" maxlength="20" inputmode="tel" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Votre note <span class="req">*</span></label>
+            <div class="tem-note-choix" id="tem-note-choix" role="group" aria-label="Note de 1 à 5">
+              <button type="button" data-note="1" aria-label="1 étoile" aria-pressed="false"><span class="iconify" data-icon="tabler:star-filled"></span></button>
+              <button type="button" data-note="2" aria-label="2 étoiles" aria-pressed="false"><span class="iconify" data-icon="tabler:star-filled"></span></button>
+              <button type="button" data-note="3" aria-label="3 étoiles" aria-pressed="false"><span class="iconify" data-icon="tabler:star-filled"></span></button>
+              <button type="button" data-note="4" aria-label="4 étoiles" aria-pressed="false"><span class="iconify" data-icon="tabler:star-filled"></span></button>
+              <button type="button" data-note="5" aria-label="5 étoiles" aria-pressed="false"><span class="iconify" data-icon="tabler:star-filled"></span></button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tem-texte">Votre témoignage <span class="req">*</span> <span class="hint">(30 caractères minimum)</span></label>
+            <textarea id="tem-texte" class="form-control" rows="5" maxlength="800" placeholder="Ce que la formation vous a apporté, ce que vous faites aujourd'hui grâce à elle..." required></textarea>
+            <span class="tem-compteur" id="tem-compteur">0 / 800</span>
+          </div>
+
+          <div class="form-group">
+            <label>Nom affiché sur le site</label>
+            <div class="tem-radios">
+              <label><input type="radio" name="tem-format-nom" value="initiale" checked /> Prénom + initiale (ex. : Jacques D.)</label>
+              <label><input type="radio" name="tem-format-nom" value="complet" /> Prénom et nom complets</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tem-photo">Votre photo <span class="hint">(facultative — JPG, PNG ou WEBP)</span></label>
+            <input type="file" id="tem-photo" class="form-control" accept="image/jpeg,image/png,image/webp" />
+            <div class="tem-photo-apercu" id="tem-photo-apercu"></div>
+          </div>
+
+          <label class="tem-consent">
+            <input type="checkbox" id="tem-consent" required />
+            <span>J'accepte que mon témoignage, mon nom (au format choisi), ma filière et ma photo éventuelle soient publiés sur le site de Les Qualités de Dieu Service. Je peux demander leur retrait à tout moment en contactant le centre.</span>
+          </label>
+
+          <button type="submit" class="btn-submit" id="tem-btn">
+            <span class="iconify" data-icon="tabler:send"></span> Envoyer mon témoignage
+          </button>
+          <div class="tem-msg" id="tem-msg" role="status" aria-live="polite"></div>
+          <p class="tem-legal">Ce formulaire est protégé par reCAPTCHA. Les <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">règles de confidentialité</a> et les <a href="https://policies.google.com/terms" target="_blank" rel="noopener">conditions d'utilisation</a> de Google s'appliquent.</p>
+        </form>
+      </div>
     </div>
   </section>
 
@@ -2364,13 +2490,21 @@ const DOC_TELECHARGEMENT_META = {
     label:     'votre carte d\'apprentissage',
     afficher:  (apprenant, token) => afficherCarteCanvas(apprenant, token),
   },
+  // Badge de certification : même contrôle d'éligibilité que l'attestation
+  // (formation terminée + frais soldés), sans quota ni paiement — 30/09/2026.
+  badge: {
+    modalId:   'modal-badge-certification',
+    previewId: 'badge-preview',
+    label:     'votre badge de certification',
+    afficher:  (apprenant, token) => afficherBadgeCertification(apprenant, token),
+  },
 };
 
 async function ouvrirDocument(type) {
   if (!_espaceApprenant) return;
   const { apprenant, token } = _espaceApprenant;
 
-  if (type === 'attestation' || type === 'carte') {
+  if (type === 'attestation' || type === 'carte' || type === 'badge') {
     const meta = DOC_TELECHARGEMENT_META[type];
     PK.openModal(meta.modalId);
     const preview = document.getElementById(meta.previewId);
@@ -2394,6 +2528,7 @@ async function ouvrirDocument(type) {
       }
 
       if (result.accesAutorise) {
+        _piedModaleDocument(type, true);
         meta.afficher(apprenant, token);
         // Décrément après affichage réussi — ne bloque jamais l'utilisateur
         // si cet appel échoue, c'est purement du suivi côté serveur.
@@ -2404,8 +2539,10 @@ async function ouvrirDocument(type) {
         })).catch(() => {});
       } else if (result.formationEnCours) {
         afficherFormationEnCours(result.dateFin, type);
+      } else if (result.bloque) {
+        afficherBlocageDocument(result, type);
       } else {
-        afficherPromptPaiementTelechargement(apprenant, result.montant, type);
+        afficherPromptPaiementTelechargement(apprenant, result.montant, type, result);
       }
     } catch (e) {
       preview.innerHTML = '<div style="text-align:center;padding:2.5rem;color:#c0392b;">Erreur réseau. Réessayez.</div>';
@@ -2417,14 +2554,6 @@ async function ouvrirDocument(type) {
       method:  'POST',
       headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: 'fiche', geo })
-    })).catch(() => {});
-  } else if (type === 'badge') {
-    PK.openModal('modal-badge-certification');
-    afficherBadgeCertification(apprenant, token);
-    obtenirGeoInfo().then(geo => fetch(GAS_WEBAPP_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body:    JSON.stringify({ action: 'enregistrer_telechargement', id: apprenant.id, type: 'badge', geo })
     })).catch(() => {});
   }
 }
@@ -2570,6 +2699,7 @@ async function chargerForumEspace() {
 // voir DOC_TELECHARGEMENT_META) : ce même écran est réutilisé pour les
 // deux documents plutôt que dupliqué.
 function afficherFormationEnCours(dateFin, type = 'attestation') {
+  _piedModaleDocument(type, false);
   const preview = document.getElementById(DOC_TELECHARGEMENT_META[type].previewId);
   const dateTxt = dateFin
     ? new Date(dateFin).toLocaleDateString('fr-BJ', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -2577,7 +2707,7 @@ function afficherFormationEnCours(dateFin, type = 'attestation') {
   preview.innerHTML = `
     <div style="text-align:center;padding:2.5rem 1.5rem;">
       <span class="iconify" data-icon="tabler:hourglass-high" style="font-size:48px;color:var(--teal-600);"></span>
-      <h3 style="margin:16px 0 8px;">Formation en cours</h3>
+      <h3 style="margin:16px 0 8px;color:#FFFFFF;">Formation en cours</h3>
       <p style="color:var(--gray-500);max-width:380px;margin:0 auto;line-height:1.6;">
         ${DOC_TELECHARGEMENT_META[type].label.charAt(0).toUpperCase() + DOC_TELECHARGEMENT_META[type].label.slice(1)}
         sera disponible au téléchargement à partir du
@@ -2590,25 +2720,85 @@ function afficherFormationEnCours(dateFin, type = 'attestation') {
 // téléchargements gratuits est épuisé. Même remarque que ci-dessus :
 // un seul écran, paramétré par `type`, pour attestation ET carte — le
 // quota/paiement est partagé entre les deux documents côté GAS.
-function afficherPromptPaiementTelechargement(apprenant, montant, type = 'attestation') {
+// Pied de modale (boutons PNG / PDF) : masqué tant qu'aucun document
+// n'est affiché — évite des boutons de téléchargement inopérants sur un
+// écran de blocage ou de paiement.
+function _piedModaleDocument(type, visible) {
+  const meta = DOC_TELECHARGEMENT_META[type];
+  const modale = meta && document.getElementById(meta.modalId);
+  const pied = modale && modale.querySelector('.pk-modal-footer');
+  if (pied) pied.style.display = visible ? '' : 'none';
+}
+
+function _escTxt(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Écran "document non disponible" (règles du 30/09/2026, voir GAS/acces.gs) :
+// formation non terminée, frais non soldés, dossier non confirmé, date de
+// fin manquante. Uniquement un message — jamais de bouton de paiement.
+function afficherBlocageDocument(result, type = 'attestation') {
+  _piedModaleDocument(type, false);
   const meta = DOC_TELECHARGEMENT_META[type];
   const preview = document.getElementById(meta.previewId);
+  const icones = {
+    frais_non_soldes:     { icon: 'tabler:receipt-2',      titre: 'Frais de formation à solder', couleur: 'var(--orange-500)' },
+    formation_en_cours:   { icon: 'tabler:hourglass-high', titre: 'Formation en cours',         couleur: 'var(--teal-600)' },
+    dossier_non_confirme: { icon: 'tabler:file-alert',     titre: 'Dossier non confirmé',       couleur: 'var(--orange-500)' },
+    date_fin_manquante:   { icon: 'tabler:calendar-off',   titre: 'Dossier à régulariser',      couleur: 'var(--orange-500)' }
+  };
+  const c = icones[result.motif] || { icon: 'tabler:lock', titre: 'Document indisponible', couleur: 'var(--orange-500)' };
   preview.innerHTML = `
     <div style="text-align:center;padding:2.5rem 1.5rem;">
+      <span class="iconify" data-icon="${c.icon}" style="font-size:48px;color:${c.couleur};"></span>
+      <h3 style="margin:16px 0 8px;color:#FFFFFF;">${c.titre}</h3>
+      <p style="color:#C9DDD6;max-width:400px;margin:0 auto 18px;line-height:1.6;">${_escTxt(result.message || '')}</p>
+      <a href="https://wa.me/22997951230" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:#5DCAA5;font-weight:600;">
+        <span class="iconify" data-icon="tabler:brand-whatsapp"></span> Contacter l'administration
+      </a>
+    </div>`;
+}
+
+// Écran affiché quand les téléchargements gratuits/payés sont épuisés.
+// Formations longues : 2500 F / 3 ; Initiation rapide : 3000 F / 6 —
+// montant et palier viennent TOUJOURS du serveur (infos.parPalier).
+// Trois voies : FedaPay, virement bancaire, Mobile Money direct (les
+// deux dernières débloquées par l'admin après confirmation).
+function afficherPromptPaiementTelechargement(apprenant, montant, type = 'attestation', infos = {}) {
+  _piedModaleDocument(type, false);
+  const meta = DOC_TELECHARGEMENT_META[type];
+  const preview = document.getElementById(meta.previewId);
+  const palier = Number(infos.parPalier) || 3;
+  const v = infos.virement || null;
+  const wa = infos.whatsapp || '22997951230';
+  const msgWa = encodeURIComponent(`Bonjour, je souhaite débloquer le téléchargement de mon attestation. Dossier : ${apprenant.id}. Je joins la preuve de paiement.`);
+  const blocVirement = v ? `
+      <div style="text-align:left;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:14px 16px;margin:18px auto 0;max-width:400px;font-size:.82rem;line-height:1.7;color:var(--gray-700);">
+        <strong style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span class="iconify" data-icon="tabler:building-bank" style="color:var(--teal-600);"></span> Par virement bancaire</strong>
+        Titulaire : ${_escTxt(v.titulaire)}<br/>
+        Banque : ${_escTxt(v.banque)}<br/>
+        IBAN : <span style="font-family:monospace;">${_escTxt(v.iban)}</span><br/>
+        BIC : <span style="font-family:monospace;">${_escTxt(v.bic)}</span><br/>
+        Motif : <strong>Attestation ${_escTxt(apprenant.id)}</strong>
+      </div>` : '';
+  preview.innerHTML = `
+    <div style="text-align:center;padding:2.2rem 1.25rem;">
       <span class="iconify" data-icon="tabler:lock" style="font-size:48px;color:var(--orange-500);"></span>
-      <h3 style="margin:16px 0 8px;">Débloquer ${meta.label}</h3>
-      <p style="color:var(--gray-500);margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.6;">
-        Le téléchargement de ${meta.label} nécessite un paiement unique de ${formatFCFA(montant)} via Mobile Money. Ce paiement débloque 6 téléchargements (attestation et carte confondues), celui-ci inclus.
+      <h3 style="margin:16px 0 8px;color:#FFFFFF;">Débloquer ${meta.label}</h3>
+      <p style="color:#C9DDD6;margin:0 auto 22px;max-width:400px;line-height:1.6;">
+        Vos téléchargements disponibles sont épuisés. Un paiement de <strong>${formatFCFA(montant)}</strong>
+        débloque <strong>${palier} nouveau${palier > 1 ? 'x' : ''} téléchargement${palier > 1 ? 's' : ''}</strong>, celui-ci inclus.
       </p>
-      <button class="btn-primary" id="btn-payer-telechargement" onclick="payerTelechargementAttestation('${apprenant.id}', ${montant}, '${type}')">
+      <button class="btn-primary" id="btn-payer-telechargement" onclick="payerTelechargementAttestation('${_escTxt(apprenant.id)}', ${Number(montant)}, '${type}')">
         <span class="iconify" data-icon="tabler:device-mobile"></span> Payer ${formatFCFA(montant)} via Mobile Money
       </button>
-      <p style="font-size:.78rem;color:var(--gray-400);margin-top:20px;line-height:1.6;max-width:380px;margin-left:auto;margin-right:auto;">
-        Vous pouvez aussi envoyer directement ${formatFCFA(montant)} via Mobile Money au
-        <strong>01 97 95 12 30 (MTN)</strong> ou <strong>01 60 98 90 94 (Moov)</strong>,
-        puis envoyer la capture d'écran du transfert
-        <a href="https://wa.me/22997951230" target="_blank" rel="noopener" style="color:var(--teal-600);font-weight:600;">par WhatsApp</a>
-        pour confirmation.
+      ${blocVirement}
+      <p style="font-size:.8rem;color:#A7C4BC;margin:16px auto 0;line-height:1.6;max-width:400px;">
+        Vous pouvez aussi envoyer ${formatFCFA(montant)} par Mobile Money au
+        <strong>01 97 95 12 30 (MTN)</strong> ou <strong>01 60 98 90 94 (Moov)</strong>.
+        Après un virement ou un transfert direct, envoyez la preuve
+        <a href="https://wa.me/${_escTxt(wa)}?text=${msgWa}" target="_blank" rel="noopener" style="color:#5DCAA5;font-weight:600;">par WhatsApp à l'administration</a> :
+        le déblocage est fait manuellement après vérification.
       </p>
     </div>`;
 }
@@ -2834,6 +3024,7 @@ async function inscrireNewsletter(evt) {
   <script src="js/fiche_apprenant_generator.js"></script>
   <script src="js/badge_certification_generator.js"></script>
   <script src="js/carte_generator.js"></script>
+  <script src="js/temoignages.js"></script>
   <script src="js/chat-widget.js" defer></script>
 </body>
 </html>

@@ -550,6 +550,10 @@
       </button>
 
       <div class="nav-section-label">Contenu du site</div>
+      <button class="nav-item" onclick="naviguer('temoignages')">
+        <span class="iconify" data-icon="tabler:message-heart"></span> Témoignages
+        <span class="nav-badge" id="badge-temoignages">0</span>
+      </button>
       <button class="nav-item" onclick="naviguer('actualites')">
         <span class="iconify" data-icon="tabler:speakerphone"></span> Actualités &amp; Bandeau
       </button>
@@ -885,6 +889,32 @@
           attente restent privées à leur auteur.
         </p>
         <div id="forum-table-container" style="padding:16px 20px;">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-temoignages">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Témoignages des anciens apprenants</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select class="modal-select" id="filtre-temoignages" onchange="chargerTemoignagesAdmin()" style="width:auto;">
+              <option value="En attente">En attente</option>
+              <option value="Publié">Publiés</option>
+              <option value="Rejeté">Rejetés</option>
+              <option value="">Tous</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="chargerTemoignagesAdmin()" aria-label="Actualiser">
+              <span class="iconify" data-icon="tabler:refresh"></span>
+            </button>
+          </div>
+        </div>
+        <p style="padding:12px 20px 0;font-size:12px;color:var(--text-3);line-height:1.6;">
+          Seuls les apprenants à la formation terminée (ID + téléphone vérifiés) peuvent témoigner. Rien n'est visible
+          sur le site avant publication. La photo reste privée tant que le témoignage n'est pas publié.
+        </p>
+        <div id="temoignages-container" style="padding:16px 20px;">
           <div class="loading-overlay"><div class="spinner"></div></div>
         </div>
       </div>
@@ -1531,7 +1561,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', temoignages: 'Témoignages' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -1543,6 +1573,7 @@ function naviguer(page, filtre = '') {
   if (page === 'suivi')           chargerSuiviTelechargements();
   if (page === 'cours')           chargerCoursAdmin();
   if (page === 'forum')           chargerForumAdmin();
+  if (page === 'temoignages')     chargerTemoignagesAdmin();
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -1837,19 +1868,50 @@ function renderModalDossier(d) {
     <p style="font-size:11px;color:var(--text-3);margin:-12px 0 16px;">
       Génère l'attestation même si le téléchargement public est bloqué (site en construction).
     </p>
-    ${(d.formationsLabel || '').includes('Initiation rapide (1 mois)') ? `
-    <div class="info-field" style="margin-bottom:12px;">
-      <label>Téléchargements gratuits restants</label>
-      <span style="font-weight:700;${Number(d.telechargementsRestants) > 0 ? 'color:var(--green-600,#1e7a4a);' : 'color:var(--orange-600,#c0392b);'}">
-        ${d.telechargementsRestants !== undefined && d.telechargementsRestants !== '' ? d.telechargementsRestants : 0}
-      </span>
+    ${(() => {
+      // Accès attestation (30/09/2026) — toutes filières. Formations
+      // longues : 3 gratuits puis palier payant (2500 F / 3) ; Initiation
+      // rapide : palier payant 3000 F / 6. Déblocage manuel après
+      // virement, Mobile Money direct ou espèces (hors FedaPay).
+      const courte   = (d.formationsLabel || '').includes('Initiation rapide (1 mois)');
+      const payes    = Number(d.telechargementsRestants) || 0;
+      const utilises = Number(d.telechargementsGratuitsUtilises) || 0;
+      const gratuits = courte ? 0 : Math.max(0, 3 - utilises);
+      const palier   = courte ? '6 (3000 F)' : '3 (2500 F)';
+      return `
+    <div class="modal-section-title">Accès à l'attestation</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px;">
+      <div class="info-field">
+        <label>Frais de formation soldés</label>
+        <select class="modal-select" id="select-frais-soldes" style="font-weight:700;">
+          <option value="Non" ${d.fraisSoldes !== 'Oui' ? 'selected' : ''}>Non — attestation bloquée</option>
+          <option value="Oui" ${d.fraisSoldes === 'Oui' ? 'selected' : ''}>Oui — attestation autorisée</option>
+        </select>
+      </div>
+      <div class="info-field">
+        <label>Gratuits restants</label>
+        <span style="font-weight:700;">${courte ? '—' : gratuits + ' / 3'}</span>
+      </div>
+      <div class="info-field">
+        <label>Payés restants</label>
+        <span style="font-weight:700;${payes > 0 ? 'color:var(--green-600,#1e7a4a);' : ''}">${payes}</span>
+      </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="debloquerTelechargement('${d.id}')" style="margin-bottom:16px;margin-left:8px;">
-      <span class="iconify" data-icon="tabler:device-mobile"></span> Débloquer 6 téléchargements (paiement MoMo direct)
-    </button>
-    <p style="font-size:11px;color:var(--text-3);margin:-12px 0 16px;">
-      À utiliser après vérification manuelle d'une preuve de paiement Mobile Money reçue par WhatsApp (hors FedaPay).
-    </p>` : ''}
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px;">
+      <select class="modal-select" id="select-canal-deblocage" style="max-width:220px;">
+        <option value="Virement bancaire">Virement bancaire</option>
+        <option value="Mobile Money direct">Mobile Money direct</option>
+        <option value="Espèces">Espèces au centre</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="debloquerTelechargement('${d.id}')">
+        <span class="iconify" data-icon="tabler:lock-open"></span> Débloquer un palier : ${palier}
+      </button>
+    </div>
+    <p style="font-size:11px;color:var(--text-3);margin:0 0 16px;line-height:1.6;">
+      Le palier s'ajoute au solde. À utiliser uniquement après vérification de la preuve de paiement (hors FedaPay).
+      L'attestation reste bloquée tant que la formation n'est pas terminée ou que les frais ne sont pas soldés.
+    </p>`;
+    })()}
     <div class="modal-section-title">Gestion du statut</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div>
@@ -1957,17 +2019,19 @@ async function sauvegarderStatuts(id) {
     ? document.getElementById('input-niveau-atteint-autre').value.trim()
     : selectNiveau.value;
   try {
-    const [r1, r2, r3] = await Promise.all([
+    const selectSoldes = document.getElementById('select-frais-soldes');
+    const [r1, r2, r3, r4] = await Promise.all([
       apiCall('admin_update_statut',   { id, statut: statutDossier }),
       apiCall('admin_update_paiement', { id, statut: statutPaiement }),
-      apiCall('admin_update_suivi',    { id, dateEntree, dateFin, niveauAtteint })
+      apiCall('admin_update_suivi',    { id, dateEntree, dateFin, niveauAtteint }),
+      selectSoldes ? apiCall('admin_update_frais_soldes', { id, valeur: selectSoldes.value }) : Promise.resolve({ status: 'success' })
     ]);
-    if (r1.status === 'success' && r2.status === 'success' && r3.status === 'success') {
+    if (r1.status === 'success' && r2.status === 'success' && r3.status === 'success' && r4.status === 'success') {
       toast('Dossier mis à jour avec succès.', 'success');
       fermerModal('modal-dossier');
       if (state.page === 'dossiers') chargerDossiers();
       chargerDashboard();
-    } else { toast((r1.message || r2.message || r3.message || 'Erreur.'), 'error'); }
+    } else { toast((r1.message || r2.message || r3.message || r4.message || 'Erreur.'), 'error'); }
   } catch(e) { toast('Erreur réseau.', 'error'); }
 }
 
@@ -3247,9 +3311,11 @@ async function apercuAttestation(id) {
 }
 
 async function debloquerTelechargement(id) {
-  if (!confirm('Confirmer le paiement Mobile Money reçu et débloquer 6 téléchargements pour ce dossier ?')) return;
+  const selCanal = document.getElementById('select-canal-deblocage');
+  const canal = selCanal ? selCanal.value : 'Mobile Money direct';
+  if (!confirm(`Confirmer le paiement reçu (${canal}) et débloquer un palier de téléchargements pour ce dossier ?`)) return;
   try {
-    const result = await apiCall('admin_debloquer_telechargement', { id });
+    const result = await apiCall('admin_debloquer_telechargement', { id, canal });
     if (result.status === 'success') {
       toast(result.message || 'Téléchargements débloqués.', 'success');
       ouvrirDossier(id); // Rafraîchit l'affichage — le compteur mis à jour doit être visible immédiatement
@@ -3490,6 +3556,81 @@ async function supprimerForumAdmin(id) {
       toast('Erreur réseau.', 'error');
     }
   });
+}
+
+/* ================================================================
+   TÉMOIGNAGES — modération (30/09/2026). Voir GAS/temoignages.gs.
+   Texte saisi par des visiteurs : toujours échappé avant affichage.
+================================================================ */
+function _escAdmin(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function chargerTemoignagesAdmin() {
+  const container = document.getElementById('temoignages-container');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const result = await apiCall('admin_temoignages_lister');
+    if (result.status !== 'success') throw new Error(result.message);
+
+    const badge = document.getElementById('badge-temoignages');
+    if (badge) badge.textContent = result.temoignages.filter(t => t.statut === 'En attente').length;
+
+    const filtre = (document.getElementById('filtre-temoignages') || {}).value || '';
+    const liste = filtre ? result.temoignages.filter(t => t.statut === filtre) : result.temoignages;
+    if (!liste.length) {
+      container.innerHTML = '<div class="empty-state"><p>Aucun témoignage dans cette catégorie.</p></div>';
+      return;
+    }
+
+    const couleurs = { 'En attente': '#F5A623', 'Publié': '#1D9E75', 'Rejeté': '#E24B4A' };
+    container.innerHTML = liste.map(t => `
+      <div class="table-card" style="margin-bottom:12px;border:1px solid ${couleurs[t.statut] || 'var(--dark-600,#333)'};">
+        <div style="padding:14px 18px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+          ${t.vignette
+            ? `<img src="${_escAdmin(t.vignette)}" alt="Photo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;" />`
+            : `<div style="width:64px;height:64px;border-radius:50%;background:var(--dark-700,#222);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="iconify" data-icon="tabler:user" style="font-size:26px;color:var(--text-3);"></span></div>`}
+          <div style="flex:1;min-width:220px;">
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">
+              ${_escAdmin(t.dossier)} — ${_escAdmin(t.filiere)} — ${new Date(t.date).toLocaleString('fr-FR')}
+              ${t.score !== '' && t.score !== undefined ? ` — reCAPTCHA ${_escAdmin(t.score)}` : ''}
+            </div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px;">
+              ${_escAdmin(t.nom)}
+              <span style="color:#F5A623;margin-left:6px;">${'&#9733;'.repeat(t.note)}${'&#9734;'.repeat(5 - t.note)}</span>
+              <span style="font-size:11px;font-weight:700;margin-left:8px;padding:2px 8px;border-radius:20px;background:${couleurs[t.statut] || '#666'};color:#fff;">${_escAdmin(t.statut)}</span>
+            </div>
+            <div style="font-size:13px;line-height:1.7;white-space:pre-line;word-break:break-word;">${_escAdmin(t.texte)}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+              ${t.statut !== 'Publié' ? `<button class="btn btn-primary btn-sm" onclick="changerStatutTemoignage('${_escAdmin(t.id)}','Publié')"><span class="iconify" data-icon="tabler:world-upload"></span> Publier</button>` : ''}
+              ${t.statut !== 'Rejeté' ? `<button class="btn btn-ghost btn-sm" onclick="changerStatutTemoignage('${_escAdmin(t.id)}','Rejeté')"><span class="iconify" data-icon="tabler:eye-off"></span> ${t.statut === 'Publié' ? 'Retirer du site' : 'Rejeter'}</button>` : ''}
+              ${t.statut === 'Rejeté' ? `<button class="btn btn-ghost btn-sm" onclick="changerStatutTemoignage('${_escAdmin(t.id)}','En attente')"><span class="iconify" data-icon="tabler:arrow-back-up"></span> Remettre en attente</button>` : ''}
+              <button class="btn btn-ghost btn-sm" onclick="changerStatutTemoignage('${_escAdmin(t.id)}','Supprimer')"><span class="iconify" data-icon="tabler:trash"></span> Supprimer</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+  }
+}
+
+async function changerStatutTemoignage(id, statut) {
+  const libelles = {
+    'Publié': 'Publier ce témoignage sur le site (la photo deviendra visible publiquement) ?',
+    'Rejeté': 'Retirer / rejeter ce témoignage ? Il ne sera plus visible sur le site.',
+    'En attente': 'Remettre ce témoignage en attente ?',
+    'Supprimer': 'Supprimer définitivement ce témoignage et sa photo ? Action irréversible.'
+  };
+  if (!confirm(libelles[statut] || 'Confirmer ?')) return;
+  try {
+    const result = await apiCall('admin_temoignage_statut', { id, statut });
+    toast(result.message || 'Fait.', result.status === 'success' ? 'success' : 'error');
+    if (result.status === 'success') chargerTemoignagesAdmin();
+  } catch (e) {
+    toast('Erreur réseau.', 'error');
+  }
 }
 </script>
 <script src="js/attestation_generator.js"></script>

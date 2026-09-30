@@ -127,7 +127,10 @@ module.exports = async (req, res) => {
         action: "confirmer_paiement_telechargement",
         secretPartage: secretGas,
         id: id,
-        referenceFedapay: String(transaction.id)
+        referenceFedapay: String(transaction.id),
+        // Montant lu côté serveur auprès de FedaPay — GAS le compare au
+        // palier attendu pour ce dossier (2500 F ou 3000 F).
+        montant: Number(transaction.amount) || 0
       })
     });
 
