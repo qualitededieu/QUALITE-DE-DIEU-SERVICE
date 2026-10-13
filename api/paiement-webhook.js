@@ -128,10 +128,7 @@ async function confirmerAupresDeGas(urlGas, secretGas, transaction) {
     action: "confirmer_paiement_telechargement",
     secretPartage: secretGas,
     id: String(id),
-    referenceFedapay: String(transaction.id),
-    // Montant lu dans l'événement SIGNÉ par FedaPay (jamais celui du
-    // navigateur) — GAS refuse tout montant inférieur au palier attendu.
-    montant: Number(transaction.amount) || 0
+    referenceFedapay: String(transaction.id)
   };
 
   const reponseGas = await fetch(urlGas, {
