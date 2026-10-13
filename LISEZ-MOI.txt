@@ -1,0 +1,74 @@
+=====================================================================
+LES QUALITÉS DE DIEU SERVICE — Site complet, prêt à déployer
+Mise à jour : site multi-pages + nouveau logo (octobre 2026)
+=====================================================================
+
+Ce zip contient l'INTÉGRALITÉ du projet.
+
+---------------------------------------------------------------------
+1. NOUVELLE STRUCTURE — une page par rubrique du menu
+---------------------------------------------------------------------
+  Avant : tout le site tenait dans index.html (2 839 lignes), le menu
+  faisait défiler une seule longue page — les visiteurs s'y perdaient.
+
+  Maintenant :
+    /                 index.html           Accueil + "Que souhaitez-vous faire ?"
+    /formations       formations.html
+    /services         services.html
+    /renseignements   renseignements.html
+    /inscription      inscription.html     (dossier d'inscription complet)
+    /galerie          galerie.html
+    /actualites       actualites.html
+    /contact          contact.html
+    /espace-apprenant espace-apprenant.html (inchangé)
+    /postuler         postuler.html        (inchangé)
+
+  Chaque page a : la rubrique active surlignée dans le menu, un fil
+  d'Ariane "Accueil / Rubrique", et un bloc "étape suivante" en bas.
+  Le bouton "S'inscrire" d'une formation ouvre /inscription avec la
+  formation déjà cochée et les frais déjà calculés.
+
+---------------------------------------------------------------------
+2. RÈGLE DE MAINTENANCE — À RETENIR
+---------------------------------------------------------------------
+  - La NAV et le FOOTER sont recopiés à l'identique dans les 8 pages
+    publiques. Changer un lien, un numéro, une adresse dans le menu ou
+    le pied de page = le changer dans LES 8 FICHIERS.
+  - Le style est commun : css/site.css (un seul fichier pour tout).
+  - Le JavaScript est commun : js/site.js (menu, bandeau, newsletter,
+    notifications), plus un fichier par page qui en a besoin :
+      js/inscription.js    frais, pièces, signature, envoi du dossier
+      js/renseignement.js  formulaire "Vous avez des questions ?"
+      js/actualites.js     chargement des actualités publiées
+  - Tarifs des formations : js/inscription.js (en haut du fichier),
+    TOUJOURS synchronisés avec GAS/code.gs et js/chat-widget.js.
+
+---------------------------------------------------------------------
+3. NOUVEAU LOGO
+---------------------------------------------------------------------
+  Fichier utilisé partout sur le site : icons/logo-lqd-v2.jpg
+  (pages, admin, espace apprenant, attestation, carte, fiche, badge).
+
+  Pourquoi un NOUVEAU NOM de fichier : vercel.json met le dossier
+  icons/ en cache "immutable" pendant 1 an. Remplacer l'image sous le
+  même nom aurait laissé l'ANCIEN logo affiché chez tous les visiteurs
+  déjà passés sur le site. Nouveau nom = téléchargement garanti.
+
+  icons/logoqds.jpg contient aussi le nouveau logo : il reste utilisé
+  par les emails envoyés depuis GAS (GAS/code.gs, LOGO_URL). Rien à
+  changer côté GAS.
+
+  Prochain changement de logo : nouveau nom (logo-lqd-v3.jpg...) et
+  remplacer "logo-lqd-v2.jpg" dans tous les fichiers.
+
+---------------------------------------------------------------------
+4. DÉPLOIEMENT GITHUB / VERCEL
+---------------------------------------------------------------------
+  1. Remplace tout le contenu de la branche main par celui de ce zip
+     (nouveaux fichiers : 7 pages .html, css/site.css, js/site.js,
+     js/inscription.js, js/renseignement.js, js/actualites.js,
+     icons/logo-lqd-v2.jpg).
+  2. Vercel redéploie automatiquement.
+  3. Aucun redéploiement GAS nécessaire pour cette mise à jour.
+  4. Google Search Console : soumettre à nouveau sitemap.xml (il
+     liste maintenant toutes les pages).

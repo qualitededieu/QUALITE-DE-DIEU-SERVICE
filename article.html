@@ -12,7 +12,7 @@
   <meta property="og:site_name" content="Les Qualités de Dieu Service" />
   <meta property="og:title" id="og-title" content="Actualité — Les Qualités de Dieu Service" />
   <meta property="og:description" id="og-description" content="Actualité du centre de formation Les Qualités de Dieu Service, Comé, Bénin." />
-  <meta property="og:image" id="og-image" content="https://www.qualitededieuservice.com/icons/logoqds.jpg" />
+  <meta property="og:image" id="og-image" content="https://www.qualitededieuservice.com/icons/logo-lqd-v2.jpg" />
   <meta property="og:locale" content="fr_FR" />
 
   <link rel="icon" href="icons/icon-192x192.png" />
@@ -118,10 +118,10 @@
   <nav id="navbar">
     <div class="nav-inner">
       <a class="nav-logo" href="/">
-        <img src="icons/logoqds.jpg" alt="LQD Service" />
+        <img src="icons/logo-lqd-v2.jpg" alt="LQD Service" />
         <span>LQD Service</span>
       </a>
-      <a class="nav-back" href="/#blog">
+      <a class="nav-back" href="/actualites">
         <span class="iconify" data-icon="tabler:arrow-left"></span> Retour aux actualités
       </a>
     </div>
@@ -136,7 +136,7 @@
     <span class="iconify" data-icon="tabler:file-off"></span>
     <h2 style="margin-bottom:10px;">Article introuvable</h2>
     <p style="margin-bottom:24px;">Cette actualité n'existe plus ou n'est pas publiée.</p>
-    <a href="/#blog" class="btn-primary">Voir toutes les actualités</a>
+    <a href="/actualites" class="btn-primary">Voir toutes les actualités</a>
   </div>
 
   <div id="art-page" style="display:none;">
@@ -161,10 +161,10 @@
           <div class="art-content" id="art-contenu"></div>
 
           <div class="art-cta" id="art-cta">
-            <a href="/#blog" class="btn-ghost">
+            <a href="/actualites" class="btn-ghost">
               <span class="iconify" data-icon="tabler:arrow-left"></span> Toutes les actualités
             </a>
-            <a href="/#inscription" class="btn-primary" id="art-cta-action">
+            <a href="/inscription" class="btn-primary" id="art-cta-action">
               <span class="iconify" data-icon="tabler:pencil"></span> S'inscrire à une formation
             </a>
           </div>
@@ -248,7 +248,7 @@
         el.href = '/postuler';
         el.innerHTML = '<span class="iconify" data-icon="tabler:send"></span> ' + (a.ctaLabel || "Je suis intéressé(e) par cette offre");
       } else {
-        el.href = '/#inscription';
+        el.href = '/inscription';
         el.innerHTML = '<span class="iconify" data-icon="tabler:pencil"></span> ' + (a.ctaLabel || "S'inscrire à une formation");
       }
     }

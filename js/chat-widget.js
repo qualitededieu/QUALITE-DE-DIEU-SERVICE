@@ -84,7 +84,7 @@
       </button>
       <div id="pkc-panel" role="dialog" aria-label="Chat LQD Service">
         <div id="pkc-header">
-          <img src="icons/logoqds.jpg" alt="LQD" />
+          <img src="icons/logo-lqd-v2.jpg" alt="LQD" />
           <div>
             <div class="pkc-title">LQD Service</div>
             <div class="pkc-sub">Assistant en ligne</div>
@@ -251,7 +251,7 @@
         fermerPanel();
         const cible = document.getElementById('inscription');
         if (cible) cible.scrollIntoView({ behavior: 'smooth' });
-        else window.location.href = 'index.html#inscription';
+        else window.location.href = '/inscription';
       }
     });
   }

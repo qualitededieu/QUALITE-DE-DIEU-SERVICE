@@ -1,14 +1,14 @@
 // sw.js — Service Worker PHANOS KOSMOS
 // Version a incrementer a chaque deploiement Vercel
 
-const CACHE_VERSION = "pk-v1.0.3";
-const CACHE_STATIC  = "pk-v1.0.3-static";
-const CACHE_DYNAMIC = "pk-v1.0.3-dynamic";
+const CACHE_VERSION = "pk-v1.1.0";
+const CACHE_STATIC  = "pk-v1.1.0-static";
+const CACHE_DYNAMIC = "pk-v1.1.0-dynamic";
 
 // Assets vraiment statiques : images, icones, manifest
 // NE PAS inclure les fichiers JS/CSS ici (servis en networkFirst)
 const STATIC_ASSETS = [
-  "/icons/logoqds.jpg",
+  "/icons/logo-lqd-v2.jpg",
   "/manifest.json"
 ];
 

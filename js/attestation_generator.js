@@ -23,7 +23,7 @@ const ATT_ENTREPRISE = {
   TEL:      "+229 01 97 95 12 30 / 01 60 98 90 94",
   EMAIL:    "papablaise1993@gmail.com",
   SITE:     "www.qualitededieuservice.com",
-  LOGO_URL: "icons/logoqds.jpg",
+  LOGO_URL: "icons/logo-lqd-v2.jpg",
   // Mentions légales — la même entité (LQD Service SARL) délivre TOUTE
   // attestation quelle que soit la durée de la formation ; ces mentions
   // doivent donc apparaître sur les deux gabarits (long ET court), pas
@@ -727,26 +727,35 @@ async function genererAttestationCanvas(apprenant, token) {
       const dW = _mw(ctx, domaineTxt);
       const baselineY = posY + 14;
       ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, baselineY);
-      // Marge sous la ligne de base — 3e itération. Historique : (1) marge
-      // fixe 34px → chevauchement (34px trop court pour les jambages) ;
-      // (2) confiance totale en actualBoundingBoxDescent seul → toujours
-      // signalé en chevauchement le 25/09/2026 (mesure non fiable ou
-      // déploiement non à jour, jamais tranché) ; (3) plancher à 68% de la
-      // taille de police pour ne plus dépendre de la mesure → cette fois
-      // signalé TROP ÉLOIGNÉ le 25/09/2026 (capture PDG à l'appui : les
-      // jambages réels s'arrêtent nettement, la ligne se retrouve à ~2×
-      // cette profondeur, quasi collée au paragraphe suivant). Le plancher
-      // à 68% était donc lui-même le problème, pas la mesure.
-      // On revient à la mesure comme source principale (elle capture
-      // correctement où s'arrêtent les jambages, la capture le confirme),
-      // avec un plancher BAS — garde-fou uniquement contre une mesure
-      // nulle ou aberrante (retour 0 ou quasi 0), plus une marge fixe
-      // modeste pour détacher visuellement le filet sans l'éloigner.
+      // Marge sous la ligne de base — 4e itération, chaque fois calibrée sur
+      // une vraie capture du PDG (25/09/2026) plutôt qu'une nouvelle
+      // estimation à l'aveugle :
+      //  (1) marge fixe 34px → chevauchement (bien trop court) ;
+      //  (2) actualBoundingBoxDescent seul, sans plancher → toujours
+      //      signalé en chevauchement (mesure non fiable en l'état, ou
+      //      déploiement non à jour — jamais tranché) ;
+      //  (3) plancher à 68% de la taille + marge fixe 14px → cette fois
+      //      signalé TROP ÉLOIGNÉ (le filet touchait presque le paragraphe
+      //      suivant) : le plancher écrasait une mesure qui, elle, était
+      //      en fait correcte ;
+      //  (4) capture suivante avec la mesure seule + petite marge fixe
+      //      (8px) → PAS de chevauchement cette fois (vérifié pixel par
+      //      pixel : "Polyvalent", "Graphisme", "Sérigraphie" dégagent
+      //      tous le filet), mais jugé "moche" — trop collé, aucune
+      //      respiration visuelle entre le texte et le filet.
+      // Conclusion : la mesure actualBoundingBoxDescent est fiable ici (on
+      // le sait maintenant, chevauchement confirmé absent). Le seul
+      // problème restant est esthétique — pas assez d'air sous le texte
+      // avant le filet. On garde donc la mesure comme référence de
+      // jambage réel, et on ajoute une respiration proportionnelle à la
+      // taille de police (au lieu d'un +8px fixe, insuffisant, ou d'un
+      // plancher de 68% qui recréait le problème (3)).
       const metrics = ctx.measureText(domaineTxt);
       const mesure = metrics.actualBoundingBoxDescent || 0;
       const jambagePlancher = Math.round(taille * 0.22);
       const jambage = mesure > jambagePlancher ? mesure : jambagePlancher;
-      const ruleY = baselineY + jambage + 8; // +8 : filet visuellement détaché, sans excès
+      const respiration = Math.round(taille * 0.24); // air visuel entre le texte et le filet
+      const ruleY = baselineY + jambage + respiration;
       _rect(ctx, CENTRE_HAUT - dW / 2 - 40, ruleY, dW + 80, 6, ATT.OR);
       posY = ruleY + _g(76);
     }
@@ -883,13 +892,16 @@ async function genererAttestationCanvas(apprenant, token) {
       const iW = _mw(ctx, intitule);
       const baselineY = posY + 20;
       ctx.fillText(intitule, CENTRE_HAUT_COURT - iW / 2, baselineY);
-      // Même logique que le gabarit long (voir plus haut) : la mesure est la
-      // source principale, le plancher n'est qu'un garde-fou bas.
+      // Même logique que le gabarit long (voir plus haut, historique complet
+      // des 4 itérations) : la mesure est la source de vérité pour le
+      // jambage réel, le plancher un garde-fou bas, et on ajoute une
+      // respiration proportionnelle (24% de la taille) pour l'air visuel.
       const metrics = ctx.measureText(intitule);
       const mesure = metrics.actualBoundingBoxDescent || 0;
       const jambagePlancher = Math.round(120 * 0.22);
       const jambage = mesure > jambagePlancher ? mesure : jambagePlancher;
-      const ruleY = baselineY + jambage + 8;
+      const respiration = Math.round(120 * 0.24);
+      const ruleY = baselineY + jambage + respiration;
       _rect(ctx, CENTRE_HAUT_COURT - iW / 2 - 40, ruleY, iW + 80, 6, ATT.OR);
       posY = ruleY + 70;
     }

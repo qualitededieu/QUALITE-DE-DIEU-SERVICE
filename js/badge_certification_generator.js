@@ -13,7 +13,7 @@ const BADGE_C = {
 
 const BADGE_ENTREPRISE = {
   NOM: "LES QUALITÉS DE DIEU SERVICE",
-  LOGO_URL: "icons/logoqds.jpg",
+  LOGO_URL: "icons/logo-lqd-v2.jpg",
   SITE: "www.qualitededieuservice.com",
 };
 

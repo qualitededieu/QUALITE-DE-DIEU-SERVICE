@@ -16,7 +16,7 @@ const FICHE_ENTREPRISE = {
   NOM: "LES QUALITÉS DE DIEU SERVICE",
   ADRESSE: "Comé, Hongodé — Bénin",
   SITE: "www.qualitededieuservice.com",
-  LOGO_URL: "icons/logoqds.jpg",
+  LOGO_URL: "icons/logo-lqd-v2.jpg",
   // Mêmes mentions légales que sur l'attestation (voir ATT_ENTREPRISE dans
   // attestation_generator.js) — la fiche apprenant est aussi un document
   // administratif qui peut sortir du centre, elle doit donc les porter.

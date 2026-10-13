@@ -40,7 +40,7 @@ const CARTE_C = {
 
 const CARTE_ENTREPRISE = {
   NOM:      "LES QUALITÉS DE DIEU SERVICE",
-  LOGO_URL: "icons/logoqds.jpg",
+  LOGO_URL: "icons/logo-lqd-v2.jpg",
   ADRESSE:  "Comé, Hongodé — en face Hôpital de Zone de Comé, Bénin",
   TEL:      "+229 01 97 95 12 30",
   SITE:     "qualitededieuservice.com",
