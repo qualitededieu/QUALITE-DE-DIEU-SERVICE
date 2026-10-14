@@ -24,6 +24,9 @@ const MAX_FILE_SIZE     = 2 * 1024 * 1024; // 2 Mo
 
 /* ---- Stockage fichiers base64 ---- */
 const fichiers = { piece1: null, photo: null, preuve: null };
+// Vrai pendant la détection de visage : la photo n'est pas encore
+// acceptée, on ne doit pas laisser passer l'étape 4 entre-temps.
+let photoEnVerification = false;
 
 /* ================================================================
    CALCUL FRAIS
@@ -131,8 +134,6 @@ function mettreAJourFrais() {
   const btn = document.getElementById('submitBtn');
   btn.innerHTML = `<span class="iconify" data-icon="tabler:send"></span> Soumettre — virement de ${formatFCFA(premierVirement)}`;
 
-  updateStep(2, 'done');
-  updateStep(3, 'active');
 }
 
 function resetBtnLabel() {
@@ -143,27 +144,6 @@ function resetBtnLabel() {
 document.querySelectorAll('input[name="formations"]').forEach(cb => {
   cb.addEventListener('change', mettreAJourFrais);
 });
-
-/* ================================================================
-   STEPS
-================================================================ */
-function updateStep(num, state) {
-  const el = document.getElementById('step-' + num);
-  if (el) el.className = 'form-step ' + state;
-}
-
-['prenom','nom','telephone'].forEach(id => {
-  document.getElementById(id).addEventListener('input', checkStep1);
-});
-document.getElementById('sexe').addEventListener('change', checkStep1);
-function checkStep1() {
-  const ok = document.getElementById('prenom').value.trim() &&
-             document.getElementById('nom').value.trim() &&
-             document.getElementById('sexe').value &&
-             document.getElementById('telephone').value.trim();
-  updateStep(1, ok ? 'done' : 'active');
-  if (ok) updateStep(2, 'active');
-}
 
 /* ================================================================
    UPLOAD FICHIERS
@@ -209,7 +189,9 @@ function gererFichier(input, cle) {
     // navigateur, aucune donnée envoyée à un tiers.
     if (cle === 'photo') {
       majUIUpload('photo', 'Vérification du visage...', true);
+      photoEnVerification = true;
       const verif = await verifierVisagePhoto(dataURL);
+      photoEnVerification = false;
       if (verif.rejet) {
         showToast(verif.message, 'error');
         effacerZone(cle);
@@ -220,12 +202,7 @@ function gererFichier(input, cle) {
 
     fichiers[cle] = { base64: dataURL.split(',')[1], mimeType: file.type, nom: file.name };
     majUIUpload(cle, file.name, true);
-    if (cle === 'piece1' || cle === 'photo') {
-      const piece1ok = !!fichiers.piece1;
-      const photoOk  = !!fichiers.photo;
-      if (piece1ok && photoOk) { updateStep(3, 'done'); updateStep(4, 'active'); }
-      else updateStep(3, 'active');
-    }
+    effacerErreurEtape(4);
   };
   reader.onerror = () => showToast('Erreur de lecture du fichier. Réessayez.', 'error');
   reader.readAsDataURL(file);
@@ -334,51 +311,6 @@ function supprimerFichier(cle) {
 }
 
 /* ================================================================
-   VALIDATION INSCRIPTION
-================================================================ */
-function validateInscription() {
-  let valid = true;
-
-  ['prenom','nom','sexe','telephone','typePiece','dateNaissance','lieuNaissance','nationalite','adresse',
-   'prenomMere','nomMere','prenomPere','nomPere','numeroPiece'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.remove('error');
-    if (!el.value.trim()) { el.classList.add('error'); valid = false; }
-  });
-
-  const tel = document.getElementById('telephone');
-  if (tel.value && !/^(\+229|229|0)[0-9\s]{8,15}$/.test(tel.value.replace(/\s/g,''))) {
-    tel.classList.add('error'); valid = false;
-  }
-
-  const email = document.getElementById('email');
-  if (email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-    email.classList.add('error'); valid = false;
-  }
-
-  const formations = getFormationsSelectionnees();
-  const errEl      = document.getElementById('formationsError');
-  if (formations.length === 0) {
-    errEl.classList.add('show'); valid = false;
-  } else {
-    errEl.classList.remove('show');
-  }
-
-  if (!fichiers.piece1) { document.getElementById('zone-piece1').classList.add('error'); valid = false; }
-  if (!fichiers.photo)  { document.getElementById('zone-photo').classList.add('error');  valid = false; }
-
-  const sigErrEl = document.getElementById('signatureError');
-  if (!signatureApposee) { sigErrEl.style.display = 'block'; valid = false; }
-  else { sigErrEl.style.display = 'none'; }
-
-  if (!document.getElementById('clause1').checked) valid = false;
-  if (!document.getElementById('clause2').checked) valid = false;
-
-  return valid;
-}
-
-/* ================================================================
    SIGNATURE NUMÉRIQUE — canvas tactile/souris
 ================================================================ */
 let signatureApposee = false;
@@ -446,6 +378,248 @@ function obtenirSignatureBase64() {
 }
 
 /* ================================================================
+   FORMULAIRE EN 5 ÉTAPES
+   Identité > Parents > Formations > Pièces > Validation.
+   Une seule étape visible à la fois ; "Suivant" refuse d'avancer tant
+   que l'étape en cours n'est pas correcte (message clair + champs en
+   rouge). Toutes les étapes restent dans le même <form> : l'envoi
+   final vers GAS (plus bas) est inchangé.
+================================================================ */
+const NB_ETAPES = 5;
+let etapeCourante    = 1;
+let etapeMaxAtteinte = 1;
+
+// Même règle que l'ancienne validation globale (numéros béninois).
+const REGEX_TEL_PRINCIPAL = /^(\+229|229|0)[0-9]{8,15}$/;
+// Téléphones facultatifs (parents, tuteur) : contrôle plus souple, on
+// accepte aussi un numéro étranger — on refuse seulement le n'importe quoi.
+const REGEX_TEL_SOUPLE    = /^\+?[0-9]{8,15}$/;
+const REGEX_EMAIL         = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function _val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function _marquer(id, ok) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('error', !ok);
+  return ok;
+}
+function _obligatoires(ids) {
+  let ok = true;
+  ids.forEach(id => { if (!_marquer(id, _val(id) !== '')) ok = false; });
+  return ok;
+}
+function _telOk(id, regex) {
+  const v = _val(id).replace(/\s/g, '');
+  return v === '' || regex.test(v);
+}
+
+const VALIDATEURS = {
+  1() {
+    const ok = _obligatoires(['prenom', 'nom', 'sexe', 'telephone', 'dateNaissance', 'lieuNaissance', 'nationalite', 'adresse']);
+    if (!ok) return { ok: false, message: 'Complétez les champs en rouge pour continuer.' };
+    if (!_marquer('telephone', _telOk('telephone', REGEX_TEL_PRINCIPAL))) {
+      return { ok: false, message: 'Numéro de téléphone invalide. Exemple : 01 97 95 12 30.' };
+    }
+    if (!_marquer('email', _val('email') === '' || REGEX_EMAIL.test(_val('email')))) {
+      return { ok: false, message: 'Adresse email invalide. Laissez le champ vide si vous n\'en avez pas.' };
+    }
+    const naissance = new Date(_val('dateNaissance') + 'T00:00:00');
+    if (!_marquer('dateNaissance', !isNaN(naissance.getTime()) && naissance < new Date())) {
+      return { ok: false, message: 'La date de naissance doit être une date passée.' };
+    }
+    return { ok: true };
+  },
+  2() {
+    const ok = _obligatoires(['prenomMere', 'nomMere', 'prenomPere', 'nomPere']);
+    if (!ok) return { ok: false, message: 'Le nom et le prénom de la mère et du père sont obligatoires.' };
+    const telsOk = ['telephoneMere', 'telephonePere', 'telephoneTuteur']
+      .map(id => _marquer(id, _telOk(id, REGEX_TEL_SOUPLE)))
+      .every(Boolean);
+    if (!telsOk) return { ok: false, message: 'Un numéro de téléphone est invalide (chiffres uniquement, 8 au minimum).' };
+    return { ok: true };
+  },
+  3() {
+    const ok = getFormationsSelectionnees().length > 0;
+    document.getElementById('formationsError').classList.toggle('show', !ok);
+    return ok ? { ok: true } : { ok: false, message: 'Choisissez au moins une formation.' };
+  },
+  4() {
+    if (photoEnVerification) {
+      return { ok: false, message: 'Vérification de la photo en cours… patientez quelques secondes puis réessayez.' };
+    }
+    const champsOk = _obligatoires(['typePiece', 'numeroPiece']);
+    const pieceOk  = !!fichiers.piece1;
+    const photoOk  = !!fichiers.photo;
+    document.getElementById('zone-piece1').classList.toggle('error', !pieceOk);
+    document.getElementById('zone-photo').classList.toggle('error', !photoOk);
+    if (!champsOk || !pieceOk || !photoOk) {
+      const manque = [];
+      if (!champsOk) manque.push('le type et le numéro de la pièce');
+      if (!pieceOk)  manque.push('le fichier de la pièce d\'identité');
+      if (!photoOk)  manque.push('la photo d\'identité');
+      return { ok: false, message: 'Il manque : ' + manque.join(', ') + '.' };
+    }
+    return { ok: true };
+  },
+  5() {
+    const clausesOk = document.getElementById('clause1').checked && document.getElementById('clause2').checked;
+    document.getElementById('signatureError').style.display = signatureApposee ? 'none' : 'block';
+    if (!clausesOk && !signatureApposee) return { ok: false, message: 'Cochez les deux engagements et signez avant d\'envoyer.' };
+    if (!clausesOk) return { ok: false, message: 'Cochez les deux engagements avant d\'envoyer.' };
+    if (!signatureApposee) return { ok: false, message: 'Apposez votre signature dans le cadre avant d\'envoyer.' };
+    return { ok: true };
+  },
+};
+
+// Défilement VERTICAL uniquement. scrollIntoView() est à éviter ici :
+// #inscription a overflow:hidden (cercle décoratif qui déborde), et
+// scrollIntoView peut faire défiler horizontalement cette section en
+// coupant le texte à gauche.
+function _defilerVers(el, decalage = 0.35) {
+  const y = el.getBoundingClientRect().top + window.scrollY - window.innerHeight * decalage;
+  window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+}
+
+function afficherErreurEtape(n, message) {
+  const el = document.getElementById('erreur-etape-' + n);
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add('show');
+  const champ = document.querySelector('#etape-' + n + ' .error');
+  _defilerVers(champ || el);
+}
+function effacerErreurEtape(n) {
+  const el = document.getElementById('erreur-etape-' + n);
+  if (el) { el.textContent = ''; el.classList.remove('show'); }
+}
+
+function rendreIndicateur() {
+  for (let i = 1; i <= NB_ETAPES; i++) {
+    const pastille = document.getElementById('step-' + i);
+    if (!pastille) continue;
+    const etat = i === etapeCourante ? 'active' : (i < etapeMaxAtteinte ? 'done' : '');
+    pastille.className = 'form-step' + (etat ? ' ' + etat : '');
+    // Retour en arrière uniquement : jamais de saut vers une étape suivante
+    // sans repasser par la validation de "Suivant".
+    pastille.disabled = i >= etapeCourante;
+    if (i === etapeCourante) pastille.setAttribute('aria-current', 'step');
+    else pastille.removeAttribute('aria-current');
+  }
+  const barre = document.getElementById('wizardBarre');
+  if (barre) barre.style.width = ((etapeCourante - 1) / (NB_ETAPES - 1) * 100) + '%';
+}
+
+function allerEtape(n) {
+  if (n < 1 || n > NB_ETAPES) return;
+  document.querySelectorAll('.wizard-etape').forEach(f => { f.hidden = Number(f.dataset.etape) !== n; });
+  etapeCourante    = n;
+  etapeMaxAtteinte = Math.max(etapeMaxAtteinte, n);
+  rendreIndicateur();
+  if (n === NB_ETAPES) { preparerSignature(); construireRecap(); }
+
+  // Remonter en haut du formulaire (sous la barre de navigation fixe).
+  const carte = document.querySelector('.form-card');
+  if (carte) {
+    const y = carte.getBoundingClientRect().top + window.scrollY - 90;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }
+  // Focus sur le premier champ (ordinateur uniquement : sur mobile, ça
+  // ouvrirait le clavier à chaque changement d'étape).
+  if (window.matchMedia('(min-width: 769px)').matches) {
+    const premier = document.querySelector('#etape-' + n + ' input:not([type="file"]):not([type="checkbox"]), #etape-' + n + ' select');
+    if (premier) premier.focus({ preventScroll: true });
+  }
+}
+
+function etapeSuivante() {
+  const r = VALIDATEURS[etapeCourante]();
+  if (!r.ok) { afficherErreurEtape(etapeCourante, r.message); return; }
+  effacerErreurEtape(etapeCourante);
+  allerEtape(etapeCourante + 1);
+}
+function etapePrecedente() {
+  effacerErreurEtape(etapeCourante);
+  allerEtape(etapeCourante - 1);
+}
+
+// La signature est un canvas : dessiné pendant qu'il était masqué, il a
+// une taille nulle. On le redimensionne à la première ouverture de
+// l'étape 5 (et seulement si sa taille a vraiment changé, pour ne pas
+// effacer une signature déjà faite quand on revient sur l'étape).
+function preparerSignature() {
+  const canvas = document.getElementById('sigCanvas');
+  const rect   = canvas.getBoundingClientRect();
+  const dpr    = window.devicePixelRatio || 1;
+  if (rect.width && canvas.width !== Math.floor(rect.width * dpr)) {
+    window.dispatchEvent(new Event('resize'));
+    if (signatureApposee) effacerSignature();
+  }
+}
+
+function construireRecap() {
+  const sexe = { M: 'Masculin', F: 'Féminin' }[_val('sexe')] || '';
+  const dn   = _val('dateNaissance')
+    ? new Date(_val('dateNaissance') + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  const tuteur = (_val('prenomTuteur') || _val('nomTuteur')) ? ' — Tuteur : ' + _val('prenomTuteur') + ' ' + _val('nomTuteur') : '';
+  const lignes = [
+    ['Identité',     `${_val('prenom')} ${_val('nom')} (${sexe})`, 1],
+    ['Naissance',    `${dn} à ${_val('lieuNaissance')} — ${_val('nationalite')}`, 1],
+    ['Contact',      _val('telephone') + (_val('email') ? ' — ' + _val('email') : ' — pas d\'email'), 1],
+    ['Adresse',      _val('adresse'), 1],
+    ['Parents',      `Mère : ${_val('prenomMere')} ${_val('nomMere')} — Père : ${_val('prenomPere')} ${_val('nomPere')}${tuteur}`, 2],
+    ['Formation(s)', getFormationsSelectionnees().join(', '), 3],
+    [document.getElementById('labelVirement').textContent, document.getElementById('premierVirementVal').textContent, 3],
+    ['Pièces',       `${_val('typePiece')} n° ${_val('numeroPiece')} — photo jointe` + (fichiers.preuve ? ' — preuve de paiement jointe' : ''), 4],
+  ];
+  document.getElementById('recapContenu').innerHTML = lignes.map(([lib, val, etape]) => `
+    <div class="recap-ligne">
+      <span class="recap-lib">${_escapeHtml(lib)}</span>
+      <span class="recap-val">${_escapeHtml(val)}</span>
+      <button type="button" class="recap-modifier" onclick="allerEtape(${etape})">Modifier</button>
+    </div>`).join('');
+}
+
+// Affichage final après un envoi réussi : on masque le formulaire, on
+// garde le message de confirmation (n° de dossier, consignes de virement).
+function wizardSucces() {
+  document.getElementById('inscriptionForm').hidden = true;
+  document.getElementById('wizardIndicateur').hidden = true;
+  const prog = document.querySelector('.wizard-progression');
+  if (prog) prog.hidden = true;
+  const fb = document.getElementById('formFeedback');
+  fb.insertAdjacentHTML('beforeend', `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+      <a href="/espace-apprenant" class="btn-contour">Mon espace apprenant</a>
+      <a href="/inscription" class="btn-contour">Nouvelle inscription</a>
+    </div>`);
+  _defilerVers(fb, 0.25);
+}
+
+(function initWizard() {
+  const formEl = document.getElementById('inscriptionForm');
+  // Entrée dans un champ = "Suivant" (et non un envoi prématuré du dossier).
+  formEl.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || etapeCourante === NB_ETAPES) return;
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    etapeSuivante();
+  });
+  // Dès que l'apprenant corrige quelque chose, le message d'erreur disparaît.
+  formEl.addEventListener('input',  () => effacerErreurEtape(etapeCourante));
+  formEl.addEventListener('change', () => effacerErreurEtape(etapeCourante));
+  document.querySelectorAll('#wizardIndicateur .form-step').forEach(p => {
+    p.addEventListener('click', () => {
+      const cible = Number(p.dataset.cible);
+      if (cible < etapeCourante) allerEtape(cible);
+    });
+  });
+  rendreIndicateur();
+})();
+
+/* ================================================================
    SOUMISSION INSCRIPTION
    FIX : Content-Type text/plain pour éviter le preflight CORS
 ================================================================ */
@@ -458,11 +632,19 @@ form.addEventListener('submit', async function (e) {
   feedback.className     = 'form-feedback';
   feedback.style.display = 'none';
 
-  if (!validateInscription()) {
-    feedback.className     = 'form-feedback error-msg';
-    feedback.textContent   = 'Veuillez corriger les champs manquants ou invalides.';
-    feedback.style.display = 'block';
-    return;
+  // Pas encore à la dernière étape (ex. touche Entrée) : on avance au
+  // lieu d'envoyer.
+  if (etapeCourante < NB_ETAPES) { etapeSuivante(); return; }
+
+  // Contrôle complet avant envoi : si une étape précédente a été
+  // modifiée entre-temps et n'est plus valide, on y renvoie l'apprenant.
+  for (let n = 1; n <= NB_ETAPES; n++) {
+    const r = VALIDATEURS[n]();
+    if (!r.ok) {
+      if (n !== etapeCourante) allerEtape(n);
+      afficherErreurEtape(n, r.message);
+      return;
+    }
   }
 
   const formations = getFormationsSelectionnees();
@@ -534,6 +716,7 @@ form.addEventListener('submit', async function (e) {
       document.getElementById('fraisBloc').classList.remove('show');
       resetBtnLabel();
       showToast(`Dossier ${result.id} enregistré. Virement attendu.`, 'success');
+      wizardSucces();
     } else {
       // AVANT : on affichait un message générique qui masquait la vraie
       // raison du rejet (ex. "Champs invalides : formation(s), ...") —
