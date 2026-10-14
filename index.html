@@ -88,22 +88,29 @@
       <div class="nav-inner">
         <a class="nav-logo" href="/" aria-label="Accueil — LQD Service">
           <img src="icons/logo-lqd-v2.jpg" alt="LQD Service" />
-          <span>LQD Service</span>
+          <span translate="no">LQD Service</span>
         </a>
         <ul class="nav-links">
           <li><a href="/formations" class="nav-link">Formations</a></li>
           <li><a href="/services" class="nav-link">Services</a></li>
           <li><a href="/renseignements" class="nav-link">Renseignements</a></li>
           <li><a href="/galerie" class="nav-link">Galerie</a></li>
+          <li><a href="/temoignages" class="nav-link">Témoignages</a></li>
           <li><a href="/actualites" class="nav-link">Actualités</a></li>
           <li><a href="/contact" class="nav-link">Contact</a></li>
           <li><a href="/postuler" class="nav-link">Postuler</a></li>
           <li><a href="/espace-apprenant" class="nav-link">Espace apprenant</a></li>
           <li><a href="/inscription" class="btn-nav-cta">S'inscrire</a></li>
         </ul>
-        <button class="nav-burger" id="navBurger" aria-label="Menu">
-          <span class="iconify" data-icon="tabler:menu-2"></span>
-        </button>
+        <div class="nav-droite">
+          <div class="selecteur-langue notranslate" translate="no">
+            <span class="iconify" data-icon="tabler:world" aria-hidden="true"></span>
+            <select class="langue-select" aria-label="Langue du site"><option value="fr">Français</option><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="ar">العربية</option><option value="zh-CN">中文</option></select>
+          </div>
+          <button class="nav-burger" id="navBurger" aria-label="Menu">
+            <span class="iconify" data-icon="tabler:menu-2"></span>
+          </button>
+        </div>
       </div>
       <ul class="nav-mobile" id="navMobile">
         <li><a href="/" onclick="closeMobileNav()" aria-current="page">Accueil</a></li>
@@ -111,6 +118,7 @@
         <li><a href="/services" onclick="closeMobileNav()">Services</a></li>
         <li><a href="/renseignements" onclick="closeMobileNav()">Renseignements</a></li>
         <li><a href="/galerie" onclick="closeMobileNav()">Galerie</a></li>
+        <li><a href="/temoignages" onclick="closeMobileNav()">Témoignages</a></li>
         <li><a href="/actualites" onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="/contact" onclick="closeMobileNav()">Contact</a></li>
         <li><a href="/postuler" onclick="closeMobileNav()">Postuler</a></li>
@@ -230,6 +238,20 @@
     </div>
   </section>
 
+<section class="section section-alt" id="sectionTemoignagesAccueil" hidden>
+    <div class="container">
+      <div class="section-header reveal visible">
+        <span class="section-tag">Ils témoignent</span>
+        <h2 class="section-title">Ce que disent nos apprenants</h2>
+        <p class="section-subtitle">Des témoignages vérifiés, publiés par les apprenants du centre eux-mêmes.</p>
+      </div>
+      <div class="temo-grille" id="temoignagesAccueil"></div>
+      <div class="temo-accueil-lien">
+        <a href="/temoignages" class="btn-contour"><span class="iconify" data-icon="tabler:messages"></span>Lire tous les témoignages</a>
+      </div>
+    </div>
+  </section>
+
 <section id="carte" style="background:#F0F4F2;padding:80px 0;">
   <div class="container">
     <div class="section-header reveal">
@@ -296,6 +318,7 @@
             <li><a href="/services">Nos services</a></li>
             <li><a href="/renseignements">Renseignements</a></li>
             <li><a href="/galerie">Galerie</a></li>
+            <li><a href="/temoignages">Témoignages</a></li>
             <li><a href="/actualites">Actualités</a></li>
             <li><a href="/contact">Nous trouver</a></li>
             <li><a href="/postuler">Postuler (formateur / stage)</a></li>
@@ -321,6 +344,8 @@
   <div id="toast" role="alert" aria-live="polite"></div>
 
   <script src="js/site.js"></script>
+  <script src="js/traduction.js"></script>
+  <script src="js/temoignages.js"></script>
   <script src="js/chat-widget.js" defer></script>
 </body>
 </html>

@@ -74,22 +74,29 @@
       <div class="nav-inner">
         <a class="nav-logo" href="/" aria-label="Accueil — LQD Service">
           <img src="icons/logo-lqd-v2.jpg" alt="LQD Service" />
-          <span>LQD Service</span>
+          <span translate="no">LQD Service</span>
         </a>
         <ul class="nav-links">
           <li><a href="/formations" class="nav-link">Formations</a></li>
           <li><a href="/services" class="nav-link">Services</a></li>
           <li><a href="/renseignements" class="nav-link">Renseignements</a></li>
           <li><a href="/galerie" class="nav-link" aria-current="page">Galerie</a></li>
+          <li><a href="/temoignages" class="nav-link">Témoignages</a></li>
           <li><a href="/actualites" class="nav-link">Actualités</a></li>
           <li><a href="/contact" class="nav-link">Contact</a></li>
           <li><a href="/postuler" class="nav-link">Postuler</a></li>
           <li><a href="/espace-apprenant" class="nav-link">Espace apprenant</a></li>
           <li><a href="/inscription" class="btn-nav-cta">S'inscrire</a></li>
         </ul>
-        <button class="nav-burger" id="navBurger" aria-label="Menu">
-          <span class="iconify" data-icon="tabler:menu-2"></span>
-        </button>
+        <div class="nav-droite">
+          <div class="selecteur-langue notranslate" translate="no">
+            <span class="iconify" data-icon="tabler:world" aria-hidden="true"></span>
+            <select class="langue-select" aria-label="Langue du site"><option value="fr">Français</option><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="ar">العربية</option><option value="zh-CN">中文</option></select>
+          </div>
+          <button class="nav-burger" id="navBurger" aria-label="Menu">
+            <span class="iconify" data-icon="tabler:menu-2"></span>
+          </button>
+        </div>
       </div>
       <ul class="nav-mobile" id="navMobile">
         <li><a href="/" onclick="closeMobileNav()">Accueil</a></li>
@@ -97,6 +104,7 @@
         <li><a href="/services" onclick="closeMobileNav()">Services</a></li>
         <li><a href="/renseignements" onclick="closeMobileNav()">Renseignements</a></li>
         <li><a href="/galerie" onclick="closeMobileNav()" aria-current="page">Galerie</a></li>
+        <li><a href="/temoignages" onclick="closeMobileNav()">Témoignages</a></li>
         <li><a href="/actualites" onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="/contact" onclick="closeMobileNav()">Contact</a></li>
         <li><a href="/postuler" onclick="closeMobileNav()">Postuler</a></li>
@@ -116,45 +124,58 @@
       <nav class="fil-ariane" aria-label="Fil d'Ariane">
         <a href="/">Accueil</a><span class="sep">/</span><span aria-current="page">Galerie</span>
       </nav>
-      <h1>Notre cadre et nos réalisations</h1>
-      <p>Découvrez l'atmosphère du centre, les équipements et les travaux de nos apprenants.</p>
+      <h1>La vie au centre, en images</h1>
+      <p>Nos salles, nos ateliers, les réalisations de nos apprenants et les remises d'attestations.</p>
     </div>
   </header>
 
   <section id="galerie" class="section section-alt">
     <div class="container">
-      <div class="galerie-grid reveal">
-        <div class="galerie-item">
-          <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=80" alt="Équipe de travail numérique" loading="lazy" />
-          <div class="galerie-overlay"><span class="iconify" data-icon="tabler:eye" style="font-size:28px;"></span><span>Travail en équipe</span></div>
-          <div class="galerie-caption">Atelier numérique</div>
-        </div>
-        <div class="galerie-item">
-          <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?w=900&q=80" alt="Apprenant en formation informatique" loading="lazy" />
-          <div class="galerie-overlay"><span class="iconify" data-icon="tabler:eye" style="font-size:28px;"></span><span>Formation informatique</span></div>
-          <div class="galerie-caption">Cours pratiques</div>
-        </div>
-        <div class="galerie-item">
-          <img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=900&q=80" alt="Formation graphisme et design" loading="lazy" />
-          <div class="galerie-overlay"><span class="iconify" data-icon="tabler:eye" style="font-size:28px;"></span><span>Atelier graphisme</span></div>
-          <div class="galerie-caption">Graphisme &amp; PAO</div>
-        </div>
-        <div class="galerie-item">
-          <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=900&q=80" alt="Groupe d'apprenants en salle de cours" loading="lazy" />
-          <div class="galerie-overlay"><span class="iconify" data-icon="tabler:eye" style="font-size:28px;"></span><span>Apprenants en cours</span></div>
-          <div class="galerie-caption">Promotion 2025</div>
-        </div>
-        <div class="galerie-item">
-          <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=900&q=80" alt="Étudiant africain avec ordinateur portable" loading="lazy" />
-          <div class="galerie-overlay"><span class="iconify" data-icon="tabler:eye" style="font-size:28px;"></span><span>Remise d'attestations</span></div>
-          <div class="galerie-caption">Certificats professionnels</div>
-        </div>
+
+      <div class="galerie-chargement" id="galerieChargement">
+        <span class="iconify" data-icon="tabler:loader-2" style="animation:spin 1s linear infinite;font-size:22px;"></span>
+        Chargement des photos...
       </div>
-      <p style="text-align:center;font-size:11px;color:var(--gray-400);margin-top:14px;">
-        Photos : <a href="https://unsplash.com" target="_blank" rel="noopener" style="color:var(--teal-600);">Unsplash</a> — Licence libre d'utilisation
-      </p>
+
+      <!-- Galerie vide : aucune photo n'a encore été ajoutée depuis l'admin. -->
+      <div class="galerie-vide" id="galerieVide" hidden>
+        <span class="iconify" data-icon="tabler:photo-heart"></span>
+        <h2>Nos photos arrivent très bientôt</h2>
+        <p>En attendant, venez découvrir le centre en vrai : nous vous accueillons tous les jours à Comé-Hongodé.</p>
+        <a href="/contact" class="btn-primary"><span class="iconify" data-icon="tabler:map-pin"></span>Nous rendre visite</a>
+      </div>
+
+      <div id="galerieStage" hidden>
+        <div class="carrousel" id="carrousel" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Photos du centre (flèches gauche et droite pour naviguer)">
+          <div class="carrousel-piste" id="carrouselPiste"></div>
+          <div class="carrousel-degrade" aria-hidden="true"></div>
+          <div class="carrousel-legende" id="carrouselLegende" aria-live="polite"></div>
+          <button type="button" class="carrousel-btn carrousel-prec" id="carrouselPrec" aria-label="Photo précédente"><span class="iconify" data-icon="tabler:chevron-left"></span></button>
+          <button type="button" class="carrousel-btn carrousel-suiv" id="carrouselSuiv" aria-label="Photo suivante"><span class="iconify" data-icon="tabler:chevron-right"></span></button>
+          <button type="button" class="carrousel-pause" id="carrouselPause" aria-label="Mettre en pause le défilement"></button>
+        </div>
+        <div class="carrousel-points" id="carrouselPoints"></div>
+
+        <div class="galerie-entete-mosaique">
+          <h2>Toutes les photos</h2>
+          <div class="galerie-filtres" id="galerieFiltres" role="tablist" aria-label="Filtrer par catégorie"></div>
+        </div>
+        <div class="galerie-mosaique" id="galerieMosaique"></div>
+      </div>
+
     </div>
   </section>
+
+  <!-- Visionneuse plein écran -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo agrandie" hidden>
+    <button type="button" class="lightbox-fermer" id="lightboxFermer" aria-label="Fermer"><span class="iconify" data-icon="tabler:x"></span></button>
+    <button type="button" class="lightbox-nav lightbox-prec" id="lightboxPrec" aria-label="Photo précédente"><span class="iconify" data-icon="tabler:chevron-left"></span></button>
+    <figure class="lightbox-figure">
+      <img id="lightboxImage" src="" alt="" />
+      <figcaption id="lightboxLegende"></figcaption>
+    </figure>
+    <button type="button" class="lightbox-nav lightbox-suiv" id="lightboxSuiv" aria-label="Photo suivante"><span class="iconify" data-icon="tabler:chevron-right"></span></button>
+  </div>
 
   <section class="suite-parcours">
     <div class="container">
@@ -216,6 +237,7 @@
             <li><a href="/services">Nos services</a></li>
             <li><a href="/renseignements">Renseignements</a></li>
             <li><a href="/galerie">Galerie</a></li>
+            <li><a href="/temoignages">Témoignages</a></li>
             <li><a href="/actualites">Actualités</a></li>
             <li><a href="/contact">Nous trouver</a></li>
             <li><a href="/postuler">Postuler (formateur / stage)</a></li>
@@ -241,6 +263,8 @@
   <div id="toast" role="alert" aria-live="polite"></div>
 
   <script src="js/site.js"></script>
+  <script src="js/traduction.js"></script>
+  <script src="js/galerie.js"></script>
   <script src="js/chat-widget.js" defer></script>
 </body>
 </html>
