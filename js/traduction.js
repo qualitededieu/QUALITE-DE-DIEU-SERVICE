@@ -86,11 +86,38 @@
         autoDisplay: false
       }, 'google_translate_element');
     };
-    const s = document.createElement('script');
-    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-    s.async = true;
-    s.onerror = () => console.warn('[traduction] Google Traduction indisponible : le site reste en français.');
-    document.head.appendChild(s);
+    // Deux adresses officielles du même module : si la première est
+    // bloquée (réseau, pare-feu opérateur), on tente la seconde.
+    const SOURCES = [
+      'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit',
+      'https://translate.googleapis.com/translate_a/element.js?cb=googleTranslateElementInit'
+    ];
+    function essayer(i) {
+      if (i >= SOURCES.length) return echecTraduction();
+      const s = document.createElement('script');
+      s.src = SOURCES[i];
+      s.async = true;
+      s.onerror = () => { s.remove(); essayer(i + 1); };
+      document.head.appendChild(s);
+    }
+    essayer(0);
+  }
+
+  // Google injoignable (bloqueur de publicité, navigateur Brave, réseau
+  // filtré...) : on revient au français et on prévient le visiteur au lieu
+  // de laisser un sélecteur qui affiche une langue sans rien traduire.
+  function echecTraduction() {
+    console.warn('[traduction] Google Traduction injoignable (bloqueur ou réseau). Retour au français.');
+    const expire = 'Thu, 01 Jan 1970 00:00:00 GMT';
+    domaines().forEach(d => { document.cookie = 'googtrans=; expires=' + expire + '; path=/' + d; });
+    document.documentElement.classList.remove('site-traduit');
+    document.querySelectorAll('.langue-select').forEach(s => { s.value = 'fr'; });
+    const msg = document.createElement('div');
+    msg.className = 'traduction-alerte notranslate';
+    msg.setAttribute('role', 'status');
+    msg.textContent = 'Translation unavailable: please disable your ad blocker or check your connection, then try again. / Traduction indisponible : désactivez votre bloqueur de publicité ou vérifiez votre connexion, puis réessayez.';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 9000);
   }
 
   // Styles minimum injectés ici : les pages qui ne chargent pas
@@ -106,7 +133,9 @@
     'iframe.skiptranslate,.goog-te-banner-frame,#goog-gt-tt,.goog-te-balloon-frame,.goog-tooltip,',
     '.VIpgJd-ZVi9od-ORHb-OEVmcd,.VIpgJd-ZVi9od-aZ2wEe-wOHMyf{display:none!important}',
     'html.site-traduit body{top:0!important;position:static!important}',
-    '.goog-text-highlight{background:none!important;box-shadow:none!important}'
+    '.goog-text-highlight{background:none!important;box-shadow:none!important}',
+    '.traduction-alerte{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10000;max-width:min(92vw,520px);',
+    'background:#2C2C3E;color:#fff;font-size:13px;line-height:1.45;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25)}'
   ].join('');
   document.head.appendChild(style);
 
