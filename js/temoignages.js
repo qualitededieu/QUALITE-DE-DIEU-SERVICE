@@ -60,18 +60,36 @@
     return r;
   }
 
+  // Le serveur GAS peut mettre quelques secondes à "se réveiller" : on
+  // retente une fois avant d'abandonner.
+  async function listerAvecReprise(limite) {
+    try { return await lister(limite); }
+    catch (e) {
+      await new Promise(ok => setTimeout(ok, 2500));
+      return lister(limite);
+    }
+  }
+
+  // Message affiché quand la liste est vide OU indisponible : on ne parle
+  // jamais de panne au visiteur, on l'invite à agir. La vraie cause reste
+  // visible dans la console (F12) pour le diagnostic.
+  function blocInvitation(texte) {
+    return `<div class="temo-vide">
+      <span class="iconify" data-icon="tabler:message-heart"></span>
+      <p>${texte}</p>
+      <a href="#formTemoignage" class="temo-vide-btn">Laisser mon témoignage</a>
+    </div>`;
+  }
+
   // Page Témoignages : liste complète + note moyenne
   async function chargerPage() {
     const liste = document.getElementById('temoignagesListe');
     if (!liste) return;
     const stats = document.getElementById('temoignagesStats');
     try {
-      const r = await lister(100);
+      const r = await listerAvecReprise(100);
       if (!r.temoignages.length) {
-        liste.innerHTML = `<div class="temo-vide">
-          <span class="iconify" data-icon="tabler:message-heart"></span>
-          <p>Aucun témoignage pour le moment. Vous êtes apprenant(e) du centre ? Soyez le premier ou la première à partager votre expérience.</p>
-        </div>`;
+        liste.innerHTML = blocInvitation('Les avis de nos apprenants seront bientôt publiés ici. Vous avez suivi une formation chez nous ? Soyez le premier ou la première à partager votre expérience.');
         if (stats) stats.hidden = true;
         return;
       }
@@ -83,8 +101,9 @@
           <span>sur ${r.total} témoignage${r.total > 1 ? 's' : ''} d'apprenants vérifiés</span>`;
       }
     } catch (e) {
-      liste.innerHTML = '<p class="temo-vide">Impossible de charger les témoignages pour le moment.</p>';
-      console.warn('[temoignages]', e.message);
+      liste.innerHTML = blocInvitation('Nos apprenants partagent ici leur expérience au centre. Vous avez suivi une formation chez nous ? Votre avis compte : laissez votre témoignage ci-dessous.');
+      if (stats) stats.hidden = true;
+      console.warn('[temoignages] liste indisponible :', e.message);
     }
   }
 
@@ -94,7 +113,7 @@
     if (!zone) return;
     const section = document.getElementById('sectionTemoignagesAccueil');
     try {
-      const r = await lister(3);
+      const r = await listerAvecReprise(3);
       if (!r.temoignages.length) return;
       zone.innerHTML = r.temoignages.map(carte).join('');
       if (section) section.hidden = false;
