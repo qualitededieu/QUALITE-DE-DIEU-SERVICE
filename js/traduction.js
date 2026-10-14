@@ -26,6 +26,7 @@
     ['de', 'Deutsch'],
     ['ar', 'العربية'],
     ['zh-CN', '中文'],
+    ['ee', 'Eʋegbe (Éwé)'],
   ];
   const CODES = LANGUES.map(l => l[0]);
 
