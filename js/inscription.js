@@ -2,16 +2,32 @@
    pièces jointes (+ contrôle visage), signature, envoi du dossier.
    Dépend de js/site.js (GAS_WEBAPP_URL, formatFCFA, showToast). */
 /* ================================================================
-   CONFIG — Coûts formations (FCFA)
-   TODO : renseigner les montants réels — même valeurs que code.gs
+   CONFIG — Coûts formations (FCFA), grille d'octobre 2026.
+   TOUJOURS identique à GAS/code.gs (CONFIG.COUTS_FORMATIONS,
+   FRAIS_INSCRIPTION, PACK_COMPLET) : le serveur recalcule les montants
+   de son côté, un écart ici afficherait un faux montant à l'apprenant.
+   Les clés sont les identifiants techniques (jamais les noms affichés).
 ================================================================ */
 const COUTS_FORMATIONS = {
-  'Informatique & Bureautique': 100000,
-  'Graphisme & PAO':           200000,
+  'Informatique & Bureautique': 100000,   // affiché "Secrétariat bureautique"
+  'Secrétariat comptable':      150000,
+  'Graphisme & PAO':            200000,   // affiché "Graphisme"
+  'Montage audio-visuel':       150000,
   'Sérigraphie':                100000,
-  'Création de sites web':      250000
+  'Création de sites web':      200000    // affiché "Développeur Web / Mobile / Windows"
 };
-const FRAIS_INSCRIPTION = 10000;
+const FRAIS_INSCRIPTION = 5000;
+// Noms montrés à l'apprenant (même table que CONFIG.NOMS_AFFICHAGE_PUBLIC
+// côté GAS). Une clé absente s'affiche telle quelle.
+const NOMS_AFFICHAGE = {
+  'Informatique & Bureautique': 'Secrétariat bureautique',
+  'Graphisme & PAO':            'Graphisme',
+  'Création de sites web':      'Développeur Web / Mobile / Windows',
+};
+function nomAffichage(cle) { return NOMS_AFFICHAGE[cle] || cle; }
+// Initiation rapide : plus proposée aux nouvelles inscriptions depuis
+// octobre 2026 (case retirée du formulaire). Constante conservée car le
+// calcul des frais ci-dessous la référence encore sans risque.
 const FORMATION_COURTE = { NOM: 'Initiation rapide (1 mois)', COUT: 25000, FRAIS_INSCRIPTION: 5000 };
 // Pack "toutes les filières" — coût forfaitaire fixe (PC portable Core
 // i7 inclus), jamais une somme de COUTS_FORMATIONS. Reste sur le
@@ -41,32 +57,30 @@ function getFormationsSelectionnees() {
 // mélanger paiement unique, tranches sur pack et tranches sur
 // filière(s) dans le même dossier. Miroir exact de l'exclusivité
 // appliquée côté serveur dans GAS/code.gs::traiterInscription.
+// Octobre 2026 : la case Initiation rapide (#f5) a été retirée du
+// formulaire — chaque accès à #f5 est donc protégé (null toléré). Seul le
+// Pack (#f6) reste une offre exclusive.
 function gererExclusiviteFormationCourte() {
   const caseCourte   = document.getElementById('f5');
   const casePack     = document.getElementById('f6');
   const casesLongues = Array.from(document.querySelectorAll('input[name="formations"]:not(#f5):not(#f6)'));
   const hintCourte   = document.getElementById('hint-courte');
   const hintPack     = document.getElementById('hint-pack');
+  const exclusives   = [caseCourte, casePack].filter(Boolean);
 
-  if (caseCourte.checked) {
+  const exclusiveCochee = exclusives.find(cb => cb.checked);
+  if (exclusiveCochee) {
     casesLongues.forEach(cb => { cb.checked = false; cb.disabled = true; });
-    casePack.checked = false; casePack.disabled = true;
-    hintCourte.style.display = 'block';
-  } else if (casePack.checked) {
-    casesLongues.forEach(cb => { cb.checked = false; cb.disabled = true; });
-    caseCourte.checked = false; caseCourte.disabled = true;
-    hintPack.style.display = 'block';
+    exclusives.forEach(cb => { if (cb !== exclusiveCochee) { cb.checked = false; cb.disabled = true; } });
   } else {
     casesLongues.forEach(cb => cb.disabled = false);
-    caseCourte.disabled = false;
-    casePack.disabled   = false;
-    hintCourte.style.display = 'none';
-    hintPack.style.display   = 'none';
+    exclusives.forEach(cb => cb.disabled = false);
   }
+  if (hintCourte) hintCourte.style.display = caseCourte && caseCourte.checked ? 'block' : 'none';
+  if (hintPack)   hintPack.style.display   = casePack && casePack.checked ? 'block' : 'none';
 
   const uneLongueCochee = casesLongues.some(cb => cb.checked);
-  caseCourte.disabled = caseCourte.disabled || uneLongueCochee;
-  casePack.disabled   = casePack.disabled   || uneLongueCochee;
+  exclusives.forEach(cb => { cb.disabled = cb.disabled || uneLongueCochee; });
 }
 
 function mettreAJourFrais() {
@@ -570,7 +584,7 @@ function construireRecap() {
     ['Contact',      _val('telephone') + (_val('email') ? ' — ' + _val('email') : ' — pas d\'email'), 1],
     ['Adresse',      _val('adresse'), 1],
     ['Parents',      `Mère : ${_val('prenomMere')} ${_val('nomMere')} — Père : ${_val('prenomPere')} ${_val('nomPere')}${tuteur}`, 2],
-    ['Formation(s)', getFormationsSelectionnees().join(', '), 3],
+    ['Formation(s)', getFormationsSelectionnees().map(nomAffichage).join(', '), 3],
     [document.getElementById('labelVirement').textContent, document.getElementById('premierVirementVal').textContent, 3],
     ['Pièces',       `${_val('typePiece')} n° ${_val('numeroPiece')} — photo jointe` + (fichiers.preuve ? ' — preuve de paiement jointe' : ''), 4],
   ];
@@ -756,7 +770,7 @@ function preselectionnerFormation(formation) {
   if (!cb) return;
   if (!cb.disabled) cb.checked = true;
   mettreAJourFrais();
-  showToast('Formation présélectionnée : ' + formation, 'success');
+  showToast('Formation présélectionnée : ' + nomAffichage(formation), 'success');
 }
 (function preselectionDepuisUrl() {
   const formation = new URLSearchParams(window.location.search).get('formation');

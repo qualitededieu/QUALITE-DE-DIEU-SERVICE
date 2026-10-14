@@ -822,11 +822,14 @@
           <div>
             <label class="auth-label" for="cours-filiere">Filière</label>
             <select id="cours-filiere" class="auth-input">
-              <option value="Informatique &amp; Bureautique">Informatique &amp; Bureautique</option>
-              <option value="Graphisme &amp; PAO">Graphisme &amp; PAO</option>
+              <!-- value = clé technique (GAS), libellé = nom affiché d'octobre 2026 -->
+              <option value="Informatique &amp; Bureautique">Secrétariat bureautique</option>
+              <option value="Secrétariat comptable">Secrétariat comptable</option>
+              <option value="Graphisme &amp; PAO">Graphisme</option>
+              <option value="Montage audio-visuel">Montage audio-visuel</option>
               <option value="Sérigraphie">Sérigraphie</option>
-              <option value="Création de sites web">Création de sites web</option>
-              <option value="Initiation rapide (1 mois)">Initiation rapide (1 mois)</option>
+              <option value="Création de sites web">Développeur Web / Mobile / Windows</option>
+              <option value="Initiation rapide (1 mois)">Initiation rapide (1 mois) — anciens dossiers</option>
               <option value="Tous">Tous (support commun)</option>
             </select>
           </div>
@@ -1094,10 +1097,12 @@
       <label class="auth-label" for="annonce-categorie" style="margin-top:14px;display:block;">Catégorie</label>
       <select id="annonce-categorie" class="filter-select" style="width:100%;">
         <option value="Général">Général</option>
-        <option value="Informatique & Bureautique">Informatique & Bureautique</option>
-        <option value="Graphisme & PAO">Graphisme & PAO</option>
+        <option value="Informatique & Bureautique">Secrétariat bureautique</option>
+        <option value="Secrétariat comptable">Secrétariat comptable</option>
+        <option value="Graphisme & PAO">Graphisme</option>
+        <option value="Montage audio-visuel">Montage audio-visuel</option>
         <option value="Sérigraphie">Sérigraphie</option>
-        <option value="Création de sites web">Création de sites web & Application Mobile</option>
+        <option value="Création de sites web">Développeur Web / Mobile / Windows</option>
       </select>
 
       <label class="auth-label" for="annonce-type" style="margin-top:14px;display:block;">Type d'annonce</label>
@@ -1890,11 +1895,15 @@ function renderModalDossier(d) {
 // à partir de laquelle filtrer. Les intitulés "Pack 3 Filières" reprennent
 // celui déjà utilisé sur l'attestation (ATT_NOMS_AFFICHAGE, attestation_generator.js).
 const NIVEAU_OPTIONS_ADMIN = {
-  'Informatique & Bureautique': [
+  'Secrétariat bureautique': [
     'Niveau 1 — Bureautique de base',
     'Niveau 2 — Word, Excel, PowerPoint avancés',
   ],
-  'Graphisme & PAO': [
+  'Secrétariat comptable': [
+    'Niveau 1 — Comptabilité courante',
+    'Niveau 2 — Tenue comptable complète',
+  ],
+  'Graphisme': [
     'Niveau 1 — Photoshop & Illustrator',
     'Niveau 2 — Maquette professionnelle',
   ],
@@ -1902,7 +1911,11 @@ const NIVEAU_OPTIONS_ADMIN = {
     'Niveau 1 — Impression textile',
     'Niveau 2 — Multi-supports & finitions',
   ],
-  'Création de sites web & Application Mobile': [
+  'Montage audio-visuel': [
+    'Niveau 1 — Montage de base',
+    'Niveau 2 — Production vidéo complète',
+  ],
+  'Développeur Web / Mobile / Windows': [
     'Niveau 1 — Site vitrine HTML/CSS',
     'Niveau 2 — Site dynamique + hébergement',
   ],
@@ -2658,10 +2671,12 @@ function badgeRegStatut(statut) {
 }
 function abrevierFormation(f) {
   const map = {
-    'Informatique & Bureautique':        'Informatique',
+    'Informatique & Bureautique':        'Secr. bureautique',
+    'Secrétariat comptable':             'Secr. comptable',
     'Graphisme & PAO':                   'Graphisme',
+    'Montage audio-visuel':              'Audio-visuel',
     'Sérigraphie':                       'Sérigraphie',
-    'Création de sites web':             'Web & Mobile',
+    'Création de sites web':             'Dév. Web/Mobile',
     'Initiation rapide (1 mois)':        'Initiation',
     'Pack 3 Filières':                   'Pack 3F'
   };

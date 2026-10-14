@@ -90,7 +90,9 @@ function forumLister(data) {
   const feuille = _getOrCreateFeuilleForum();
   if (!feuille) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
-  const mesFilieres = _filieresApprenant(payload.filiere);
+  // Comparaison par clé technique : les questions anciennes portent les
+  // noms affichés de l'époque (voir cleFiliere / clesFilieres, code.gs).
+  const mesCles = clesFilieres(payload.filiere);
   const donnees = feuille.getDataRange().getValues();
   const questions = [];
   for (let i = 1; i < donnees.length; i++) {
@@ -98,7 +100,7 @@ function forumLister(data) {
     if (!row[0]) continue;
     const obj = _ligneForumVersObjet(row);
     const estMoi = obj.dossierId === payload.id;
-    const memeFiliere = mesFilieres.indexOf(obj.filiere) !== -1;
+    const memeFiliere = clesFilieres(obj.filiere).some(c => mesCles.indexOf(c) !== -1);
     if (!estMoi && !(memeFiliere && obj.statut === 'repondu')) continue;
     questions.push(obj);
   }

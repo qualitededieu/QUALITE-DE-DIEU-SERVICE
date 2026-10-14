@@ -42,7 +42,16 @@ const ATT_DESCRIPTIONS = {
   "Sérigraphie":                                    "Techniques d'impression sur tout support (tissu, enseignes, objets promotionnels), préparation des écrans, gestion des couleurs et finitions.",
   "Création de sites web & Application Mobile":     "Conception et publication de sites internet (HTML/CSS, WordPress, Wix) et d'applications mobiles, mise en ligne, hébergement et publication sur les stores.",
   "Initiation rapide (1 mois)":                     "Initiation accélérée aux outils numériques essentiels : prise en main de l'ordinateur, bureautique de base et navigation Internet.",
-  "Pack 3 Filières":                                "Parcours combiné couvrant trois filières du centre (Bureautique, Graphisme, Sérigraphie), avec remise d'un PC portable Core i7.",
+  "Pack 3 Filières":                                "Parcours combiné couvrant trois filières du centre (Secrétariat bureautique, Graphisme, Sérigraphie), avec remise d'un PC portable Core i7.",
+  // Noms d'affichage d'octobre 2026 (GAS/code.gs NOMS_AFFICHAGE_PUBLIC).
+  // Les anciennes clés ci-dessus restent pour les données déjà émises.
+  // ATTENTION : textes des 3 dernières filières rédigés sans fiche
+  // pédagogique officielle — à faire valider par le PDG (document officiel).
+  "Secrétariat bureautique":                        "Maîtrise des outils bureautiques (Word, Excel, PowerPoint), travaux de secrétariat, saisie et mise en forme de documents professionnels, classement et navigation Internet.",
+  "Graphisme":                                      "Conception graphique et publication assistée par ordinateur : logos, affiches et supports visuels, maîtrise des logiciels professionnels (Photoshop, Illustrator, CorelDRAW, Canva Pro).",
+  "Secrétariat comptable":                          "Travaux de secrétariat et comptabilité courante : saisie des pièces comptables, facturation, suivi de caisse et de trésorerie, tableaux de suivi sous Excel.",
+  "Montage audio-visuel":                           "Prise de vue, montage vidéo et traitement du son, habillage graphique et exportation des productions pour la diffusion (événements, publicité, réseaux sociaux).",
+  "Développeur Web / Mobile / Windows":             "Conception et développement de sites internet, d'applications mobiles et de logiciels Windows, bases de données, mise en ligne et publication.",
 };
 
 function _attDescription(filiere) {
@@ -59,6 +68,12 @@ const ATT_CATEGORIES_LONGUE = {
   "Sérigraphie":                                { categorie: "Design & Impression",   texte: ATT_DESCRIPTIONS["Sérigraphie"] },
   "Création de sites web & Application Mobile": { categorie: "Développement Web & Mobile", texte: ATT_DESCRIPTIONS["Création de sites web & Application Mobile"] },
   "Initiation rapide (1 mois)":                 { categorie: "Initiation numérique",  texte: ATT_DESCRIPTIONS["Initiation rapide (1 mois)"] },
+  // Noms d'affichage d'octobre 2026.
+  "Secrétariat bureautique":                    { categorie: "Bureautique & Digital",       texte: ATT_DESCRIPTIONS["Secrétariat bureautique"] },
+  "Graphisme":                                  { categorie: "Design & Impression",         texte: ATT_DESCRIPTIONS["Graphisme"] },
+  "Secrétariat comptable":                      { categorie: "Gestion & Comptabilité",      texte: ATT_DESCRIPTIONS["Secrétariat comptable"] },
+  "Montage audio-visuel":                       { categorie: "Audiovisuel & Multimédia",    texte: ATT_DESCRIPTIONS["Montage audio-visuel"] },
+  "Développeur Web / Mobile / Windows":         { categorie: "Développement informatique",  texte: ATT_DESCRIPTIONS["Développeur Web / Mobile / Windows"] },
 };
 
 // Les 3 filières couvertes par le Pack 3 Filières — utilisées pour
@@ -67,8 +82,8 @@ const ATT_CATEGORIES_LONGUE = {
 // N'inclut PAS "Création de sites web & Application Mobile" — exclue
 // délibérément de ce pack (confirmé par le PDG, 22/09/2026).
 const ATT_PACK_COMPLET_FILIERES = [
-  "Informatique & Bureautique",
-  "Graphisme & PAO",
+  "Secrétariat bureautique",
+  "Graphisme",
   "Sérigraphie",
 ];
 

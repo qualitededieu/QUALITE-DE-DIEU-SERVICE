@@ -46,7 +46,9 @@ function coursListerApprenant(data) {
   const feuille = _getOrCreateFeuilleCours();
   if (!feuille) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
 
-  const mesFilieres = _filieresApprenant(payload.filiere);
+  // Comparaison par clé technique (voir cleFiliere / clesFilieres dans
+  // code.gs) : le token porte des noms AFFICHÉS, la feuille Cours des clés.
+  const mesCles = clesFilieres(payload.filiere);
   const donnees = feuille.getDataRange().getValues();
   const cours = [];
   for (let i = 1; i < donnees.length; i++) {
@@ -55,7 +57,7 @@ function coursListerApprenant(data) {
     const filiereCours = String(row[1] || '').trim();
     // 'Tous' = support commun visible par toutes les filières (ex.
     // rappel de sécurité informatique, guide d'utilisation du centre).
-    if (filiereCours !== 'Tous' && mesFilieres.indexOf(filiereCours) === -1) continue;
+    if (filiereCours !== 'Tous' && mesCles.indexOf(cleFiliere(filiereCours)) === -1) continue;
 
     cours.push({
       id:          String(row[0]),

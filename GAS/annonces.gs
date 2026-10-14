@@ -14,6 +14,8 @@ const ANNONCE_CATEGORIES = {
   'Graphisme & PAO':            { icone: 'tabler:vector-bezier', couleur: '#7B2EFF', fond: 'linear-gradient(135deg,#F0E8FF,#E2D0FF)' },
   'Sérigraphie':                { icone: 'tabler:shirt',         couleur: '#C97A1A', fond: 'linear-gradient(135deg,#FDF0E0,#FBE1C2)' },
   'Création de sites web':      { icone: 'tabler:code',          couleur: '#0D7A8A', fond: 'linear-gradient(135deg,#E0F4F7,#C2E9EF)' },
+  'Secrétariat comptable':      { icone: 'tabler:calculator',    couleur: '#2563A8', fond: 'linear-gradient(135deg,#E7F0FB,#CFE0F5)' },
+  'Montage audio-visuel':       { icone: 'tabler:movie',         couleur: '#C2410C', fond: 'linear-gradient(135deg,#FDECEC,#FBD5C9)' },
   'Général':                    { icone: 'tabler:speakerphone',  couleur: '#04342C', fond: 'linear-gradient(135deg,#E7EEEC,#CFDFDA)' },
 };
 

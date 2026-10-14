@@ -12,15 +12,22 @@ const CONFIG = {
   COULEUR_DARK:   '#04342C',
   WHATSAPP:       '22997951230'.replace(/\s/g, ''),
 
-  FRAIS_INSCRIPTION: 10000,
+  // Grille tarifaire d'octobre 2026 (affiche PDG) : frais d'inscription
+  // ramenés à 5 000 F pour toutes les filières, Pack compris.
+  FRAIS_INSCRIPTION: 5000,
 
-  // Tarifs mis à jour par le PDG (septembre 2026) — durée 6 mois pour les
-  // 3 filières classiques, 24 mois pour le web (offre élargie au mobile).
+  // Tarifs octobre 2026 — 6 filières. Les CLÉS sont des identifiants
+  // techniques (feuilles Sheets, dossiers existants, filtres admin) : ne
+  // jamais les renommer. Le nom montré au public est dans
+  // NOMS_AFFICHAGE_PUBLIC plus bas. Chaque filière est suivie de 3 mois
+  // de stage en entreprise (non facturés, non comptés dans la durée).
   COUTS_FORMATIONS: {
-    'Informatique & Bureautique': 100000,
-    'Graphisme & PAO':            200000,
+    'Informatique & Bureautique': 100000,   // affiché "Secrétariat bureautique"
+    'Secrétariat comptable':      150000,
+    'Graphisme & PAO':            200000,   // affiché "Graphisme"
+    'Montage audio-visuel':       150000,
     'Sérigraphie':                100000,
-    'Création de sites web':      250000
+    'Création de sites web':      200000    // affiché "Développeur Web / Mobile / Windows"
   },
 
   // Durée en mois par filière longue — utilisée pour l'affichage public et
@@ -28,10 +35,15 @@ const CONFIG = {
   // _mapperApprenantInscription). Ne pas confondre avec PACK_COMPLET.DUREE_MOIS.
   DUREES_FORMATIONS: {
     'Informatique & Bureautique': 6,
+    'Secrétariat comptable':      6,
     'Graphisme & PAO':            6,
+    'Montage audio-visuel':       9,
     'Sérigraphie':                6,
     'Création de sites web':      24
   },
+
+  // Stage en entreprise après la formation (toutes filières) — affichage.
+  DUREE_STAGE_MOIS: 3,
 
   // La clé technique 'Création de sites web' est conservée telle quelle
   // pour ne jamais casser les dossiers déjà enregistrés (feuilles, filtres,
@@ -44,9 +56,14 @@ const CONFIG = {
   // séparateur utilisé par carte.gs pour joindre plusieurs filières côté
   // affichage est ' | ' (jamais une virgule) précisément pour éviter toute
   // collision avec une virgule interne à un nom d'affichage comme celui-ci.
+  // Octobre 2026 : nouveaux noms publics (affiche PDG). Les anciens
+  // dossiers gardent leur clé technique et s'affichent automatiquement
+  // sous le nouveau nom.
   NOMS_AFFICHAGE_PUBLIC: {
-    'Création de sites web': 'Création de sites web & Application Mobile',
-    'Pack 3 Filières':       'Pack 3 Filières — Bureautique, Graphisme & Sérigraphie'
+    'Informatique & Bureautique': 'Secrétariat bureautique',
+    'Graphisme & PAO':            'Graphisme',
+    'Création de sites web':      'Développeur Web / Mobile / Windows',
+    'Pack 3 Filières':            'Pack 3 Filières — Secrétariat bureautique, Graphisme & Sérigraphie'
   },
 
   // Pack 3 filières — option exclusive et autonome (jamais combinée avec
@@ -91,12 +108,32 @@ const CONFIG = {
     BIC:           'AFRIBJBJXXX'
   },
 
+  // Toutes les formations CONNUES du système, y compris celles qui ne
+  // sont plus proposées : sert aux feuilles Sheets, à l'admin
+  // (suppression, recherche) et aux dossiers existants. Ne jamais en
+  // retirer une formation qui a des dossiers enregistrés.
   FORMATIONS_VALIDES: [
     'Informatique & Bureautique',
+    'Secrétariat comptable',
     'Graphisme & PAO',
+    'Montage audio-visuel',
     'Sérigraphie',
     'Création de sites web',
     'Initiation rapide (1 mois)',
+    'Pack 3 Filières'
+  ],
+
+  // Formations ouvertes aux NOUVELLES inscriptions et demandes de
+  // renseignement. L'Initiation rapide n'est plus proposée depuis octobre
+  // 2026 (décision PDG) : retirée ici seulement, ses dossiers existants
+  // restent gérés normalement via FORMATIONS_VALIDES.
+  FORMATIONS_OUVERTES: [
+    'Informatique & Bureautique',
+    'Secrétariat comptable',
+    'Graphisme & PAO',
+    'Montage audio-visuel',
+    'Sérigraphie',
+    'Création de sites web',
     'Pack 3 Filières'
   ]
 };
@@ -108,6 +145,41 @@ const CONFIG = {
 // attestations) — jamais pour les clés internes (Sheets, filtres, CONFIG).
 function nomAffichagePublic(filiere) {
   return (CONFIG.NOMS_AFFICHAGE_PUBLIC && CONFIG.NOMS_AFFICHAGE_PUBLIC[filiere]) || filiere;
+}
+
+// Anciens noms d'affichage encore présents dans des données déjà
+// enregistrées (questions du forum, sessions apprenant ouvertes avant la
+// mise à jour d'octobre 2026) -> clé technique correspondante.
+const ANCIENS_NOMS_AFFICHAGE = {
+  'Création de sites web & Application Mobile':            'Création de sites web',
+  'Pack 3 Filières — Bureautique, Graphisme & Sérigraphie': 'Pack 3 Filières'
+};
+
+// Inverse de nomAffichagePublic : ramène n'importe quel nom de filière
+// (clé technique, nom affiché actuel ou ancien nom affiché) à sa clé
+// technique. Sert à comparer des filières sans dépendre de la façon dont
+// elles ont été écrites au moment de l'enregistrement.
+function cleFiliere(nom) {
+  const n = String(nom || '').trim();
+  if (CONFIG.FORMATIONS_VALIDES.indexOf(n) !== -1) return n;
+  for (const cle in CONFIG.NOMS_AFFICHAGE_PUBLIC) {
+    if (CONFIG.NOMS_AFFICHAGE_PUBLIC[cle] === n) return cle;
+  }
+  return ANCIENS_NOMS_AFFICHAGE[n] || n;
+}
+
+// Liste des clés techniques d'une chaîne de filières "A | B". Le Pack est
+// développé en ses 3 filières réelles, pour qu'un apprenant du Pack voie
+// aussi les cours et questions de chacune d'elles.
+function clesFilieres(chaine) {
+  const cles = [];
+  String(chaine || '').split(' | ').map(cleFiliere).filter(Boolean).forEach(function (c) {
+    if (cles.indexOf(c) === -1) cles.push(c);
+    if (c === CONFIG.PACK_COMPLET.NOM) {
+      CONFIG.PACK_COMPLET.FILIERES.forEach(function (f) { if (cles.indexOf(f) === -1) cles.push(f); });
+    }
+  });
+  return cles;
 }
 
 const ENTETES_INSCRIPTION = [
@@ -320,7 +392,7 @@ function traiterInscription(data) {
     return reponseJSON({ status: 'error', message: erreursFichiers.join(' ') });
   }
 
-  const formationsBrutes = _normaliserFormations(data).filter(f => CONFIG.FORMATIONS_VALIDES.includes(f));
+  const formationsBrutes = _normaliserFormations(data).filter(f => CONFIG.FORMATIONS_OUVERTES.includes(f));
 
   if (formationsBrutes.length === 0) {
     return reponseJSON({ status: 'error', message: 'Aucune formation valide sélectionnée.' });
@@ -429,7 +501,7 @@ function traiterRenseignement(data) {
   }
 
   const formations = Array.isArray(data.formations)
-    ? data.formations.filter(f => CONFIG.FORMATIONS_VALIDES.includes(f))
+    ? data.formations.filter(f => CONFIG.FORMATIONS_OUVERTES.includes(f))
     : [];
 
   const renseignement = {
@@ -513,7 +585,7 @@ function validerDonneesInscription(data) {
   if (!data.numeroPiece|| data.numeroPiece.trim().length < 4) erreurs.push('numéro de pièce');
 
   const formations = _normaliserFormations(data);
-  if (!formations || !formations.some(f => CONFIG.FORMATIONS_VALIDES.includes(f)))
+  if (!formations || !formations.some(f => CONFIG.FORMATIONS_OUVERTES.includes(f)))
     erreurs.push('formation(s)');
 
   if (!data.signatureBase64 || data.signatureBase64.length < 100) erreurs.push('signature');

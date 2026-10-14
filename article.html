@@ -192,6 +192,8 @@
       'Graphisme & PAO':            { icone: 'tabler:vector-bezier', couleur: '#7B2EFF' },
       'Sérigraphie':                { icone: 'tabler:shirt',         couleur: '#C97A1A' },
       'Création de sites web':      { icone: 'tabler:code',          couleur: '#0D7A8A' },
+      'Secrétariat comptable':      { icone: 'tabler:calculator',    couleur: '#2563A8' },
+      'Montage audio-visuel':       { icone: 'tabler:movie',         couleur: '#C2410C' },
       'Général':                    { icone: 'tabler:speakerphone',  couleur: '#04342C' },
     };
 
@@ -279,7 +281,8 @@
         const a = result.annonce;
         const style = ANNONCE_CATEGORIES_STYLE[a.categorie] || ANNONCE_CATEGORIES_STYLE['Général'];
 
-        document.getElementById('art-categorie').textContent = a.categorie;
+        const NOMS_CATEGORIE = { 'Informatique & Bureautique': 'Secrétariat bureautique', 'Graphisme & PAO': 'Graphisme', 'Création de sites web': 'Développeur Web / Mobile / Windows' };
+        document.getElementById('art-categorie').textContent = NOMS_CATEGORIE[a.categorie] || a.categorie;
         document.getElementById('art-categorie').style.background = style.couleur;
         document.getElementById('art-titre').textContent = a.titre;
         document.getElementById('art-date').textContent = _formatDateArticle(a.datePublication);

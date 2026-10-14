@@ -9,12 +9,16 @@
   // d'entrée ici : il sort du cadre du quiz filière-par-filière ci-dessous
   // (recommandation basée sur un score par domaine unique).
   const FORMATIONS = {
-    informatique:   { label: 'Informatique & Bureautique',                duree: '6 mois',  prix: '100 000 F' },
-    graphisme:      { label: 'Graphisme & PAO',                            duree: '6 mois',  prix: '200 000 F' },
-    serigraphie:    { label: 'Sérigraphie',                                duree: '6 mois',  prix: '100 000 F' },
-    developpement:  { label: 'Création de sites web & Application Mobile', duree: '24 mois', prix: '250 000 F' },
+    informatique:   { label: 'Secrétariat bureautique',             duree: '6 mois',  prix: '100 000 F' },
+    comptable:      { label: 'Secrétariat comptable',               duree: '6 mois',  prix: '150 000 F' },
+    graphisme:      { label: 'Graphisme',                           duree: '6 mois',  prix: '200 000 F' },
+    audiovisuel:    { label: 'Montage audio-visuel',                duree: '9 mois',  prix: '150 000 F' },
+    serigraphie:    { label: 'Sérigraphie',                         duree: '6 mois',  prix: '100 000 F' },
+    developpement:  { label: 'Développeur Web / Mobile / Windows',   duree: '24 mois', prix: '200 000 F' },
   };
-  const FRAIS_INSCRIPTION = '10 000 F';
+  // Grille d'octobre 2026 — synchronisée avec GAS/code.gs et js/inscription.js.
+  const FRAIS_INSCRIPTION = '5 000 F';
+  const STAGE = '3 mois de stage en entreprise';
   const TEL_CONTACT   = '+229 01 97 95 12 30';
   const EMAIL_CONTACT = 'contact@lqdservice.bj';
 
@@ -177,9 +181,11 @@
 
   function detecterFormation(t) {
     if (/bureau|word|excel|powerpoint|informatique/.test(t)) return 'informatique';
+    if (/compta|comptable|facturation/.test(t)) return 'comptable';
+    if (/montage|vid[ée]o|audio|audiovisuel|cin[ée]ma|film/.test(t)) return 'audiovisuel';
     if (/graph|photoshop|illustrator|corel|pao|design/.test(t)) return 'graphisme';
     if (/s[ée]rigraph|impression|tissu/.test(t)) return 'serigraphie';
-    if (/web|site|d[ée]veloppement|html|css|wordpress/.test(t)) return 'developpement';
+    if (/web|site|d[ée]velopp|html|css|wordpress|mobile|application|logiciel|windows|programm/.test(t)) return 'developpement';
     return null;
   }
 
@@ -196,19 +202,19 @@
     if (/tarif|prix|co[ûu]t|combien/.test(t)) {
       if (cleFormation) {
         const f = FORMATIONS[cleFormation];
-        return `${f.label} coûte ${f.prix} (durée : ${f.duree}), plus ${FRAIS_INSCRIPTION} de frais d'inscription uniques. Le paiement se fait en 3 tranches par virement bancaire.`;
+        return `${f.label} coûte ${f.prix} (durée : ${f.duree}, puis ${STAGE}), plus ${FRAIS_INSCRIPTION} de frais d'inscription uniques. Le paiement se fait en 3 tranches par virement bancaire, dont 50 % à l'inscription.`;
       }
-      return `Nos formations vont de 35 000 F à 200 000 F selon la filière, plus ${FRAIS_INSCRIPTION} de frais d'inscription. Quelle formation vous intéresse ?`;
+      return `Nos formations vont de 100 000 F à 200 000 F selon la filière, plus ${FRAIS_INSCRIPTION} de frais d'inscription. Tous les tarifs sont sur la page Formations. Quelle formation vous intéresse ?`;
     }
     if (/dur[ée]e|combien de temps|mois/.test(t)) {
-      if (cleFormation) return `${FORMATIONS[cleFormation].label} dure ${FORMATIONS[cleFormation].duree}.`;
-      return `Nos formations durent entre 3 et 4 mois selon la filière.`;
+      if (cleFormation) return `${FORMATIONS[cleFormation].label} dure ${FORMATIONS[cleFormation].duree}, suivis de ${STAGE}.`;
+      return `Nos formations durent 6 mois (9 mois pour le Montage audio-visuel, 24 mois pour le Développeur Web / Mobile / Windows), suivis de ${STAGE}.`;
     }
     if (/paiement|virement|payer|tranche/.test(t)) {
       return `Le paiement se fait uniquement par virement bancaire, en 3 tranches (50% à l'inscription, 25% en milieu de formation, 25% en fin de formation). Les coordonnées bancaires vous sont envoyées après inscription.`;
     }
     if (/attestation|certificat|diplome|diplôme/.test(t)) {
-      return `Une attestation de fin de formation officielle vous est délivrée à la fin de votre parcours, téléchargeable directement depuis l'espace apprenant du site avec votre numéro de dossier.`;
+      return `En fin de parcours : préparation au CQM et attestation de fin de formation du centre, téléchargeable depuis l'espace apprenant du site avec votre numéro de dossier.`;
     }
     if (/stage|postuler|emploi|recrut|formateur/.test(t)) {
       return `Vous pouvez postuler comme formateur/staff ou pour un stage via notre page dédiée.`;
@@ -261,18 +267,22 @@
       texte: "Qu'est-ce qui vous attire le plus ?",
       options: [
         { label: 'Word, Excel, gestion de bureau', scores: { informatique: 3 } },
+        { label: 'Les chiffres, la comptabilité', scores: { comptable: 3 } },
         { label: 'Créer des visuels, des logos', scores: { graphisme: 3 } },
+        { label: 'Filmer et monter des vidéos', scores: { audiovisuel: 3 } },
         { label: 'Imprimer sur tissu, objets promo', scores: { serigraphie: 3 } },
-        { label: 'Construire des sites internet', scores: { developpement: 3 } },
+        { label: 'Créer des sites, des applis, des logiciels', scores: { developpement: 3 } },
       ],
     },
     {
       texte: 'Quel métier vous fait rêver ?',
       options: [
         { label: 'Assistant(e) de direction / secrétariat', scores: { informatique: 2 } },
+        { label: 'Aide-comptable / secrétaire comptable', scores: { comptable: 2 } },
         { label: 'Graphiste / infographe', scores: { graphisme: 2 } },
+        { label: 'Monteur vidéo / vidéaste', scores: { audiovisuel: 2 } },
         { label: 'Entrepreneur en sérigraphie', scores: { serigraphie: 2 } },
-        { label: 'Développeur web / webmaster', scores: { developpement: 2 } },
+        { label: 'Développeur web / mobile', scores: { developpement: 2 } },
       ],
     },
   ];

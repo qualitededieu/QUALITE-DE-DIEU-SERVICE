@@ -458,3 +458,36 @@ button.form-step:disabled{opacity:1}
 /* overflow:clip (et non hidden) : le contenu ne peut plus être décalé
    horizontalement par un défilement programmé (focus, ancre...). */
 #inscription{overflow:clip}
+
+/* ==================================================================
+   PAGE FORMATIONS — tarifs, stage, Pack, modalités (octobre 2026)
+================================================================== */
+.fc-comptable .formation-card-top{background:linear-gradient(135deg,#1E4E8C,#3B82C4)}
+.fc-audiovisuel .formation-card-top{background:linear-gradient(135deg,#B42318,#E8590C)}
+.formation-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin:-4px 0 12px;font-size:12.5px;font-weight:600;color:var(--teal-700)}
+.formation-meta>span{display:inline-flex;align-items:center;gap:5px}
+.formation-prix{display:flex;flex-direction:column;line-height:1.25}
+.formation-prix strong{font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:var(--teal-800)}
+.formation-prix span{font-size:11.5px;color:var(--gray-500)}
+.pack-encart{display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;margin-top:36px;background:linear-gradient(135deg,var(--teal-900),var(--teal-700));color:var(--white);border-radius:var(--radius-xl);padding:28px 32px;box-shadow:var(--shadow-card)}
+.pack-encart-icone{width:60px;height:60px;border-radius:var(--radius-lg);background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--orange-400)}
+.pack-encart-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal-900);background:var(--orange-400);border-radius:50px;padding:3px 10px;margin-bottom:6px}
+.pack-encart h3{font-size:20px;color:var(--white);margin-bottom:4px}
+.pack-encart p{font-size:14px;color:rgba(255,255,255,0.82)}
+.pack-encart-action{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.pack-encart .formation-prix{text-align:right}
+.pack-encart .formation-prix strong{color:var(--orange-400);font-size:22px}
+.pack-encart .formation-prix span{color:rgba(255,255,255,0.7)}
+.modalites-titre{font-size:24px;color:var(--teal-900);margin:52px 0 18px}
+.modalites-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.modalite-carte{background:var(--white);border:1.5px solid var(--gray-100);border-radius:var(--radius-lg);padding:18px 20px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--shadow-card)}
+.modalite-lib{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--gray-500)}
+.modalite-carte strong{font-family:'Sora',sans-serif;font-size:16px;color:var(--teal-900);line-height:1.35}
+.modalite-detail{font-size:12.5px;color:var(--gray-500)}
+@media(max-width:900px){
+  .modalites-grid{grid-template-columns:1fr 1fr}
+  .pack-encart{grid-template-columns:1fr;text-align:left}
+  .pack-encart-action{align-items:flex-start}
+  .pack-encart .formation-prix{text-align:left}
+}
+@media(max-width:480px){.modalites-grid{grid-template-columns:1fr}}
