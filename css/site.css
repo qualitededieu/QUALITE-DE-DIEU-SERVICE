@@ -655,3 +655,7 @@ html.site-traduit body{top:0!important;position:static!important}
 .suivi-attente{background:var(--orange-50);border-color:var(--orange-100)}
 .suivi-attente .suivi-lib{color:var(--orange-600)}
 @media(max-width:860px){.suivi-carte{grid-template-columns:1fr;padding:24px 18px;gap:20px}}
+/* Témoignages : consentement à la publication */
+.temo-consent{display:flex;align-items:flex-start;gap:10px;margin:4px 0 18px;font-size:13px;line-height:1.5;color:#4B5563;cursor:pointer}
+.temo-consent input{margin-top:3px;flex:none;width:17px;height:17px;accent-color:#0F6E56}
+.temo-consent.error span{color:#B42318}
