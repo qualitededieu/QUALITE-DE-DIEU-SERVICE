@@ -149,18 +149,26 @@
           <h3>Formulaire d'inscription</h3>
           <p>Champs marqués <span style="color:var(--red-500);">*</span> obligatoires.</p>
 
-          <div class="form-steps">
-            <div class="form-step active" id="step-1"><div class="step-num">1</div><span>Identité</span></div>
+          <!-- Indicateur d'étapes : cliquable uniquement pour revenir sur une
+               étape déjà validée (jamais pour sauter en avant). -->
+          <div class="form-steps" id="wizardIndicateur">
+            <button type="button" class="form-step active" id="step-1" data-cible="1"><div class="step-num">1</div><span>Identité</span></button>
             <div class="step-sep"></div>
-            <div class="form-step" id="step-2"><div class="step-num">2</div><span>Formations</span></div>
+            <button type="button" class="form-step" id="step-2" data-cible="2"><div class="step-num">2</div><span>Parents</span></button>
             <div class="step-sep"></div>
-            <div class="form-step" id="step-3"><div class="step-num">3</div><span>Pièces</span></div>
+            <button type="button" class="form-step" id="step-3" data-cible="3"><div class="step-num">3</div><span>Formations</span></button>
             <div class="step-sep"></div>
-            <div class="form-step" id="step-4"><div class="step-num">4</div><span>Paiement</span></div>
+            <button type="button" class="form-step" id="step-4" data-cible="4"><div class="step-num">4</div><span>Pièces</span></button>
+            <div class="step-sep"></div>
+            <button type="button" class="form-step" id="step-5" data-cible="5"><div class="step-num">5</div><span>Validation</span></button>
           </div>
+          <div class="wizard-progression" aria-hidden="true"><div class="wizard-progression-barre" id="wizardBarre"></div></div>
 
           <form id="inscriptionForm" novalidate>
 
+            <fieldset class="wizard-etape" id="etape-1" data-etape="1">
+              <legend class="wizard-titre"><span class="wizard-titre-num">Étape 1 sur 5</span>Votre identité</legend>
+              <p class="wizard-sous-titre">Les informations telles qu'elles figurent sur votre pièce d'identité.</p>
             <div class="form-row">
               <div class="form-group">
                 <label for="prenom">Prénom <span class="req">*</span></label>
@@ -208,7 +216,16 @@
                 <input type="text" id="adresse" class="form-control" placeholder="Ex. Comé, Quartier Hongodé" required />
               </div>
             </div>
+              <div class="wizard-erreur" id="erreur-etape-1" role="alert"></div>
+            <div class="wizard-nav">
+              <span></span>
+              <button type="button" class="btn-wizard btn-wizard-suiv" onclick="etapeSuivante()">Suivant <span class="iconify" data-icon="tabler:arrow-right"></span></button>
+            </div>
+            </fieldset>
 
+            <fieldset class="wizard-etape" id="etape-2" data-etape="2" hidden>
+              <legend class="wizard-titre"><span class="wizard-titre-num">Étape 2 sur 5</span>Vos parents ou tuteur</legend>
+              <p class="wizard-sous-titre">Mère et père obligatoires ; tuteur seulement s'il est différent des parents.</p>
             <div class="formations-check-bloc" style="background:var(--white);">
               <div class="formations-check-titre">
                 <span class="iconify" data-icon="tabler:users" style="color:var(--teal-600);font-size:16px;"></span>
@@ -270,7 +287,16 @@
                 <input type="tel" id="telephoneTuteur" class="form-control" placeholder="+229 01 XX XX XX XX" />
               </div>
             </div>
+              <div class="wizard-erreur" id="erreur-etape-2" role="alert"></div>
+            <div class="wizard-nav">
+              <button type="button" class="btn-wizard btn-wizard-prec" onclick="etapePrecedente()"><span class="iconify" data-icon="tabler:arrow-left"></span> Précédent</button>
+              <button type="button" class="btn-wizard btn-wizard-suiv" onclick="etapeSuivante()">Suivant <span class="iconify" data-icon="tabler:arrow-right"></span></button>
+            </div>
+            </fieldset>
 
+            <fieldset class="wizard-etape" id="etape-3" data-etape="3" hidden>
+              <legend class="wizard-titre"><span class="wizard-titre-num">Étape 3 sur 5</span>Votre ou vos formations</legend>
+              <p class="wizard-sous-titre">Les frais se calculent automatiquement selon votre choix.</p>
             <div class="formations-check-bloc">
               <div class="formations-check-titre">
                 <span class="iconify" data-icon="tabler:books" style="color:var(--teal-600);font-size:16px;"></span>
@@ -350,7 +376,32 @@
               <label for="message">Message (facultatif)</label>
               <textarea id="message" class="form-control" rows="2" placeholder="Questions, disponibilités, précisions..."></textarea>
             </div>
+            <div class="frais-bloc" id="fraisBloc">
+              <div class="frais-bloc-title">
+                <span class="iconify" data-icon="tabler:receipt"></span>
+                Structure des frais
+              </div>
+              <table class="frais-table">
+                <tbody>
+                  <tr><td>Frais d'inscription</td><td id="fraisInscriptionVal">—</td></tr>
+                  <tr><td>Coût total des formations</td><td id="coutTotalVal">—</td></tr>
+                  <tr id="ligneTranche1"><td id="labelTranche1">Tranche 1 — 50% <span class="t1">Immédiat</span></td><td id="tranche1Val">—</td></tr>
+                  <tr id="ligneTranche2"><td>Tranche 2 — 25% <span class="t2">Milieu</span></td><td id="tranche2Val">—</td></tr>
+                  <tr id="ligneTranche3"><td>Tranche 3 — 25% <span class="t3">Fin</span></td><td id="tranche3Val">—</td></tr>
+                  <tr class="frais-total frais-sep"><td id="labelVirement">1er virement à effectuer</td><td id="premierVirementVal">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+              <div class="wizard-erreur" id="erreur-etape-3" role="alert"></div>
+            <div class="wizard-nav">
+              <button type="button" class="btn-wizard btn-wizard-prec" onclick="etapePrecedente()"><span class="iconify" data-icon="tabler:arrow-left"></span> Précédent</button>
+              <button type="button" class="btn-wizard btn-wizard-suiv" onclick="etapeSuivante()">Suivant <span class="iconify" data-icon="tabler:arrow-right"></span></button>
+            </div>
+            </fieldset>
 
+            <fieldset class="wizard-etape" id="etape-4" data-etape="4" hidden>
+              <legend class="wizard-titre"><span class="wizard-titre-num">Étape 4 sur 5</span>Vos pièces justificatives</legend>
+              <p class="wizard-sous-titre">Pièce d'identité et photo obligatoires ; la preuve de paiement peut être envoyée plus tard.</p>
             <div class="pieces-bloc">
               <div class="pieces-bloc-title">
                 <span class="iconify" data-icon="tabler:file-certificate"></span>
@@ -423,7 +474,23 @@
               </div>
               <div class="upload-limit">Max 2 Mo</div>
             </div>
+              <div class="wizard-erreur" id="erreur-etape-4" role="alert"></div>
+            <div class="wizard-nav">
+              <button type="button" class="btn-wizard btn-wizard-prec" onclick="etapePrecedente()"><span class="iconify" data-icon="tabler:arrow-left"></span> Précédent</button>
+              <button type="button" class="btn-wizard btn-wizard-suiv" onclick="etapeSuivante()">Vérifier mon dossier <span class="iconify" data-icon="tabler:arrow-right"></span></button>
+            </div>
+            </fieldset>
 
+            <fieldset class="wizard-etape" id="etape-5" data-etape="5" hidden>
+              <legend class="wizard-titre"><span class="wizard-titre-num">Étape 5 sur 5</span>Vérification, engagement et envoi</legend>
+              <p class="wizard-sous-titre">Relisez votre dossier, cochez les engagements, signez puis envoyez.</p>
+              <div class="recap-bloc" id="recapBloc">
+                <div class="pieces-bloc-title">
+                  <span class="iconify" data-icon="tabler:list-check"></span>
+                  Récapitulatif de votre dossier
+                </div>
+                <div id="recapContenu"></div>
+              </div>
             <div class="pieces-bloc">
               <div class="pieces-bloc-title">
                 <span class="iconify" data-icon="tabler:signature"></span>
@@ -454,24 +521,6 @@
                 <div class="formations-check-error" id="signatureError" style="display:none;">Veuillez apposer votre signature.</div>
               </div>
             </div>
-
-            <div class="frais-bloc" id="fraisBloc">
-              <div class="frais-bloc-title">
-                <span class="iconify" data-icon="tabler:receipt"></span>
-                Structure des frais
-              </div>
-              <table class="frais-table">
-                <tbody>
-                  <tr><td>Frais d'inscription</td><td id="fraisInscriptionVal">—</td></tr>
-                  <tr><td>Coût total des formations</td><td id="coutTotalVal">—</td></tr>
-                  <tr id="ligneTranche1"><td id="labelTranche1">Tranche 1 — 50% <span class="t1">Immédiat</span></td><td id="tranche1Val">—</td></tr>
-                  <tr id="ligneTranche2"><td>Tranche 2 — 25% <span class="t2">Milieu</span></td><td id="tranche2Val">—</td></tr>
-                  <tr id="ligneTranche3"><td>Tranche 3 — 25% <span class="t3">Fin</span></td><td id="tranche3Val">—</td></tr>
-                  <tr class="frais-total frais-sep"><td id="labelVirement">1er virement à effectuer</td><td id="premierVirementVal">—</td></tr>
-                </tbody>
-              </table>
-            </div>
-
             <div class="virement-info-box">
               <span class="iconify" data-icon="tabler:building-bank" style="float:left;margin-right:10px;margin-top:2px;font-size:18px;color:var(--teal-600);"></span>
               <strong>Paiement par virement bancaire uniquement.</strong><br />
@@ -479,7 +528,10 @@
               Mentionnez votre <strong>numéro de dossier</strong> dans le motif.
               Vous pouvez aussi envoyer votre preuve de paiement par WhatsApp au <strong>+229 01 97 95 12 30</strong>.
             </div>
-
+              <div class="wizard-erreur" id="erreur-etape-5" role="alert"></div>
+            <div class="wizard-nav">
+              <button type="button" class="btn-wizard btn-wizard-prec" onclick="etapePrecedente()"><span class="iconify" data-icon="tabler:arrow-left"></span> Précédent</button>
+            </div>
             <button type="submit" class="btn-submit" id="submitBtn">
               <span class="iconify" data-icon="tabler:send"></span>
               Soumettre mon dossier
@@ -488,8 +540,9 @@
               <span class="iconify" data-icon="tabler:lock"></span>
               Vos données et pièces sont sécurisées et enregistrées dans notre base de donnée.
             </p>
-            <div class="form-feedback" id="formFeedback"></div>
+            </fieldset>
           </form>
+          <div class="form-feedback" id="formFeedback"></div>
         </div>
 
       </div>
