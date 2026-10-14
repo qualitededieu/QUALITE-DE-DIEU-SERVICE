@@ -234,6 +234,35 @@
     .gal-admin-corps .auth-input { margin-bottom: 0; padding: 8px 10px; font-size: 13px; }
     .gal-admin-ligne { display: flex; gap: 8px; align-items: center; }
     .gal-admin-ligne label { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+    .gal-depot { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 28px 16px; border: 2px dashed var(--border-l); border-radius: 12px; background: var(--dark-900); cursor: pointer; transition: border-color .2s, background .2s; }
+    .gal-depot .iconify { font-size: 38px; color: var(--teal-l); }
+    .gal-depot strong { font-size: 14px; color: var(--text-1); }
+    .gal-depot span:last-of-type { font-size: 12px; color: var(--text-3); }
+    .gal-depot:hover, .gal-depot:focus, .gal-depot.survol { border-color: var(--teal-l); background: var(--teal-dim); outline: none; }
+    .gal-reglages { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px 20px 0; }
+    .gal-file { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; padding: 16px 20px 0; }
+    .gal-item { position: relative; background: var(--dark-900); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+    .gal-item img { width: 100%; height: 110px; object-fit: cover; background: var(--dark-700); display: block; }
+    .gal-item-corps { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .gal-item-nom { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gal-item .auth-input { margin: 0; padding: 6px 8px; font-size: 12px; }
+    .gal-item-etat { font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .gal-item-etat.pret { color: var(--text-2); }
+    .gal-item-etat.envoi { color: var(--orange); }
+    .gal-item-etat.ok { color: var(--green); }
+    .gal-item-etat.echec { color: var(--red); }
+    .gal-item.ok { opacity: .6; }
+    .gal-item-retirer { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .gal-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 20px 0; }
+    .gal-barre { flex: 1 1 160px; height: 6px; border-radius: 6px; background: var(--dark-700); overflow: hidden; }
+    .gal-barre > div { height: 100%; width: 0; background: var(--teal-l); transition: width .3s; }
+    .gal-progression { font-size: 12.5px; color: var(--text-3); }
+    .gal-aide { padding: 14px 20px 18px; font-size: 12px; color: var(--text-3); line-height: 1.6; margin: 0; }
+    .gal-filtres { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 20px 0; }
+    .gal-filtre { border: 1px solid var(--border-l); background: transparent; color: var(--text-2); border-radius: 50px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .gal-filtre.actif { background: var(--teal); border-color: var(--teal); color: #fff; }
+    .gal-compteur { font-size: 12px; font-weight: 500; color: var(--text-3); margin-left: 6px; }
+    @media (max-width: 640px) { .gal-reglages { grid-template-columns: 1fr; } .gal-file { grid-template-columns: repeat(2, 1fr); } }
     .temo-admin-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--dark-700); }
     .temo-admin-texte { max-width: 420px; white-space: pre-line; line-height: 1.5; }
     .data-table th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--dark-900); border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -913,39 +942,48 @@
       <div class="table-card" style="margin-bottom:20px;">
         <div class="table-card-header">
           <span class="table-card-title"><span class="iconify" data-icon="tabler:photo-plus"></span> Ajouter des photos</span>
+          <a class="btn btn-ghost btn-sm" href="/galerie" target="_blank" rel="noopener"><span class="iconify" data-icon="tabler:external-link"></span> Voir la galerie</a>
         </div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div style="grid-column:1/-1;">
-            <label class="auth-label" for="gal-fichiers">Photos (plusieurs à la fois possible — JPG, PNG)</label>
-            <input type="file" id="gal-fichiers" class="auth-input" accept="image/jpeg,image/png,image/webp" multiple />
-          </div>
+        <div style="padding:20px 20px 0;">
+          <label class="gal-depot" id="gal-depot" for="gal-fichiers" tabindex="0">
+            <span class="iconify" data-icon="tabler:cloud-upload"></span>
+            <strong>Glissez vos photos ici ou cliquez pour les choisir</strong>
+            <span>JPG, PNG ou WEBP — jusqu'à 30 photos à la fois, 40 Mo maximum chacune. Redimensionnées automatiquement avant l'envoi.</span>
+            <input type="file" id="gal-fichiers" accept="image/jpeg,image/png,image/webp" multiple hidden />
+          </label>
+        </div>
+        <div class="gal-reglages">
           <div>
-            <label class="auth-label" for="gal-categorie">Catégorie</label>
+            <label class="auth-label" for="gal-categorie">Catégorie (pour tout le lot)</label>
             <select id="gal-categorie" class="auth-input"></select>
           </div>
           <div>
-            <label class="auth-label" for="gal-legende">Légende (facultatif, modifiable ensuite)</label>
+            <label class="auth-label" for="gal-legende">Légende commune (facultatif)</label>
             <input type="text" id="gal-legende" class="auth-input" maxlength="140" placeholder="Ex. Remise d'attestations — promotion 2026" />
           </div>
         </div>
-        <div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div id="gal-file" class="gal-file" hidden></div>
+        <div class="gal-actions" id="gal-actions" hidden>
           <button class="btn btn-primary btn-sm" id="btn-gal-ajouter" onclick="ajouterPhotosGalerie()">
-            <span class="iconify" data-icon="tabler:upload"></span> Envoyer
+            <span class="iconify" data-icon="tabler:upload"></span> <span id="btn-gal-libelle">Envoyer</span>
           </button>
-          <span id="gal-progression" style="font-size:12.5px;color:var(--text-3);"></span>
+          <button class="btn btn-ghost btn-sm" id="btn-gal-vider" onclick="viderFileGalerie()">Vider la liste</button>
+          <div class="gal-barre" id="gal-barre" hidden><div id="gal-barre-rempli"></div></div>
+          <span id="gal-progression" class="gal-progression"></span>
         </div>
-        <p style="padding:0 20px 18px;font-size:12px;color:var(--text-3);line-height:1.6;">
-          Les photos sont automatiquement redimensionnées avant l'envoi. Ordre d'affichage : le plus petit
-          numéro passe en premier dans le carrousel ; à égalité, la plus récente d'abord.
+        <p class="gal-aide">
+          Une légende propre à chaque photo peut être saisie dans la liste avant l'envoi. Ordre d'affichage :
+          le plus petit numéro passe en premier dans le carrousel ; à égalité, la plus récente d'abord.
           Pensez à l'accord des personnes reconnaissables sur les photos.
         </p>
       </div>
 
       <div class="table-card">
         <div class="table-card-header">
-          <span class="table-card-title">Photos en ligne</span>
-          <button class="btn btn-ghost btn-sm" onclick="chargerGalerieAdmin()"><span class="iconify" data-icon="tabler:refresh"></span></button>
+          <span class="table-card-title">Photos en ligne <span id="gal-compteur" class="gal-compteur"></span></span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerGalerieAdmin()" title="Actualiser"><span class="iconify" data-icon="tabler:refresh"></span></button>
         </div>
+        <div class="gal-filtres" id="gal-filtres"></div>
         <div id="galerie-admin-grille" class="gal-admin-grille">
           <div class="loading-overlay"><div class="spinner"></div></div>
         </div>
@@ -3538,63 +3576,192 @@ function _remplirCategoriesGalerie() {
   if (actuelle) sel.value = actuelle;
 }
 
-// Redimensionne dans le navigateur (1600 px max, JPEG) : envoi rapide,
-// même en connexion mobile, et pas de fichier de 8 Mo stocké pour rien.
-function _redimensionnerPhoto(file, coteMax = 1600) {
+/* ---------- Lecture et redimensionnement des photos ----------
+   CORRECTIF : l'ancienne version lisait la photo via une adresse "blob:",
+   refusée par la politique de sécurité du site (CSP de vercel.json) :
+   TOUTES les photos échouaient avec "Image illisible". On lit désormais
+   le fichier avec createImageBitmap (rapide, respecte l'orientation EXIF
+   des photos de téléphone), et à défaut en data: URL, autorisée par la CSP. */
+const GAL_COTE_MAX = 1600;
+const GAL_POIDS_MAX = 40 * 1024 * 1024;
+const GAL_LOT_MAX = 30;
+const GAL_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+function _lireEnDataUrl(file) {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const ratio = Math.min(1, coteMax / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * ratio);
-      canvas.height = Math.round(img.height * ratio);
-      const ctx = canvas.getContext('2d');
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1]);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible : ' + file.name)); };
-    img.src = url;
+    const lecteur = new FileReader();
+    lecteur.onload = () => resolve(lecteur.result);
+    lecteur.onerror = () => reject(new Error('fichier impossible à lire'));
+    lecteur.readAsDataURL(file);
   });
 }
 
-async function ajouterPhotosGalerie() {
-  const input = document.getElementById('gal-fichiers');
-  const fichiers = Array.from(input.files || []);
-  const prog = document.getElementById('gal-progression');
-  const btn = document.getElementById('btn-gal-ajouter');
-  if (!fichiers.length) { toast('Choisissez au moins une photo.', 'error'); return; }
-  const invalides = fichiers.filter(f => !['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
-  if (invalides.length) { toast('Format non accepté : ' + invalides.map(f => f.name).join(', '), 'error'); return; }
-
-  const categorie = document.getElementById('gal-categorie').value;
-  const legende = document.getElementById('gal-legende').value.trim();
-  btn.disabled = true;
-  let ok = 0;
-  for (let i = 0; i < fichiers.length; i++) {
-    prog.textContent = `Envoi ${i + 1} / ${fichiers.length} — ${fichiers[i].name}`;
-    try {
-      const base64 = await _redimensionnerPhoto(fichiers[i]);
-      const r = await apiCall('admin_galerie_ajouter', {
-        imageBase64: base64, imageMimeType: 'image/jpeg',
-        nomFichier: fichiers[i].name.replace(/\.[^.]+$/, '') + '.jpg', categorie, legende
-      });
-      if (r.status !== 'success') throw new Error(r.message);
-      ok++;
-    } catch (e) {
-      toast(`Échec pour ${fichiers[i].name} : ${e.message}`, 'error');
-    }
+async function _decoderImage(file) {
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (e) { /* format non géré ici : on tente la méthode classique */ }
   }
-  prog.textContent = `${ok} photo${ok > 1 ? 's' : ''} ajoutée${ok > 1 ? 's' : ''} sur ${fichiers.length}.`;
-  btn.disabled = false;
-  input.value = '';
-  if (ok) toast(`${ok} photo(s) ajoutée(s) à la galerie.`, 'success');
-  chargerGalerieAdmin();
+  const dataUrl = await _lireEnDataUrl(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('format d\'image non reconnu (fichier abîmé ou HEIC d\'iPhone : exportez-la en JPG)'));
+    img.src = dataUrl;
+  });
 }
 
+async function _redimensionnerPhoto(file, coteMax = GAL_COTE_MAX) {
+  const img = await _decoderImage(file);
+  const l = img.width, h = img.height;
+  if (!l || !h) throw new Error('dimensions de l\'image introuvables');
+  const ratio = Math.min(1, coteMax / Math.max(l, h));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(l * ratio);
+  canvas.height = Math.round(h * ratio);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFFFF';                 // PNG transparent : fond blanc plutôt que noir en JPEG
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  if (img.close) img.close();
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  return { base64: dataUrl.split(',')[1], apercu: canvas.width > 400 ? _miniature(canvas) : dataUrl };
+}
+
+function _miniature(source) {
+  const c = document.createElement('canvas');
+  const r = 400 / Math.max(source.width, source.height);
+  c.width = Math.round(source.width * r); c.height = Math.round(source.height * r);
+  c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.7);
+}
+
+function _taille(o) { return o > 1048576 ? (o / 1048576).toFixed(1).replace('.', ',') + ' Mo' : Math.round(o / 1024) + ' Ko'; }
+
+/* ---------- File d'attente avant envoi ---------- */
+let _galFile = [];      // { id, file, etat: pret|envoi|ok|echec, motif, legende, base64, apercu }
+let _galEnvoiEnCours = false;
+
+function _initDepotGalerie() {
+  const depot = document.getElementById('gal-depot');
+  const input = document.getElementById('gal-fichiers');
+  if (!depot || depot.dataset.pret) return;
+  depot.dataset.pret = '1';
+  input.addEventListener('change', () => { _ajouterALaFile(Array.from(input.files || [])); input.value = ''; });
+  depot.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  ['dragenter', 'dragover'].forEach(t => depot.addEventListener(t, e => { e.preventDefault(); depot.classList.add('survol'); }));
+  ['dragleave', 'drop'].forEach(t => depot.addEventListener(t, e => { e.preventDefault(); depot.classList.remove('survol'); }));
+  depot.addEventListener('drop', e => _ajouterALaFile(Array.from(e.dataTransfer.files || [])));
+}
+
+async function _ajouterALaFile(fichiers) {
+  if (_galEnvoiEnCours) { toast('Patientez jusqu\'à la fin de l\'envoi en cours.', 'error'); return; }
+  const refus = [];
+  for (const f of fichiers) {
+    if (_galFile.filter(x => x.etat !== 'ok').length >= GAL_LOT_MAX) { refus.push(f.name + ' (30 photos maximum par lot)'); continue; }
+    if (!GAL_TYPES.includes(f.type)) { refus.push(f.name + (/heic|heif/i.test(f.type + f.name) ? ' (HEIC : exportez en JPG)' : ' (format non accepté)')); continue; }
+    if (f.size > GAL_POIDS_MAX) { refus.push(f.name + ' (plus de 40 Mo)'); continue; }
+    if (_galFile.some(x => x.file.name === f.name && x.file.size === f.size && x.etat !== 'ok')) continue; // doublon dans la liste
+    const item = { id: 'g' + Date.now() + Math.random().toString(36).slice(2, 6), file: f, etat: 'pret', motif: '', legende: '', base64: '', apercu: '' };
+    _galFile.push(item);
+    _rendreFileGalerie();
+    // Préparation immédiate : aperçu visible et erreur détectée AVANT l'envoi.
+    try {
+      const r = await _redimensionnerPhoto(f);
+      item.base64 = r.base64; item.apercu = r.apercu;
+    } catch (e) {
+      item.etat = 'echec'; item.motif = e.message;
+    }
+    _rendreFileGalerie();
+  }
+  if (refus.length) toast('Non ajoutée(s) : ' + refus.join(', '), 'error');
+}
+
+function _rendreFileGalerie() {
+  const zone = document.getElementById('gal-file');
+  const actions = document.getElementById('gal-actions');
+  zone.hidden = actions.hidden = !_galFile.length;
+  const etats = {
+    pret:  ['tabler:circle-check', 'Prête'],
+    envoi: ['tabler:loader-2', 'Envoi…'],
+    ok:    ['tabler:check', 'Ajoutée'],
+    echec: ['tabler:alert-triangle', 'Échec']
+  };
+  zone.innerHTML = _galFile.map(it => {
+    const [ic, lib] = it.etat === 'pret' && !it.base64 ? ['tabler:loader-2', 'Préparation…'] : etats[it.etat];
+    return `<div class="gal-item ${it.etat}">
+      ${it.apercu ? `<img src="${it.apercu}" alt="" />` : '<img alt="" />'}
+      ${it.etat !== 'envoi' ? `<button type="button" class="gal-item-retirer" title="Retirer de la liste" onclick="retirerDeFileGalerie('${it.id}')">&times;</button>` : ''}
+      <div class="gal-item-corps">
+        <span class="gal-item-nom" title="${_escAdmin(it.file.name)}">${_escAdmin(it.file.name)} — ${_taille(it.file.size)}</span>
+        ${it.etat === 'ok' ? '' : `<input type="text" class="auth-input" maxlength="140" placeholder="Légende de cette photo" value="${_escAdmin(it.legende)}" oninput="legendeFileGalerie('${it.id}', this.value)" />`}
+        <span class="gal-item-etat ${it.etat}"><span class="iconify" data-icon="${ic}"></span> ${lib}${it.motif ? ' : ' + _escAdmin(it.motif) : ''}</span>
+      </div>
+    </div>`;
+  }).join('');
+  const aEnvoyer = _galFile.filter(x => (x.etat === 'pret' || x.etat === 'echec') && x.base64).length;
+  const echecs = _galFile.filter(x => x.etat === 'echec' && x.base64).length;
+  document.getElementById('btn-gal-libelle').textContent = echecs && echecs === aEnvoyer
+    ? `Réessayer (${echecs})` : `Envoyer ${aEnvoyer} photo${aEnvoyer > 1 ? 's' : ''}`;
+  document.getElementById('btn-gal-ajouter').disabled = _galEnvoiEnCours || !aEnvoyer;
+  document.getElementById('btn-gal-vider').disabled = _galEnvoiEnCours;
+}
+
+function retirerDeFileGalerie(id) { _galFile = _galFile.filter(x => x.id !== id); _rendreFileGalerie(); }
+function legendeFileGalerie(id, v) { const it = _galFile.find(x => x.id === id); if (it) it.legende = v; }
+function viderFileGalerie() {
+  if (_galEnvoiEnCours) return;
+  _galFile = [];
+  document.getElementById('gal-progression').textContent = '';
+  document.getElementById('gal-barre').hidden = true;
+  _rendreFileGalerie();
+}
+
+async function ajouterPhotosGalerie() {
+  const lot = _galFile.filter(x => (x.etat === 'pret' || x.etat === 'echec') && x.base64);
+  if (!lot.length) { toast('Ajoutez au moins une photo valide.', 'error'); return; }
+  const categorie = document.getElementById('gal-categorie').value;
+  const legendeCommune = document.getElementById('gal-legende').value.trim();
+  const prog = document.getElementById('gal-progression');
+  const barre = document.getElementById('gal-barre');
+  const rempli = document.getElementById('gal-barre-rempli');
+  _galEnvoiEnCours = true;
+  barre.hidden = false; rempli.style.width = '0';
+  let ok = 0;
+  for (let i = 0; i < lot.length; i++) {
+    const it = lot[i];
+    it.etat = 'envoi'; it.motif = '';
+    _rendreFileGalerie();
+    prog.textContent = `Envoi ${i + 1} / ${lot.length}`;
+    try {
+      const r = await apiCall('admin_galerie_ajouter', {
+        imageBase64: it.base64, imageMimeType: 'image/jpeg',
+        nomFichier: it.file.name.replace(/\.[^.]+$/, '') + '.jpg',
+        categorie, legende: (it.legende || legendeCommune).trim()
+      });
+      if (r.status !== 'success') throw new Error(r.message || 'refus du serveur');
+      it.etat = 'ok'; it.base64 = ''; ok++;
+    } catch (e) {
+      it.etat = 'echec';
+      it.motif = /fetch|network|réseau/i.test(e.message) ? 'connexion interrompue' : e.message;
+    }
+    rempli.style.width = Math.round((i + 1) / lot.length * 100) + '%';
+    _rendreFileGalerie();
+  }
+  _galEnvoiEnCours = false;
+  const echecs = lot.length - ok;
+  prog.textContent = `${ok} photo${ok > 1 ? 's' : ''} ajoutée${ok > 1 ? 's' : ''} sur ${lot.length}` + (echecs ? ` — ${echecs} échec${echecs > 1 ? 's' : ''} : cliquez sur Réessayer.` : '.');
+  _rendreFileGalerie();
+  if (ok) { toast(`${ok} photo(s) ajoutée(s) à la galerie.`, 'success'); chargerGalerieAdmin(); }
+  if (!echecs) setTimeout(() => { if (!_galEnvoiEnCours && _galFile.every(x => x.etat === 'ok')) viderFileGalerie(); }, 2500);
+}
+
+/* ---------- Photos en ligne ---------- */
+let _galPhotos = [];
+let _galFiltre = 'Toutes';
+
 async function chargerGalerieAdmin() {
+  _initDepotGalerie();
   _remplirCategoriesGalerie();
   const grille = document.getElementById('galerie-admin-grille');
   grille.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
@@ -3602,11 +3769,35 @@ async function chargerGalerieAdmin() {
     const r = await apiCall('admin_galerie_lister');
     if (r.status !== 'success') throw new Error(r.message);
     if (Array.isArray(r.categories) && r.categories.length) { _galerieCategories = r.categories; _remplirCategoriesGalerie(); }
-    if (!r.photos.length) {
-      grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Aucune photo pour le moment : la page Galerie affiche "Nos photos arrivent très bientôt".</p></div>';
-      return;
-    }
-    grille.innerHTML = r.photos.map(p => `
+    _galPhotos = r.photos || [];
+    _rendreGalerieAdmin();
+  } catch (e) {
+    grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Chargement impossible : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+function filtrerGalerieAdmin(cat) { _galFiltre = cat; _rendreGalerieAdmin(); }
+
+function _rendreGalerieAdmin() {
+  const grille = document.getElementById('galerie-admin-grille');
+  const visibles = _galPhotos.filter(p => p.visible).length;
+  document.getElementById('gal-compteur').textContent = _galPhotos.length
+    ? `${_galPhotos.length} au total — ${visibles} visible${visibles > 1 ? 's' : ''}, ${_galPhotos.length - visibles} masquée${_galPhotos.length - visibles > 1 ? 's' : ''}` : '';
+  const cats = ['Toutes'].concat(_galerieCategories);
+  document.getElementById('gal-filtres').innerHTML = _galPhotos.length ? cats.map(c => {
+    const n = c === 'Toutes' ? _galPhotos.length : _galPhotos.filter(p => p.categorie === c).length;
+    return `<button type="button" class="gal-filtre${c === _galFiltre ? ' actif' : ''}" onclick="filtrerGalerieAdmin(this.dataset.c)" data-c="${_escAdmin(c)}">${_escAdmin(c)} (${n})</button>`;
+  }).join('') : '';
+  if (!_galPhotos.length) {
+    grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Aucune photo pour le moment : la page Galerie affiche "Nos photos arrivent très bientôt".</p></div>';
+    return;
+  }
+  const liste = _galFiltre === 'Toutes' ? _galPhotos : _galPhotos.filter(p => p.categorie === _galFiltre);
+  if (!liste.length) {
+    grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Aucune photo dans cette catégorie.</p></div>';
+    return;
+  }
+  grille.innerHTML = liste.map(p => `
       <div class="gal-admin-carte${p.visible ? '' : ' masquee'}" data-id="${_escAdmin(p.id)}">
         <img src="${_escAdmin(p.url)}" alt="" loading="lazy" />
         <div class="gal-admin-corps">
@@ -3622,9 +3813,6 @@ async function chargerGalerieAdmin() {
           </div>
         </div>
       </div>`).join('');
-  } catch (e) {
-    grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Erreur de chargement.</p></div>';
-  }
 }
 
 async function enregistrerPhotoGalerie(id) {
@@ -3640,6 +3828,7 @@ async function enregistrerPhotoGalerie(id) {
     });
     if (r.status !== 'success') throw new Error(r.message);
     carte.classList.toggle('masquee', !r.photo.visible);
+    const i = _galPhotos.findIndex(x => x.id === id); if (i !== -1) { _galPhotos[i] = Object.assign(_galPhotos[i], r.photo); _rendreGalerieAdmin(); }
     toast('Photo mise à jour.', 'success');
   } catch (e) { toast('Erreur : ' + e.message, 'error'); }
 }

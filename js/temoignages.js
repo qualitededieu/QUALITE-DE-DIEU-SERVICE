@@ -199,13 +199,19 @@
     return _faceApi;
   }
 
+  // Lecture en data: URL (autorisée par la CSP du site, contrairement
+  // aux adresses blob: qui faisaient échouer toutes les photos).
   function chargerImage(file) {
     return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image illisible')); };
-      img.src = url;
+      const lecteur = new FileReader();
+      lecteur.onerror = () => reject(new Error('image illisible'));
+      lecteur.onload = () => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('image illisible'));
+        img.src = lecteur.result;
+      };
+      lecteur.readAsDataURL(file);
     });
   }
 
