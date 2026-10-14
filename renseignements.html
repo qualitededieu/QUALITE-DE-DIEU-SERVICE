@@ -74,22 +74,29 @@
       <div class="nav-inner">
         <a class="nav-logo" href="/" aria-label="Accueil — LQD Service">
           <img src="icons/logo-lqd-v2.jpg" alt="LQD Service" />
-          <span>LQD Service</span>
+          <span translate="no">LQD Service</span>
         </a>
         <ul class="nav-links">
           <li><a href="/formations" class="nav-link">Formations</a></li>
           <li><a href="/services" class="nav-link">Services</a></li>
           <li><a href="/renseignements" class="nav-link" aria-current="page">Renseignements</a></li>
           <li><a href="/galerie" class="nav-link">Galerie</a></li>
+          <li><a href="/temoignages" class="nav-link">Témoignages</a></li>
           <li><a href="/actualites" class="nav-link">Actualités</a></li>
           <li><a href="/contact" class="nav-link">Contact</a></li>
           <li><a href="/postuler" class="nav-link">Postuler</a></li>
           <li><a href="/espace-apprenant" class="nav-link">Espace apprenant</a></li>
           <li><a href="/inscription" class="btn-nav-cta">S'inscrire</a></li>
         </ul>
-        <button class="nav-burger" id="navBurger" aria-label="Menu">
-          <span class="iconify" data-icon="tabler:menu-2"></span>
-        </button>
+        <div class="nav-droite">
+          <div class="selecteur-langue notranslate" translate="no">
+            <span class="iconify" data-icon="tabler:world" aria-hidden="true"></span>
+            <select class="langue-select" aria-label="Langue du site"><option value="fr">Français</option></select>
+          </div>
+          <button class="nav-burger" id="navBurger" aria-label="Menu">
+            <span class="iconify" data-icon="tabler:menu-2"></span>
+          </button>
+        </div>
       </div>
       <ul class="nav-mobile" id="navMobile">
         <li><a href="/" onclick="closeMobileNav()">Accueil</a></li>
@@ -97,6 +104,7 @@
         <li><a href="/services" onclick="closeMobileNav()">Services</a></li>
         <li><a href="/renseignements" onclick="closeMobileNav()" aria-current="page">Renseignements</a></li>
         <li><a href="/galerie" onclick="closeMobileNav()">Galerie</a></li>
+        <li><a href="/temoignages" onclick="closeMobileNav()">Témoignages</a></li>
         <li><a href="/actualites" onclick="closeMobileNav()">Actualités</a></li>
         <li><a href="/contact" onclick="closeMobileNav()">Contact</a></li>
         <li><a href="/postuler" onclick="closeMobileNav()">Postuler</a></li>
@@ -264,6 +272,35 @@
     </div>
   </section>
 
+  <!-- Suivi d'une demande : la réponse de l'administration s'affiche ici
+       (n° de demande + téléphone), même sans adresse email. -->
+  <section id="suivi" class="section">
+    <div class="container">
+      <div class="suivi-carte">
+        <div class="suivi-intro">
+          <span class="section-tag">Déjà fait une demande ?</span>
+          <h2>Suivre ma demande</h2>
+          <p>Entrez le numéro reçu après l'envoi du formulaire (il commence par <strong translate="no">RNS-</strong>) et votre téléphone : notre réponse s'affiche ici dès qu'elle est publiée.</p>
+        </div>
+        <form id="suiviForm" class="suivi-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="suivi-id">N° de demande <span class="req">*</span></label>
+              <input type="text" id="suivi-id" class="form-control" placeholder="RNS-XXXXXX-XXXX" autocomplete="off" required />
+            </div>
+            <div class="form-group">
+              <label for="suivi-tel">Téléphone <span class="req">*</span></label>
+              <input type="tel" id="suivi-tel" class="form-control" placeholder="01 XX XX XX XX" autocomplete="tel" required />
+            </div>
+          </div>
+          <button type="submit" class="btn-submit" id="suiviBtn"><span class="iconify" data-icon="tabler:search"></span> Voir la réponse</button>
+          <div class="form-feedback" id="suiviFeedback"></div>
+        </form>
+        <div class="suivi-resultat" id="suiviResultat" hidden></div>
+      </div>
+    </div>
+  </section>
+
   <section class="suite-parcours">
     <div class="container">
       <div class="suite-parcours-inner">
@@ -324,6 +361,7 @@
             <li><a href="/services">Nos services</a></li>
             <li><a href="/renseignements">Renseignements</a></li>
             <li><a href="/galerie">Galerie</a></li>
+            <li><a href="/temoignages">Témoignages</a></li>
             <li><a href="/actualites">Actualités</a></li>
             <li><a href="/contact">Nous trouver</a></li>
             <li><a href="/postuler">Postuler (formateur / stage)</a></li>
@@ -349,6 +387,7 @@
   <div id="toast" role="alert" aria-live="polite"></div>
 
   <script src="js/site.js"></script>
+  <script src="js/traduction.js"></script>
   <script src="js/renseignement.js"></script>
   <script src="js/chat-widget.js" defer></script>
 </body>

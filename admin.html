@@ -226,6 +226,16 @@
     .table-card-actions { display: flex; gap: 8px; align-items: center; }
 
     .data-table { width: 100%; border-collapse: collapse; }
+    .gal-admin-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; padding: 18px 20px; }
+    .gal-admin-carte { background: var(--dark-900); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .gal-admin-carte.masquee { opacity: .55; }
+    .gal-admin-carte img { width: 100%; height: 150px; object-fit: cover; background: var(--dark-700); }
+    .gal-admin-corps { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .gal-admin-corps .auth-input { margin-bottom: 0; padding: 8px 10px; font-size: 13px; }
+    .gal-admin-ligne { display: flex; gap: 8px; align-items: center; }
+    .gal-admin-ligne label { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+    .temo-admin-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--dark-700); }
+    .temo-admin-texte { max-width: 420px; white-space: pre-line; line-height: 1.5; }
     .data-table th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--dark-900); border-bottom: 1px solid var(--border); white-space: nowrap; }
     .data-table td { padding: 13px 16px; font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--border); vertical-align: middle; }
     .data-table tr:last-child td { border-bottom: none; }
@@ -552,6 +562,12 @@
       <div class="nav-section-label">Contenu du site</div>
       <button class="nav-item" onclick="naviguer('actualites')">
         <span class="iconify" data-icon="tabler:speakerphone"></span> Actualités &amp; Bandeau
+      </button>
+      <button class="nav-item" onclick="naviguer('galerie')">
+        <span class="iconify" data-icon="tabler:photo"></span> Galerie photos
+      </button>
+      <button class="nav-item" onclick="naviguer('temoignages')">
+        <span class="iconify" data-icon="tabler:message-heart"></span> Témoignages
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -893,6 +909,62 @@
       </div>
     </div>
 
+    <div class="page" id="page-galerie">
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:photo-plus"></span> Ajouter des photos</span>
+        </div>
+        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="grid-column:1/-1;">
+            <label class="auth-label" for="gal-fichiers">Photos (plusieurs à la fois possible — JPG, PNG)</label>
+            <input type="file" id="gal-fichiers" class="auth-input" accept="image/jpeg,image/png,image/webp" multiple />
+          </div>
+          <div>
+            <label class="auth-label" for="gal-categorie">Catégorie</label>
+            <select id="gal-categorie" class="auth-input"></select>
+          </div>
+          <div>
+            <label class="auth-label" for="gal-legende">Légende (facultatif, modifiable ensuite)</label>
+            <input type="text" id="gal-legende" class="auth-input" maxlength="140" placeholder="Ex. Remise d'attestations — promotion 2026" />
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" id="btn-gal-ajouter" onclick="ajouterPhotosGalerie()">
+            <span class="iconify" data-icon="tabler:upload"></span> Envoyer
+          </button>
+          <span id="gal-progression" style="font-size:12.5px;color:var(--text-3);"></span>
+        </div>
+        <p style="padding:0 20px 18px;font-size:12px;color:var(--text-3);line-height:1.6;">
+          Les photos sont automatiquement redimensionnées avant l'envoi. Ordre d'affichage : le plus petit
+          numéro passe en premier dans le carrousel ; à égalité, la plus récente d'abord.
+          Pensez à l'accord des personnes reconnaissables sur les photos.
+        </p>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Photos en ligne</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerGalerieAdmin()"><span class="iconify" data-icon="tabler:refresh"></span></button>
+        </div>
+        <div id="galerie-admin-grille" class="gal-admin-grille">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-temoignages">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title">Témoignages des apprenants</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerTemoignagesAdmin()"><span class="iconify" data-icon="tabler:refresh"></span></button>
+        </div>
+        <p id="temo-admin-info" style="padding:12px 20px 0;font-size:12px;color:var(--text-3);line-height:1.6;"></p>
+        <div id="temoignages-admin-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="page" id="page-actualites">
 
       <div class="table-card" style="margin-bottom:20px;border:1px solid var(--orange-500,#F97316);">
@@ -1045,6 +1117,38 @@
     </div>
     <div class="modal-body" id="msg-modal-body"></div>
     <div class="modal-footer" id="msg-modal-footer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rens-repondre">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3>Répondre à la demande <span id="rr-ref" class="mono" style="font-size:13px;"></span></h3>
+      <button class="modal-close" onclick="fermerModal('modal-rens-repondre')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="rr-demande" style="background:var(--dark-900);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text-2);"></div>
+      <label class="auth-label" for="rr-reponse">Votre réponse</label>
+      <textarea id="rr-reponse" class="auth-input" rows="8" maxlength="3000" style="resize:vertical;font-family:inherit;line-height:1.6;" placeholder="Bonjour, merci pour votre intérêt..."></textarea>
+      <label class="auth-label" id="rr-email-ligne" style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;">
+        <input type="checkbox" id="rr-envoyer-email" style="width:18px;height:18px;" checked />
+        <span id="rr-email-libelle"></span>
+      </label>
+      <p style="font-size:12px;color:var(--text-3);line-height:1.6;margin-top:8px;">
+        La réponse est toujours visible sur le site : page Renseignements → « Suivre ma demande », avec le n° de demande et le téléphone.
+        La demande passe en « Traité ».
+      </p>
+      <div class="auth-error" id="err-rr"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-rens-repondre')">Annuler</button>
+      <a class="btn btn-ghost btn-sm" id="rr-whatsapp" target="_blank" rel="noopener" title="Prévenir aussi par WhatsApp"><span class="iconify" data-icon="tabler:brand-whatsapp"></span> WhatsApp</a>
+      <button class="btn btn-primary btn-sm" onclick="envoyerReponseRens()" id="btn-rr-envoyer">
+        <span class="iconify" data-icon="tabler:send"></span> Publier la réponse
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1512,7 +1616,12 @@ function deconnecter() {
   });
 }
 
-(function() {
+// Reprise de session au rechargement de la page. Lancée APRÈS l'exécution
+// complète du script (DOMContentLoaded) : appelée immédiatement, elle
+// utilisait des variables "let" déclarées plus bas (ex.
+// _pollingBadgeForumId) avant leur initialisation -> erreur qui stoppait
+// tout le reste du script admin quand on rechargeait la page connecté.
+document.addEventListener('DOMContentLoaded', function() {
   const token = sessionStorage.getItem('lqd_token');
   const email = sessionStorage.getItem('lqd_email');
   if (token && email) {
@@ -1525,7 +1634,7 @@ function deconnecter() {
     actualiserBadgeForum();
     _demarrerPollingBadgeForum();
   }
-})();
+});
 
 /* ================================================================
    NAVIGATION
@@ -1536,7 +1645,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', galerie: 'Galerie photos', temoignages: 'Témoignages' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -1548,6 +1657,8 @@ function naviguer(page, filtre = '') {
   if (page === 'suivi')           chargerSuiviTelechargements();
   if (page === 'cours')           chargerCoursAdmin();
   if (page === 'forum')           chargerForumAdmin();
+  if (page === 'galerie')         chargerGalerieAdmin();
+  if (page === 'temoignages')     chargerTemoignagesAdmin();
   if (filtre && page === 'dossiers') {
     const selectStatut   = document.getElementById('filtre-statut');
     const selectPaiement = document.getElementById('filtre-paiement');
@@ -2094,9 +2205,12 @@ function renderTableauRens(rens) {
         </td>
         <td style="font-size:12px;color:var(--text-3);max-width:160px;">${(r.formations||'—').split(' | ').join(', ')}</td>
         <td style="font-size:12px;color:var(--text-2);max-width:200px;">${(r.question||'—').slice(0, 80)}${(r.question||'').length > 80 ? '…' : ''}</td>
-        <td>${badgeRensStatut(r.statut)}</td>
+        <td>${badgeRensStatut(r.statut)}${r.reponse ? `<br/><span style="font-size:11px;color:var(--teal-l);">Répondu le ${_escAdmin(r.dateReponse)}</span>` : ''}</td>
         <td>
           <div style="display:flex;gap:6px;">
+            <button class="btn btn-primary btn-sm" title="${r.reponse ? 'Modifier la réponse' : 'Répondre'}" onclick="ouvrirReponseRens('${_escAdmin(r.id)}')">
+              <span class="iconify" data-icon="tabler:message-reply"></span> ${r.reponse ? 'Modifier' : 'Répondre'}
+            </button>
             <a href="tel:${String(r.telephone).replace(/[\s+]/g,'')}" class="btn btn-success btn-sm">
               <span class="iconify" data-icon="tabler:phone"></span>
             </a>
@@ -2108,6 +2222,74 @@ function renderTableauRens(rens) {
       </tr>`).join('')}</tbody>
     </table></div>`;
 }
+
+/* ================================================================
+   RÉPONSE À UNE DEMANDE DE RENSEIGNEMENT (GAS/renseignements_suivi.gs)
+   -> visible sur le site (Suivre ma demande) + email si fourni.
+================================================================ */
+let _rensEnCours = null;
+
+function _waNumero(tel) {
+  let n = String(tel || '').replace(/\D/g, '');
+  if (n.startsWith('00')) n = n.slice(2);
+  if (!n.startsWith('229')) n = '229' + n;
+  return n;
+}
+
+function _majLienWhatsappRens() {
+  const r = _rensEnCours;
+  if (!r) return;
+  const texte = `Bonjour ${r.prenom}, ici Les Qualités de Dieu Service. Nous avons répondu à votre demande ${r.id} :\n\n`
+    + document.getElementById('rr-reponse').value.trim()
+    + `\n\nVous pouvez aussi la relire sur https://www.qualitededieuservice.com/renseignements#suivi`;
+  document.getElementById('rr-whatsapp').href = 'https://wa.me/' + _waNumero(r.telephone) + '?text=' + encodeURIComponent(texte);
+}
+
+function ouvrirReponseRens(id) {
+  const r = (state.rens || []).find(x => String(x.id) === String(id));
+  if (!r) return;
+  _rensEnCours = r;
+  document.getElementById('rr-ref').textContent = r.id;
+  document.getElementById('rr-demande').innerHTML = `
+    <strong style="color:var(--text-1);">${_escAdmin(r.prenom)} ${_escAdmin(r.nom)}</strong> — ${_escAdmin(r.telephone)}${r.email ? ' — ' + _escAdmin(r.email) : ''}<br/>
+    <span style="color:var(--text-3);">Formation(s) : ${_escAdmin((r.formations || '—').split(' | ').map(abrevierFormation).join(', '))}</span><br/>
+    <span style="white-space:pre-line;">${_escAdmin(r.question || '(aucune question écrite — rappel demandé)')}</span>`;
+  document.getElementById('rr-reponse').value = r.reponse || '';
+  const aEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r.email || ''));
+  document.getElementById('rr-envoyer-email').checked = aEmail;
+  document.getElementById('rr-envoyer-email').disabled = !aEmail;
+  document.getElementById('rr-email-libelle').textContent = aEmail
+    ? 'Envoyer aussi la réponse par email à ' + r.email
+    : 'Pas d\'email fourni : la réponse sera lisible sur le site (et vous pouvez prévenir par WhatsApp).';
+  document.getElementById('err-rr').classList.remove('show');
+  _majLienWhatsappRens();
+  ouvrirModal('modal-rens-repondre');
+  setTimeout(() => document.getElementById('rr-reponse').focus(), 50);
+}
+
+async function envoyerReponseRens() {
+  const r = _rensEnCours;
+  const reponse = document.getElementById('rr-reponse').value.trim();
+  const err = document.getElementById('err-rr');
+  const btn = document.getElementById('btn-rr-envoyer');
+  err.classList.remove('show');
+  if (reponse.length < 5) { err.textContent = 'Écrivez votre réponse avant de publier.'; err.classList.add('show'); return; }
+  btn.disabled = true;
+  try {
+    const res = await apiCall('admin_repondre_renseignement', { id: r.id, reponse, envoyerEmail: document.getElementById('rr-envoyer-email').checked });
+    if (res.status !== 'success') throw new Error(res.message);
+    toast(res.message, 'success');
+    if (res.avertissement) toast(res.avertissement, 'error');
+    fermerModal('modal-rens-repondre');
+    chargerRenseignements();
+  } catch (e) {
+    err.textContent = 'Erreur : ' + e.message;
+    err.classList.add('show');
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById('rr-reponse').addEventListener('input', _majLienWhatsappRens);
 
 /* ================================================================
    CANDIDATURES (page Postuler)
@@ -3338,6 +3520,200 @@ async function chargerSuiviTelechargements() {
 /* ================================================================
    COURS — supports de l'Espace apprenant
 ================================================================ */
+/* ================================================================
+   GALERIE PHOTOS (page publique /galerie) — GAS/galerie.gs
+================================================================ */
+function _escAdmin(t) {
+  const d = document.createElement('div');
+  d.textContent = String(t == null ? '' : t);
+  return d.innerHTML;
+}
+
+let _galerieCategories = ['Le centre', 'Cours & ateliers', 'Réalisations', 'Événements', "Remise d'attestations"];
+
+function _remplirCategoriesGalerie() {
+  const sel = document.getElementById('gal-categorie');
+  const actuelle = sel.value;
+  sel.innerHTML = _galerieCategories.map(c => `<option value="${_escAdmin(c)}">${_escAdmin(c)}</option>`).join('');
+  if (actuelle) sel.value = actuelle;
+}
+
+// Redimensionne dans le navigateur (1600 px max, JPEG) : envoi rapide,
+// même en connexion mobile, et pas de fichier de 8 Mo stocké pour rien.
+function _redimensionnerPhoto(file, coteMax = 1600) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const ratio = Math.min(1, coteMax / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible : ' + file.name)); };
+    img.src = url;
+  });
+}
+
+async function ajouterPhotosGalerie() {
+  const input = document.getElementById('gal-fichiers');
+  const fichiers = Array.from(input.files || []);
+  const prog = document.getElementById('gal-progression');
+  const btn = document.getElementById('btn-gal-ajouter');
+  if (!fichiers.length) { toast('Choisissez au moins une photo.', 'error'); return; }
+  const invalides = fichiers.filter(f => !['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
+  if (invalides.length) { toast('Format non accepté : ' + invalides.map(f => f.name).join(', '), 'error'); return; }
+
+  const categorie = document.getElementById('gal-categorie').value;
+  const legende = document.getElementById('gal-legende').value.trim();
+  btn.disabled = true;
+  let ok = 0;
+  for (let i = 0; i < fichiers.length; i++) {
+    prog.textContent = `Envoi ${i + 1} / ${fichiers.length} — ${fichiers[i].name}`;
+    try {
+      const base64 = await _redimensionnerPhoto(fichiers[i]);
+      const r = await apiCall('admin_galerie_ajouter', {
+        imageBase64: base64, imageMimeType: 'image/jpeg',
+        nomFichier: fichiers[i].name.replace(/\.[^.]+$/, '') + '.jpg', categorie, legende
+      });
+      if (r.status !== 'success') throw new Error(r.message);
+      ok++;
+    } catch (e) {
+      toast(`Échec pour ${fichiers[i].name} : ${e.message}`, 'error');
+    }
+  }
+  prog.textContent = `${ok} photo${ok > 1 ? 's' : ''} ajoutée${ok > 1 ? 's' : ''} sur ${fichiers.length}.`;
+  btn.disabled = false;
+  input.value = '';
+  if (ok) toast(`${ok} photo(s) ajoutée(s) à la galerie.`, 'success');
+  chargerGalerieAdmin();
+}
+
+async function chargerGalerieAdmin() {
+  _remplirCategoriesGalerie();
+  const grille = document.getElementById('galerie-admin-grille');
+  grille.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_galerie_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    if (Array.isArray(r.categories) && r.categories.length) { _galerieCategories = r.categories; _remplirCategoriesGalerie(); }
+    if (!r.photos.length) {
+      grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Aucune photo pour le moment : la page Galerie affiche "Nos photos arrivent très bientôt".</p></div>';
+      return;
+    }
+    grille.innerHTML = r.photos.map(p => `
+      <div class="gal-admin-carte${p.visible ? '' : ' masquee'}" data-id="${_escAdmin(p.id)}">
+        <img src="${_escAdmin(p.url)}" alt="" loading="lazy" />
+        <div class="gal-admin-corps">
+          <input type="text" class="auth-input gal-legende" maxlength="140" value="${_escAdmin(p.legende)}" placeholder="Légende" />
+          <select class="auth-input gal-cat">${_galerieCategories.map(c => `<option${c === p.categorie ? ' selected' : ''}>${_escAdmin(c)}</option>`).join('')}</select>
+          <div class="gal-admin-ligne">
+            <label>Ordre <input type="number" class="auth-input gal-ordre" value="${Number(p.ordre) || 0}" style="width:70px;" /></label>
+            <label><input type="checkbox" class="gal-visible"${p.visible ? ' checked' : ''} /> Visible</label>
+          </div>
+          <div class="gal-admin-ligne">
+            <button class="btn btn-primary btn-sm" onclick="enregistrerPhotoGalerie('${_escAdmin(p.id)}')"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer</button>
+            <button class="btn btn-ghost btn-sm" title="Supprimer" onclick="supprimerPhotoGalerie('${_escAdmin(p.id)}')"><span class="iconify" data-icon="tabler:trash"></span></button>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    grille.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Erreur de chargement.</p></div>';
+  }
+}
+
+async function enregistrerPhotoGalerie(id) {
+  const carte = document.querySelector(`.gal-admin-carte[data-id="${CSS.escape(id)}"]`);
+  if (!carte) return;
+  try {
+    const r = await apiCall('admin_galerie_modifier', {
+      id,
+      legende: carte.querySelector('.gal-legende').value.trim(),
+      categorie: carte.querySelector('.gal-cat').value,
+      ordre: Number(carte.querySelector('.gal-ordre').value) || 0,
+      visible: carte.querySelector('.gal-visible').checked
+    });
+    if (r.status !== 'success') throw new Error(r.message);
+    carte.classList.toggle('masquee', !r.photo.visible);
+    toast('Photo mise à jour.', 'success');
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
+async function supprimerPhotoGalerie(id) {
+  if (!confirm('Supprimer définitivement cette photo de la galerie ?')) return;
+  try {
+    const r = await apiCall('admin_galerie_supprimer', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast('Photo supprimée.', 'success');
+    chargerGalerieAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
+/* ================================================================
+   TÉMOIGNAGES (page publique /temoignages) — GAS/temoignages.gs
+================================================================ */
+async function chargerTemoignagesAdmin() {
+  const zone = document.getElementById('temoignages-admin-container');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_temoignages_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    document.getElementById('temo-admin-info').textContent = r.moderation
+      ? 'Mode validation : un nouveau témoignage reste "En attente" jusqu\'à ce que vous le publiiez.'
+      : 'Publication automatique : un témoignage est en ligne dès que le numéro de dossier et le téléphone sont vérifiés. Vous pouvez le masquer ou le supprimer à tout moment.';
+    if (!r.temoignages.length) {
+      zone.innerHTML = '<div class="empty-state"><p>Aucun témoignage reçu pour le moment.</p></div>';
+      return;
+    }
+    const badge = st => `<span class="badge ${st === 'Publié' ? 'badge-green' : st === 'Masqué' ? 'badge-red' : 'badge-orange'}">${_escAdmin(st)}</span>`;
+    zone.innerHTML = `
+      <table class="data-table">
+        <thead><tr><th></th><th>Apprenant</th><th>Note</th><th>Témoignage</th><th>Date</th><th>Statut</th><th></th></tr></thead>
+        <tbody>${r.temoignages.map(t => `
+          <tr>
+            <td>${t.photo ? `<img class="temo-admin-photo" src="${_escAdmin(t.photo)}" alt="" />` : ''}</td>
+            <td><strong>${_escAdmin(t.nom)}</strong><br><span style="font-size:12px;">${_escAdmin(t.filiere)}</span><br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(t.dossierId)}</span></td>
+            <td>${'★'.repeat(t.note)}${'☆'.repeat(5 - t.note)}</td>
+            <td><div class="temo-admin-texte">${_escAdmin(t.texte)}</div></td>
+            <td>${t.date ? new Date(t.date).toLocaleDateString('fr-FR') : '—'}</td>
+            <td>${badge(t.statut)}</td>
+            <td style="white-space:nowrap;">
+              ${t.statut === 'Publié'
+                ? `<button class="btn btn-ghost btn-sm" onclick="changerStatutTemoignage('${_escAdmin(t.id)}','Masqué')">Masquer</button>`
+                : `<button class="btn btn-primary btn-sm" onclick="changerStatutTemoignage('${_escAdmin(t.id)}','Publié')">Publier</button>`}
+              <button class="btn btn-ghost btn-sm" title="Supprimer" onclick="supprimerTemoignageAdmin('${_escAdmin(t.id)}')"><span class="iconify" data-icon="tabler:trash"></span></button>
+            </td>
+          </tr>`).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+  }
+}
+
+async function changerStatutTemoignage(id, statut) {
+  try {
+    const r = await apiCall('admin_temoignage_statut', { id, statut });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(statut === 'Publié' ? 'Témoignage publié.' : 'Témoignage masqué.', 'success');
+    chargerTemoignagesAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
+async function supprimerTemoignageAdmin(id) {
+  if (!confirm('Supprimer définitivement ce témoignage (et sa photo) ?')) return;
+  try {
+    const r = await apiCall('admin_temoignage_supprimer', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast('Témoignage supprimé.', 'success');
+    chargerTemoignagesAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
 async function chargerCoursAdmin() {
   const container = document.getElementById('cours-table-container');
   container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';

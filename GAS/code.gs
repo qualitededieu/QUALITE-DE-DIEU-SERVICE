@@ -241,7 +241,9 @@ const ENTETES_RENSEIGNEMENT = [
   'Email',
   'Formations intéressées',
   'Question / Message',
-  'Statut'
+  'Statut',
+  'Réponse',        // ajoutée oct. 2026 — voir renseignements_suivi.gs
+  'Date réponse'
 ];
 
 function doPost(e) {
@@ -278,6 +280,10 @@ function doPost(e) {
   if (action === 'cours_lister_apprenant') return coursListerApprenant(data);
   if (action === 'forum_poster_question') return forumPosterQuestion(data);
   if (action === 'forum_lister') return forumLister(data);
+  if (action === 'temoignages_lister')  return temoignagesLister(data);
+  if (action === 'temoignage_deposer')  return temoignageDeposer(data);
+  if (action === 'galerie_lister')      return galerieLister(data);
+  if (action === 'renseignement_suivre') return renseignementSuivre(data);
     return traiterInscription(data);
 
   } catch (err) {
@@ -1242,7 +1248,8 @@ function construireEmailAutoReponseRenseignement(renseignement) {
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F9FA;border-left:4px solid ${CONFIG.COULEUR_TEAL};border-radius:0 10px 10px 0;margin-bottom:28px;">
       <tr><td style="padding:18px 20px;">
         <p style="margin:0 0 4px;font-weight:700;font-size:14px;color:${CONFIG.COULEUR_DARK};">Référence : ${renseignement.id}</p>
-        <p style="margin:0;font-size:13px;color:#6B7280;">Conservez cette référence pour tout suivi.</p>
+        <p style="margin:0;font-size:13px;color:#6B7280;">Conservez cette référence : avec votre numéro de téléphone, elle vous permet de lire notre réponse sur
+          <a href="${CONFIG.SITE_URL}/renseignements#suivi" style="color:${CONFIG.COULEUR_TEAL};font-weight:600;">notre site</a> (rubrique « Suivre ma demande »).</p>
       </td></tr>
     </table>
 

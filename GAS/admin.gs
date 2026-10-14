@@ -27,6 +27,7 @@ function routerAdmin(data, action) {
       case 'admin_get_stats':           return requireAuth(data, adminGetStats);
       case 'admin_get_dossiers':        return requireAuth(data, adminGetDossiers);
       case 'admin_get_rens':            return requireAuth(data, adminGetRenseignements);
+      case 'admin_repondre_renseignement': return requireAuth(data, adminRepondreRenseignement);
       case 'admin_get_dossier':         return requireAuth(data, adminGetDossier);
 
       case 'admin_update_statut':       return requireAuth(data, adminUpdateStatut);
@@ -81,6 +82,15 @@ function routerAdmin(data, action) {
       case 'admin_forum_lister':    return requireAuth(data, adminForumLister);
       case 'admin_forum_repondre':  return requireAuth(data, adminForumRepondre);
       case 'admin_forum_supprimer': return requireAuth(data, adminForumSupprimer);
+
+      case 'admin_temoignages_lister':   return requireAuth(data, adminTemoignagesLister);
+      case 'admin_temoignage_statut':    return requireAuth(data, adminTemoignageStatut);
+      case 'admin_temoignage_supprimer': return requireAuth(data, adminTemoignageSupprimer);
+
+      case 'admin_galerie_lister':    return requireAuth(data, adminGalerieLister);
+      case 'admin_galerie_ajouter':   return requireAuth(data, adminGalerieAjouter);
+      case 'admin_galerie_modifier':  return requireAuth(data, adminGalerieModifier);
+      case 'admin_galerie_supprimer': return requireAuth(data, adminGalerieSupprimer);
 
       default:
         return reponseJSON({ status: 'error', message: 'Action admin inconnue.' });
@@ -362,7 +372,9 @@ function adminGetRenseignements(data, email) {
       email:      row[5],
       formations: row[6],
       question:   row[7],
-      statut:     row[8]
+      statut:     row[8],
+      reponse:    String(row[9]  || ''),
+      dateReponse: String(row[10] || '')
     });
   }
 

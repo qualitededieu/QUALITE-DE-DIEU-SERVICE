@@ -213,9 +213,9 @@ function adminRepondreMessage(data, email) {
     return reponseJSON({ status: 'error', message: 'Quota d\'envoi Gmail atteint pour aujourd\'hui. Réessayez demain.' });
   }
 
+  const texteBrut = messageHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   try {
     const htmlBody = construireEmailReponseAdmin(src.label, nomDestinataire || 'Madame, Monsieur', sujet, messageHtml, id);
-    const texteBrut = messageHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     GmailApp.sendEmail(destinataireEmail, sujet, texteBrut, {
       htmlBody: htmlBody,
       name:     CONFIG.EXPEDITEUR_NOM,
@@ -228,6 +228,17 @@ function adminRepondreMessage(data, email) {
 
   if (marquerTraite && idxStatut !== -1) {
     feuille.getRange(ligneIndex + 1, idxStatut + 1).setValue('Traité');
+  }
+
+  // Renseignement : la réponse envoyée depuis la boîte de messages devient
+  // aussi lisible sur le site (Suivre ma demande) — voir renseignements_suivi.gs.
+  if (source === 'renseignement') {
+    try {
+      const f = _feuilleRenseignementsAJour();
+      f.getRange(ligneIndex + 1, _colRensReponse(), 1, 2).setValues([[texteBrut, _dateFr(new Date())]]);
+    } catch (errSite) {
+      console.error('[adminRepondreMessage] réponse site', errSite.toString());
+    }
   }
 
   try {
