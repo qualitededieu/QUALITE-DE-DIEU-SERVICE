@@ -284,6 +284,14 @@ function doPost(e) {
   if (action === 'temoignage_deposer')  return temoignageDeposer(data);
   if (action === 'galerie_lister')      return galerieLister(data);
   if (action === 'renseignement_suivre') return renseignementSuivre(data);
+    // Seule l'action "inscription" mène au traitement d'inscription. Avant,
+    // toute action inconnue y tombait par défaut : un témoignage envoyé à
+    // un GAS pas encore mis à jour renvoyait "prénom, nom, sexe..." au
+    // visiteur, ce qui n'avait aucun sens pour lui.
+    if (action !== 'inscription') {
+      console.warn('[doPost] Action inconnue :', action, '— le déploiement GAS est-il à jour ?');
+      return reponseJSON({ status: 'error', message: 'Ce service est momentanément indisponible. Merci de réessayer un peu plus tard ou de nous contacter au +229 01 97 95 12 30.' });
+    }
     return traiterInscription(data);
 
   } catch (err) {
@@ -390,7 +398,7 @@ function traiterInscription(data) {
       '— formations reçues :', JSON.stringify(data.formations),
       '— clause1 :', data.clause1, '(' + typeof data.clause1 + ')',
       '— clause2 :', data.clause2, '(' + typeof data.clause2 + ')');
-    return reponseJSON({ status: 'error', message: 'Champs invalides : ' + erreursChamps.join(', ') });
+    return reponseJSON({ status: 'error', message: messageChampsAVerifier(erreursChamps, 'votre inscription') });
   }
 
   const erreursFichiers = validerFichiersInscription(data);
@@ -503,7 +511,7 @@ function traiterRenseignement(data) {
 
   const erreurs = validerDonneesRenseignement(data);
   if (erreurs.length > 0) {
-    return reponseJSON({ status: 'error', message: 'Champs invalides : ' + erreurs.join(', ') });
+    return reponseJSON({ status: 'error', message: messageChampsAVerifier(erreurs, 'votre demande') });
   }
 
   const formations = Array.isArray(data.formations)
@@ -568,6 +576,28 @@ function calculerMontantsTotal(formations) {
   const tranche3         = coutTotal - tranche1 - tranche2;
   const premierVirement  = fraisInscription + tranche1;
   return { fraisInscription, coutTotal, tranche1, tranche2, tranche3, premierVirement, paiementUnique: false };
+}
+
+/* Message de champs manquants, rédigé pour le visiteur.
+   Libellés harmonisés (majuscule, terme métier) et phrase complète. */
+const LIBELLES_CHAMPS = {
+  'formation(s)': 'formation choisie',
+  'signature': 'signature électronique',
+  'acceptation de la déclaration sur l\'honneur': 'déclaration sur l\'honneur (case à cocher)',
+  'acceptation du traitement des données': 'consentement au traitement des données (case à cocher)',
+  'email': 'adresse email'
+};
+function messageChampsAVerifier(champs, objet) {
+  const liste = champs.map(c => {
+    const l = LIBELLES_CHAMPS[c] || c;
+    return l.charAt(0).toUpperCase() + l.slice(1);
+  });
+  const quoi = objet || 'votre dossier';
+  if (liste.length === 1) {
+    return 'Pour finaliser ' + quoi + ', merci de vérifier l\'information suivante : ' + liste[0] + '.';
+  }
+  const enumeration = liste.slice(0, -1).join(', ') + ' et ' + liste[liste.length - 1];
+  return 'Pour finaliser ' + quoi + ', merci de compléter ou de vérifier les ' + liste.length + ' informations suivantes : ' + enumeration + '.';
 }
 
 function validerDonneesInscription(data) {

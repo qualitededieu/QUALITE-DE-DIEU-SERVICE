@@ -90,7 +90,7 @@ function traiterRegularisation(data) {
   if (erreurs.length > 0) {
     return reponseJSON({
       status:  'error',
-      message: 'Champs invalides : ' + erreurs.join(', ')
+      message: messageChampsAVerifier(erreurs, 'ce dossier')
     });
   }
 
