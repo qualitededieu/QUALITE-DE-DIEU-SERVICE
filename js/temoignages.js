@@ -332,6 +332,11 @@
         document.getElementById('temo-compteur').textContent = `0 / ${TEXTE_MAX}`;
         showToast('Merci pour votre témoignage !', 'success');
         chargerPage();
+      } else if (/^Champs invalides|prénom, nom, sexe/i.test(r.message || '')) {
+        // Serveur GAS pas encore mis à jour : il traite l'envoi comme une
+        // inscription. Le visiteur n'y est pour rien, on ne lui montre pas ça.
+        console.error('[temoignages] le déploiement GAS en ligne ne connaît pas "temoignage_deposer" : redéployez une nouvelle version.');
+        erreurForm('Le dépôt de témoignages est en cours de mise à jour. Merci de réessayer un peu plus tard ou d\'appeler le centre au 01 97 95 12 30.');
       } else {
         erreurForm(r.message || 'Envoi impossible. Vérifiez vos informations.');
       }
