@@ -243,7 +243,9 @@ const ENTETES_RENSEIGNEMENT = [
   'Question / Message',
   'Statut',
   'Réponse',        // ajoutée oct. 2026 — voir renseignements_suivi.gs
-  'Date réponse'
+  'Date réponse',
+  'Pièce jointe réponse (nom)',       // facultative — image ou PDF joint par l'admin
+  'Pièce jointe réponse (Drive URL)'
 ];
 
 function doPost(e) {

@@ -374,7 +374,9 @@ function adminGetRenseignements(data, email) {
       question:   row[7],
       statut:     row[8],
       reponse:    String(row[9]  || ''),
-      dateReponse: String(row[10] || '')
+      dateReponse: String(row[10] || ''),
+      pieceJointeNom: String(row[11] || ''),   // voir renseignements_suivi.gs
+      pieceJointeUrl: String(row[12] || '')
     });
   }
 

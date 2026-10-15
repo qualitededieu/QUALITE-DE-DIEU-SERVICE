@@ -92,6 +92,18 @@ rensForm.addEventListener('submit', async function (e) {
   const decoder = t => String(t || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   const texteHtml = t => _escapeHtml(decoder(t)).replace(/\n/g, '<br>');
 
+  // Pièce jointe facultative de l'admin (image ou PDF hébergé sur Drive).
+  // Seules les adresses Google Drive sont affichées.
+  function blocPieceJointe(pj) {
+    if (!pj || !/^https:\/\/drive\.google\.com\//.test(String(pj.url || ''))) return '';
+    const estPdf = /\.pdf$/i.test(pj.nom || '');
+    return `<a class="suivi-pj" href="${_escapeHtml(pj.url)}" target="_blank" rel="noopener">
+      <span class="iconify" data-icon="${estPdf ? 'tabler:file-type-pdf' : 'tabler:photo'}"></span>
+      <span><strong>${_escapeHtml(pj.nom || 'Pièce jointe')}</strong><small>Ouvrir ou télécharger la pièce jointe</small></span>
+      <span class="iconify" data-icon="tabler:download"></span>
+    </a>`;
+  }
+
   function erreur(msg) {
     fb.className = 'form-feedback error-msg';
     fb.textContent = msg;
@@ -132,6 +144,7 @@ rensForm.addEventListener('submit', async function (e) {
         <div class="suivi-bloc suivi-reponse">
           <span class="suivi-lib"><span class="iconify" data-icon="tabler:message-check"></span> Réponse du centre${d.dateReponse ? ' — ' + _escapeHtml(d.dateReponse) : ''}</span>
           <p>${texteHtml(d.reponse)}</p>
+          ${blocPieceJointe(d.pieceJointe)}
         </div>` : `
         <div class="suivi-bloc suivi-attente">
           <span class="suivi-lib"><span class="iconify" data-icon="tabler:clock"></span> Réponse en préparation</span>

@@ -72,3 +72,37 @@ Ce zip contient l'INTÉGRALITÉ du projet.
   3. Aucun redéploiement GAS nécessaire pour cette mise à jour.
   4. Google Search Console : soumettre à nouveau sitemap.xml (il
      liste maintenant toutes les pages).
+
+=====================================================================
+MISE À JOUR — correctifs galerie, témoignages, renseignements
+(15 octobre 2026)
+=====================================================================
+
+  FICHIERS NOUVEAUX
+    GAS/galerie.gs     (manquait : cause de l'échec de publication des
+                        photos dans l'admin)
+    js/galerie.js      (manquait : la page /galerie restait bloquée sur
+                        "Chargement des photos...")
+
+  FICHIERS MODIFIÉS
+    GAS/temoignages.gs           vérification plus tolérante + nouveaux messages
+    GAS/renseignements_suivi.gs  pièce jointe facultative dans la réponse admin
+    GAS/code.gs                  2 colonnes ajoutées à la feuille Renseignements
+    GAS/admin.gs                 la liste admin renvoie la pièce jointe
+    admin.html                   champ "Pièce jointe" dans "Répondre"
+    js/renseignement.js          lien de téléchargement dans "Suivre ma demande"
+    css/site.css                 style du lien de pièce jointe
+
+  DÉPLOIEMENT GAS — OBLIGATOIRE (sinon rien ne change côté serveur)
+    1. Dans le projet Apps Script du site, créer le fichier "galerie"
+       et y coller GAS/galerie.gs. Remplacer le contenu de temoignages,
+       renseignements_suivi, code et admin.
+    2. NE PAS ajouter admin_regularisation.gs dans ce même projet :
+       il redéclare les fonctions de regularisation.gs (le projet
+       entier planterait).
+    3. Déployer > Gérer les déploiements > crayon > Version : "Nouvelle
+       version" > Déployer. L'URL /exec reste la même.
+    4. Au premier envoi, Google peut redemander l'autorisation Drive :
+       accepter.
+
+  VERCEL : pousser admin.html, js/, css/ sur main (redéploiement auto).

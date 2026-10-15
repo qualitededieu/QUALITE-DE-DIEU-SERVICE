@@ -12,6 +12,18 @@
    - Publication immédiate après vérification (TEMOIGNAGES.MODERATION =
      false). Passer à true pour exiger une validation dans l'admin.
    - L'admin peut masquer, republier ou supprimer à tout moment.
+
+   CORRECTIFS (octobre 2026) — les témoignages "ne passaient pas" :
+   - Dossier encore "En attente" : avant, refus sec. Désormais le
+     témoignage est ENREGISTRÉ en "En attente" et l'admin le publie d'un
+     clic (page Témoignages). Seuls Annulé / Rejeté restent refusés.
+   - Numéro de dossier comparé sans tenir compte des majuscules, des
+     espaces ni des tirets typographiques (copier-coller WhatsApp/PDF).
+   - Anti-abus : seules les tentatives ÉCHOUÉES sont comptées (avant,
+     chaque envoi réussi consommait aussi le quota de 5/heure).
+   - Plus de message "dossier introuvable" : un texte d'aide neutre, le
+     même que le dossier soit absent ou que le téléphone diffère (ne
+     confirme pas à un inconnu qu'un numéro de dossier existe).
 ===================================================================== */
 
 const TEMOIGNAGES = {
@@ -19,7 +31,7 @@ const TEMOIGNAGES = {
   TEXTE_MIN:   30,
   TEXTE_MAX:   600,
   PHOTO_MAX_B64: 400000,          // ~300 Ko : la photo arrive déjà recadrée/compressée par le navigateur
-  ENVOIS_MAX_PAR_HEURE: 5,        // tentatives par dossier et par heure (réussies ou non) : anti-abus
+  ECHECS_MAX_PAR_HEURE: 6,        // tentatives ÉCHOUÉES par dossier et par heure : anti-essais au hasard
   NOM_FEUILLE: 'Témoignages',
   NOM_DOSSIER_DRIVE: 'Témoignages — LQD Service'
 };
@@ -84,30 +96,53 @@ function _nomPublicTemoignage(prenom, nom) {
   return (premierePrenom + (initiale ? ' ' + initiale + '.' : '')).trim() || 'Apprenant(e)';
 }
 
-// Même vérification que l'espace apprenant (getCarte, carte.gs).
+// "lqd 260905 w9ra", "LQD–260905–W9RA" (tiret long copié d'un PDF) ou
+// " LQD-260905-W9RA " désignent tous le même dossier.
+function _normaliserIdDossier(id) {
+  return String(id || '').toUpperCase().replace(/[\u2010-\u2015\u2212]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Message unique quand la vérification échoue (dossier absent OU
+// téléphone différent) : orienter la personne, sans parler de dossier
+// "introuvable" et sans révéler si le numéro de dossier existe.
+function _messageVerificationTemoignage(telephone) {
+  const astuce01 = _telephoneSembleIncomplet(telephone)
+    ? ' Au Bénin, les numéros commencent maintenant par 01 (ex : 01 97 95 12 30).'
+    : '';
+  return 'Nous n\'avons pas pu confirmer votre inscription avec ces informations. '
+    + 'Saisissez le numéro qui figure sur votre carte d\'apprenant (LQD-XXXXXX-XXXX) et le téléphone donné lors de l\'inscription.'
+    + astuce01
+    + ' Besoin d\'aide ? Appelez le centre au 01 97 95 12 30.';
+}
+
+// Même source que l'espace apprenant (getCarte, carte.gs), mais plus
+// tolérante sur le statut : un dossier "En attente" peut témoigner, son
+// témoignage attendra simplement la validation de l'admin.
 function _verifierApprenantTemoignage(id, telephone) {
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
-  if (!ss) return { erreur: 'Erreur serveur.' };
+  if (!ss) return { erreur: 'Service momentanément indisponible. Réessayez dans quelques minutes.', technique: true };
   const feuille = ss.getSheetByName('Toutes les inscriptions');
-  if (!feuille) return { erreur: 'Erreur serveur.' };
+  if (!feuille) return { erreur: 'Service momentanément indisponible. Réessayez dans quelques minutes.', technique: true };
 
-  let idTrouve = false;
+  const idCherche = _normaliserIdDossier(id);
   const donnees = feuille.getDataRange().getValues();
   for (let i = 1; i < donnees.length; i++) {
     const row = donnees[i];
-    if (String(row[0] || '').trim() !== id || id === 'LQD-EXEMPLE') continue;
-    idTrouve = true;
+    const idRow = _normaliserIdDossier(row[0]);
+    if (!idRow || idRow !== idCherche || idRow === 'LQD-EXEMPLE') continue;
     const telRow = String(row[9] || '').trim();
-    if (!telRow || !_telephonesEquivalents(telRow, telephone)) continue;
-    const statut = String(row[28] || '').trim();
-    if (statut !== 'Confirmé' && statut !== 'Migré' && statut !== 'Terminé') {
-      return { erreur: 'Votre dossier n\'est pas encore confirmé : vous pourrez témoigner dès sa validation par le centre.' };
+    if (!telRow) {
+      return { erreur: 'Votre dossier ne comporte pas encore de numéro de téléphone. Passez au centre ou appelez le 01 97 95 12 30 pour le compléter, puis revenez témoigner.' };
     }
-    return { apprenant: _mapperApprenantInscription(row) };
+    if (!_telephonesEquivalents(telRow, telephone)) continue;
+    const statut = String(row[28] || '').trim();
+    if (statut === 'Annulé' || statut === 'Rejeté') {
+      return { erreur: 'Ce dossier n\'est plus actif : il ne permet pas de publier un témoignage. Pour toute question, appelez le 01 97 95 12 30.' };
+    }
+    const confirme = statut === 'Confirmé' || statut === 'Migré' || statut === 'Terminé';
+    return { apprenant: _mapperApprenantInscription(row), idDossier: String(row[0]).trim(), confirme: confirme };
   }
-  return { erreur: idTrouve
-    ? 'Numéro de dossier reconnu, mais le téléphone ne correspond pas.'
-    : 'Numéro de dossier introuvable. Seuls les apprenants du centre peuvent laisser un témoignage.' };
+  return { erreur: _messageVerificationTemoignage(telephone) };
 }
 
 function _enregistrerPhotoTemoignage(base64, mimeType, dossierId) {
@@ -146,13 +181,14 @@ function temoignagesLister(data) {
 }
 
 function temoignageDeposer(data) {
-  const id        = String(data.id || '').trim().toUpperCase();
+  const id        = _normaliserIdDossier(data.id);
   const telephone = String(data.telephone || '').trim();
   const texte     = String(data.texte || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
   const note      = Math.round(Number(data.note));
 
   // Validation des champs — même règles que dans le formulaire.
   if (!id || !telephone) return reponseJSON({ status: 'error', message: 'Numéro de dossier et téléphone requis.' });
+  if (id.length > 40 || telephone.length > 25) return reponseJSON({ status: 'error', message: _messageVerificationTemoignage(telephone) });
   if (data.consentement !== true) return reponseJSON({ status: 'error', message: 'Merci d\'accepter la publication de votre témoignage.' });
   if (!(note >= 1 && note <= 5)) return reponseJSON({ status: 'error', message: 'Choisissez une note de 1 à 5 étoiles.' });
   if (texte.length < TEMOIGNAGES.TEXTE_MIN) return reponseJSON({ status: 'error', message: 'Votre témoignage est trop court (' + TEMOIGNAGES.TEXTE_MIN + ' caractères minimum).' });
@@ -167,19 +203,21 @@ function temoignageDeposer(data) {
     if (photoB64.length > TEMOIGNAGES.PHOTO_MAX_B64) return reponseJSON({ status: 'error', message: 'Photo trop lourde.' });
   }
 
-  // Anti-abus : nombre de tentatives limité par dossier et par heure.
-  // Compté AVANT la vérification, échecs compris : empêche d'essayer des
-  // numéros de téléphone au hasard sur un numéro de dossier connu.
+  // Anti-abus : seules les tentatives ÉCHOUÉES sont comptées, par dossier
+  // et par heure. Empêche d'essayer des téléphones au hasard sur un numéro
+  // de dossier connu, sans pénaliser l'apprenant qui corrige son texte.
   const cache = CacheService.getScriptCache();
-  const cleCache = 'TEMOIG_' + id;
-  const nbEnvois = Number(cache.get(cleCache) || 0);
-  if (nbEnvois >= TEMOIGNAGES.ENVOIS_MAX_PAR_HEURE) {
-    return reponseJSON({ status: 'error', message: 'Trop de tentatives pour ce dossier. Réessayez dans une heure.' });
+  const cleCache = 'TEMOIG_ECHEC_' + id;
+  const nbEchecs = Number(cache.get(cleCache) || 0);
+  if (nbEchecs >= TEMOIGNAGES.ECHECS_MAX_PAR_HEURE) {
+    return reponseJSON({ status: 'error', message: 'Par sécurité, les essais sont suspendus pour ce dossier pendant une heure. Besoin d\'aide ? Appelez le 01 97 95 12 30.' });
   }
-  cache.put(cleCache, String(nbEnvois + 1), 3600);
 
   const verif = _verifierApprenantTemoignage(id, telephone);
-  if (verif.erreur) return reponseJSON({ status: 'error', message: verif.erreur });
+  if (verif.erreur) {
+    if (!verif.technique) cache.put(cleCache, String(nbEchecs + 1), 3600);
+    return reponseJSON({ status: 'error', message: verif.erreur });
+  }
 
   const apprenant = verif.apprenant;
   const feuille   = _feuilleTemoignages();
@@ -193,7 +231,7 @@ function temoignageDeposer(data) {
     let ligneExistante = -1;
     let ancien = null;
     for (let i = 1; i < donnees.length; i++) {
-      if (String(donnees[i][2] || '').trim() === id) { ligneExistante = i + 1; ancien = _ligneVersTemoignage(donnees[i]); break; }
+      if (_normaliserIdDossier(donnees[i][2]) === id) { ligneExistante = i + 1; ancien = _ligneVersTemoignage(donnees[i]); break; }
     }
 
     let photo = ancien ? { url: ancien.photo, fileId: ancien.photoId } : { url: '', fileId: '' };
@@ -205,11 +243,13 @@ function temoignageDeposer(data) {
       photo = { url: '', fileId: '' };
     }
 
-    const statut = TEMOIGNAGES.MODERATION ? 'En attente' : 'Publié';
+    // Dossier pas encore confirmé par le centre : enregistré, publié par l'admin.
+    // Témoignage masqué par l'admin : un nouvel envoi ne le republie pas tout seul.
+    const statut = (TEMOIGNAGES.MODERATION || !verif.confirme || (ancien && ancien.statut === 'Masqué')) ? 'En attente' : 'Publié';
     const ligne = [
       ancien ? ancien.id : genererID('TEM'),
       new Date(),
-      id,
+      verif.idDossier,
       _nomPublicTemoignage(apprenant.prenom, apprenant.nom),
       apprenant.filiere,
       note,
@@ -227,7 +267,7 @@ function temoignageDeposer(data) {
       publie: statut === 'Publié',
       message: statut === 'Publié'
         ? (ancien ? 'Votre témoignage a été mis à jour. Merci !' : 'Merci ! Votre témoignage est en ligne.')
-        : 'Merci ! Votre témoignage sera publié après validation par le centre.'
+        : 'Merci ! Votre témoignage est bien reçu. Il sera mis en ligne après une rapide vérification par le centre.'
     });
   } finally {
     lock.releaseLock();

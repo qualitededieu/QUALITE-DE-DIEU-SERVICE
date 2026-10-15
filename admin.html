@@ -226,6 +226,11 @@
     .table-card-actions { display: flex; gap: 8px; align-items: center; }
 
     .data-table { width: 100%; border-collapse: collapse; }
+    .rr-pj-zone { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .rr-pj-ligne { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); background: var(--dark-900); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; max-width: 100%; margin-bottom: 8px; }
+    .rr-pj-ligne[hidden] { display: none; }
+    .rr-pj-ligne a { color: var(--teal-l); word-break: break-all; }
+    .rr-pj-ligne button { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 12px; text-decoration: underline; padding: 0; }
     .gal-admin-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; padding: 18px 20px; }
     .gal-admin-carte { background: var(--dark-900); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
     .gal-admin-carte.masquee { opacity: .55; }
@@ -1170,6 +1175,17 @@
       <div id="rr-demande" style="background:var(--dark-900);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text-2);"></div>
       <label class="auth-label" for="rr-reponse">Votre réponse</label>
       <textarea id="rr-reponse" class="auth-input" rows="8" maxlength="3000" style="resize:vertical;font-family:inherit;line-height:1.6;" placeholder="Bonjour, merci pour votre intérêt..."></textarea>
+
+      <!-- Pièce jointe facultative : une image ou un PDF (GAS/renseignements_suivi.gs) -->
+      <label class="auth-label" for="rr-pj" style="margin-top:14px;">Pièce jointe <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-3);">(facultatif — image ou PDF, 10 Mo max)</span></label>
+      <div id="rr-pj-actuelle" class="rr-pj-ligne" hidden></div>
+      <div class="rr-pj-zone">
+        <label class="btn btn-ghost btn-sm" for="rr-pj" style="cursor:pointer;">
+          <span class="iconify" data-icon="tabler:paperclip"></span> <span id="rr-pj-bouton">Joindre un fichier</span>
+        </label>
+        <input type="file" id="rr-pj" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" hidden />
+        <span id="rr-pj-choisie" class="rr-pj-ligne" hidden></span>
+      </div>
       <label class="auth-label" id="rr-email-ligne" style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;">
         <input type="checkbox" id="rr-envoyer-email" style="width:18px;height:18px;" checked />
         <span id="rr-email-libelle"></span>
@@ -2243,7 +2259,7 @@ function renderTableauRens(rens) {
         </td>
         <td style="font-size:12px;color:var(--text-3);max-width:160px;">${(r.formations||'—').split(' | ').join(', ')}</td>
         <td style="font-size:12px;color:var(--text-2);max-width:200px;">${(r.question||'—').slice(0, 80)}${(r.question||'').length > 80 ? '…' : ''}</td>
-        <td>${badgeRensStatut(r.statut)}${r.reponse ? `<br/><span style="font-size:11px;color:var(--teal-l);">Répondu le ${_escAdmin(r.dateReponse)}</span>` : ''}</td>
+        <td>${badgeRensStatut(r.statut)}${r.reponse ? `<br/><span style="font-size:11px;color:var(--teal-l);">Répondu le ${_escAdmin(r.dateReponse)}</span>` : ''}${r.pieceJointeUrl ? `<br/><span style="font-size:11px;color:var(--text-3);display:inline-flex;align-items:center;gap:3px;" title="${_escAdmin(r.pieceJointeNom)}"><span class="iconify" data-icon="tabler:paperclip"></span> Pièce jointe</span>` : ''}</td>
         <td>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-primary btn-sm" title="${r.reponse ? 'Modifier la réponse' : 'Répondre'}" onclick="ouvrirReponseRens('${_escAdmin(r.id)}')">
@@ -2277,8 +2293,10 @@ function _waNumero(tel) {
 function _majLienWhatsappRens() {
   const r = _rensEnCours;
   if (!r) return;
+  const avecPj = !!_rrPj || (!!r.pieceJointeUrl && !_rrRetirerPj);
   const texte = `Bonjour ${r.prenom}, ici Les Qualités de Dieu Service. Nous avons répondu à votre demande ${r.id} :\n\n`
     + document.getElementById('rr-reponse').value.trim()
+    + (avecPj ? `\n\nUn document est joint à notre réponse : vous pouvez le télécharger sur la page ci-dessous.` : '')
     + `\n\nVous pouvez aussi la relire sur https://www.qualitededieuservice.com/renseignements#suivi`;
   document.getElementById('rr-whatsapp').href = 'https://wa.me/' + _waNumero(r.telephone) + '?text=' + encodeURIComponent(texte);
 }
@@ -2293,6 +2311,10 @@ function ouvrirReponseRens(id) {
     <span style="color:var(--text-3);">Formation(s) : ${_escAdmin((r.formations || '—').split(' | ').map(abrevierFormation).join(', '))}</span><br/>
     <span style="white-space:pre-line;">${_escAdmin(r.question || '(aucune question écrite — rappel demandé)')}</span>`;
   document.getElementById('rr-reponse').value = r.reponse || '';
+  _rrPj = null;
+  _rrRetirerPj = false;
+  document.getElementById('rr-pj').value = '';
+  _rendrePieceJointeRens();
   const aEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r.email || ''));
   document.getElementById('rr-envoyer-email').checked = aEmail;
   document.getElementById('rr-envoyer-email').disabled = !aEmail;
@@ -2312,22 +2334,114 @@ async function envoyerReponseRens() {
   const btn = document.getElementById('btn-rr-envoyer');
   err.classList.remove('show');
   if (reponse.length < 5) { err.textContent = 'Écrivez votre réponse avant de publier.'; err.classList.add('show'); return; }
+  if (_rrPjPreparation) { err.textContent = 'Patientez : la pièce jointe est en cours de préparation.'; err.classList.add('show'); return; }
   btn.disabled = true;
+  const libelleBtn = btn.innerHTML;
+  if (_rrPj) btn.innerHTML = '<span class="iconify" data-icon="tabler:loader-2" style="animation:spin 1s linear infinite;"></span> Envoi de la pièce jointe…';
   try {
-    const res = await apiCall('admin_repondre_renseignement', { id: r.id, reponse, envoyerEmail: document.getElementById('rr-envoyer-email').checked });
+    const charge = { id: r.id, reponse, envoyerEmail: document.getElementById('rr-envoyer-email').checked };
+    if (_rrPj) charge.pieceJointe = { base64: _rrPj.base64, mimeType: _rrPj.mimeType, nom: _rrPj.nom };
+    else if (_rrRetirerPj) charge.retirerPieceJointe = true;
+    const res = await apiCall('admin_repondre_renseignement', charge);
     if (res.status !== 'success') throw new Error(res.message);
     toast(res.message, 'success');
     if (res.avertissement) toast(res.avertissement, 'error');
     fermerModal('modal-rens-repondre');
     chargerRenseignements();
   } catch (e) {
-    err.textContent = 'Erreur : ' + e.message;
+    err.textContent = 'Erreur : ' + (/fetch|network/i.test(e.message) ? 'connexion interrompue, réessayez.' : e.message);
     err.classList.add('show');
   } finally {
     btn.disabled = false;
+    btn.innerHTML = libelleBtn;
   }
 }
 document.getElementById('rr-reponse').addEventListener('input', _majLienWhatsappRens);
+
+/* ---------- Pièce jointe facultative (image ou PDF) ----------
+   Une photo de téléphone de plus de 1,5 Mo est réduite (2000 px, JPEG)
+   avant l'envoi : réponse plus rapide en 3G/4G et email plus léger.
+   Les PDF partent tels quels (10 Mo maximum). */
+const RR_PJ_MAX = 10 * 1024 * 1024;
+const RR_PJ_TYPES = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+let _rrPj = null;              // { base64, mimeType, nom, taille }
+let _rrRetirerPj = false;
+let _rrPjPreparation = false;
+
+function _rendrePieceJointeRens() {
+  const r = _rensEnCours;
+  const actuelle = document.getElementById('rr-pj-actuelle');
+  const choisie = document.getElementById('rr-pj-choisie');
+  const urlOk = r && /^https:\/\/drive\.google\.com\//.test(r.pieceJointeUrl || '');
+  if (urlOk && !_rrPj) {
+    actuelle.hidden = false;
+    actuelle.innerHTML = _rrRetirerPj
+      ? `<span class="iconify" data-icon="tabler:x"></span> <span>La pièce jointe actuelle sera retirée.</span> <button type="button" onclick="annulerRetraitPjRens()">Annuler</button>`
+      : `<span class="iconify" data-icon="tabler:paperclip"></span> Actuelle : <a href="${_escAdmin(r.pieceJointeUrl)}" target="_blank" rel="noopener">${_escAdmin(r.pieceJointeNom || 'Pièce jointe')}</a> <button type="button" onclick="retirerPjActuelleRens()">Retirer</button>`;
+  } else {
+    actuelle.hidden = true;
+    actuelle.innerHTML = '';
+  }
+  if (_rrPjPreparation) {
+    choisie.hidden = false;
+    choisie.innerHTML = '<span class="iconify" data-icon="tabler:loader-2" style="animation:spin 1s linear infinite;"></span> Préparation du fichier…';
+  } else if (_rrPj) {
+    choisie.hidden = false;
+    choisie.innerHTML = `<span class="iconify" data-icon="${_rrPj.mimeType === 'application/pdf' ? 'tabler:file-type-pdf' : 'tabler:photo'}"></span> ${_escAdmin(_rrPj.nom)} — ${_taille(_rrPj.taille)} <button type="button" onclick="retirerPjChoisieRens()">Retirer</button>`;
+  } else {
+    choisie.hidden = true;
+    choisie.innerHTML = '';
+  }
+  document.getElementById('rr-pj-bouton').textContent = (_rrPj || (urlOk && !_rrRetirerPj)) ? 'Remplacer le fichier' : 'Joindre un fichier';
+  _majLienWhatsappRens();
+}
+
+function retirerPjActuelleRens() { _rrRetirerPj = true; _rendrePieceJointeRens(); }
+function annulerRetraitPjRens()  { _rrRetirerPj = false; _rendrePieceJointeRens(); }
+function retirerPjChoisieRens()  { _rrPj = null; document.getElementById('rr-pj').value = ''; _rendrePieceJointeRens(); }
+
+function _base64Fichier(file) {
+  return _lireEnDataUrl(file).then(u => String(u).split(',')[1] || '');
+}
+
+document.getElementById('rr-pj').addEventListener('change', async function () {
+  const err = document.getElementById('err-rr');
+  err.classList.remove('show');
+  const file = this.files && this.files[0];
+  if (!file) return;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  // Certains téléphones Android ne donnent pas de type MIME : on se rabat sur l'extension.
+  const mime = Object.values(RR_PJ_TYPES).includes(file.type) ? file.type : (RR_PJ_TYPES[ext] || '');
+  const refus = msg => { err.textContent = msg; err.classList.add('show'); this.value = ''; };
+  if (!mime) return refus('Format non accepté : joignez un PDF ou une image JPG, PNG ou WEBP.');
+  if (mime !== 'application/pdf' && file.size > 40 * 1024 * 1024) return refus('Image trop lourde (40 Mo maximum avant réduction).');
+  if (mime === 'application/pdf' && file.size > RR_PJ_MAX) return refus('PDF trop lourd (10 Mo maximum). Compressez-le avant de le joindre.');
+
+  _rrPjPreparation = true;
+  _rendrePieceJointeRens();
+  try {
+    let base64, type = mime, nom = file.name, taille = file.size;
+    if (mime !== 'application/pdf' && file.size > 1.5 * 1024 * 1024) {
+      const reduite = await _redimensionnerPhoto(file, 2000);
+      base64 = reduite.base64;
+      type = 'image/jpeg';
+      nom = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+      taille = Math.round(base64.length * 3 / 4);
+    } else {
+      base64 = await _base64Fichier(file);
+    }
+    if (!base64) throw new Error('fichier vide ou illisible');
+    if (base64.length * 3 / 4 > RR_PJ_MAX) throw new Error('fichier trop lourd (10 Mo maximum)');
+    _rrPj = { base64, mimeType: type, nom, taille };
+    _rrRetirerPj = false;
+  } catch (e) {
+    _rrPj = null;
+    refus('Pièce jointe impossible à préparer : ' + e.message);
+  } finally {
+    _rrPjPreparation = false;
+    _rendrePieceJointeRens();
+  }
+});
 
 /* ================================================================
    CANDIDATURES (page Postuler)

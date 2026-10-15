@@ -9,11 +9,21 @@
    2. envoyée par email si la personne en a donné un.
    Le statut passe à "Traité" et la réponse est tracée dans le
    "Journal des réponses" (même journal que la boîte de messages).
+
+   PIÈCE JOINTE FACULTATIVE (demande client, octobre 2026) : l'admin peut
+   joindre UNE image (JPG, PNG, WEBP) ou UN PDF à sa réponse. Le fichier
+   est rangé dans le dossier Drive "Réponses renseignements — LQD
+   Service" (lecture avec le lien), joint à l'email, et proposé en
+   téléchargement sur la page "Suivre ma demande". Modifier la réponse
+   sans nouveau fichier conserve la pièce jointe actuelle.
 ===================================================================== */
 
 const RENS_SUIVI = {
   REPONSE_MAX: 3000,
-  CONSULTATIONS_MAX_PAR_HEURE: 10   // par n° de demande : anti-essais au hasard sur le téléphone
+  CONSULTATIONS_MAX_PAR_HEURE: 10,  // par n° de demande : anti-essais au hasard sur le téléphone
+  PJ_TYPES: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+  PJ_MAX_OCTETS: 10 * 1024 * 1024,  // 10 Mo (Gmail accepte 25 Mo, on reste large)
+  PJ_DOSSIER_DRIVE: 'Réponses renseignements — LQD Service'
 };
 
 // Colonnes ajoutées à la feuille existante (après "Statut", colonne I).
@@ -22,6 +32,51 @@ const RENS_SUIVI = {
 // pas encore exister au moment où ce fichier est lu.
 function _colRensReponse()     { return ENTETES_RENSEIGNEMENT.indexOf('Réponse') + 1; }      // J
 function _colRensDateReponse() { return ENTETES_RENSEIGNEMENT.indexOf('Date réponse') + 1; } // K
+function _colRensPjNom()       { return ENTETES_RENSEIGNEMENT.indexOf('Pièce jointe réponse (nom)') + 1; }       // L
+function _colRensPjUrl()       { return ENTETES_RENSEIGNEMENT.indexOf('Pièce jointe réponse (Drive URL)') + 1; } // M
+
+function _idDepuisUrlDrive(url) {
+  const m = String(url || '').match(/\/d\/([\w-]{10,})/);
+  return m ? m[1] : '';
+}
+
+// Contrôle de la pièce jointe envoyée par l'admin. Renvoie { blob } ou
+// { erreur }. Le type est vérifié sur le MIME ET sur l'extension, et les
+// premiers octets doivent correspondre (un .exe renommé en .pdf est refusé).
+function _preparerPieceJointeRens(pj) {
+  const mime = String(pj.mimeType || '').toLowerCase();
+  if (RENS_SUIVI.PJ_TYPES.indexOf(mime) === -1) return { erreur: 'Pièce jointe : seuls les PDF et les images JPG, PNG ou WEBP sont acceptés.' };
+  let octets;
+  try { octets = Utilities.base64Decode(String(pj.base64 || '')); }
+  catch (e) { return { erreur: 'Pièce jointe illisible (fichier corrompu).' }; }
+  if (!octets.length) return { erreur: 'Pièce jointe vide.' };
+  if (octets.length > RENS_SUIVI.PJ_MAX_OCTETS) return { erreur: 'Pièce jointe trop lourde (10 Mo maximum).' };
+
+  const sig = octets.slice(0, 12).map(b => (b + 256) % 256);
+  const signatures = {
+    'application/pdf': sig[0] === 0x25 && sig[1] === 0x50 && sig[2] === 0x44 && sig[3] === 0x46,     // %PDF
+    'image/jpeg':      sig[0] === 0xFF && sig[1] === 0xD8,
+    'image/png':       sig[0] === 0x89 && sig[1] === 0x50 && sig[2] === 0x4E && sig[3] === 0x47,
+    'image/webp':      sig[8] === 0x57 && sig[9] === 0x45 && sig[10] === 0x42 && sig[11] === 0x50   // ....WEBP
+  };
+  if (!signatures[mime]) return { erreur: 'Pièce jointe : le contenu ne correspond pas à un PDF ou à une image valide.' };
+
+  const extensions = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+  let nom = String(pj.nom || '').replace(/[\\/:*?"<>|\u0000-\u001F]+/g, ' ').replace(/\s+/g, ' ').trim();
+  nom = nom.replace(/\.[A-Za-z0-9]{1,5}$/, '').slice(0, 80) || 'piece-jointe';
+  return { blob: Utilities.newBlob(octets, mime, nom + '.' + extensions[mime]) };
+}
+
+function _enregistrerPieceJointeRens(blob, idDemande) {
+  const dossier = trouverDossierDrive(RENS_SUIVI.PJ_DOSSIER_DRIVE) || DriveApp.createFolder(RENS_SUIVI.PJ_DOSSIER_DRIVE);
+  const nomAffiche = blob.getName();
+  // Sur Drive, le fichier est préfixé par le n° de demande (retrouvable) ;
+  // la personne voit le nom d'origine.
+  const fichier = dossier.createFile(blob.setName(idDemande + ' - ' + nomAffiche));
+  // Lecture avec le lien : nécessaire pour l'ouvrir depuis "Suivre ma demande".
+  fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return { nom: nomAffiche, url: 'https://drive.google.com/file/d/' + fichier.getId() + '/view' };
+}
 
 // Ajoute les en-têtes manquantes sur une feuille créée avant cette mise à jour.
 function _feuilleRenseignementsAJour() {
@@ -60,6 +115,13 @@ function adminRepondreRenseignement(data, email) {
   const feuille = _feuilleRenseignementsAJour();
   if (!feuille) return reponseJSON({ status: 'error', message: 'Feuille Renseignements introuvable.' });
 
+  // Pièce jointe facultative : contrôlée AVANT toute écriture.
+  let nouvellePj = null;
+  if (data.pieceJointe && data.pieceJointe.base64) {
+    nouvellePj = _preparerPieceJointeRens(data.pieceJointe);
+    if (nouvellePj.erreur) return reponseJSON({ status: 'error', message: nouvellePj.erreur });
+  }
+
   const lignes = feuille.getDataRange().getValues();
   let i = -1;
   for (let k = 1; k < lignes.length; k++) {
@@ -69,8 +131,30 @@ function adminRepondreRenseignement(data, email) {
 
   const row = lignes[i];
   const maintenant = new Date();
-  // 1. Réponse visible sur le site (Suivre ma demande)
-  feuille.getRange(i + 1, _colRensReponse(), 1, 2).setValues([[reponse, _dateFr(maintenant)]]);
+
+  // Pièce jointe : nouvelle (remplace l'ancienne), retirée, ou conservée.
+  let pj = { nom: String(row[_colRensPjNom() - 1] || ''), url: String(row[_colRensPjUrl() - 1] || '') };
+  const ancienFichierId = _idDepuisUrlDrive(pj.url);
+  let blobEmail = null;
+  if (nouvellePj) {
+    try {
+      blobEmail = nouvellePj.blob.copyBlob();
+      pj = _enregistrerPieceJointeRens(nouvellePj.blob, id);
+    } catch (e) {
+      console.error('[adminRepondreRenseignement] pièce jointe', e.toString());
+      return reponseJSON({ status: 'error', message: 'La pièce jointe n\'a pas pu être enregistrée sur Drive : ' + e.message + '. Rien n\'a été publié, réessayez.' });
+    }
+    if (ancienFichierId) _supprimerFichierDrive(ancienFichierId);
+  } else if (data.retirerPieceJointe === true) {
+    if (ancienFichierId) _supprimerFichierDrive(ancienFichierId);
+    pj = { nom: '', url: '' };
+  } else if (ancienFichierId) {
+    try { blobEmail = DriveApp.getFileById(ancienFichierId).getBlob().setName(pj.nom || 'piece-jointe'); }
+    catch (e) { blobEmail = null; /* fichier supprimé à la main sur Drive : email sans pièce jointe */ }
+  }
+
+  // 1. Réponse visible sur le site (Suivre ma demande) — colonnes J à M
+  feuille.getRange(i + 1, _colRensReponse(), 1, 4).setValues([[reponse, _dateFr(maintenant), pj.nom, pj.url]]);
   feuille.getRange(i + 1, ENTETES_RENSEIGNEMENT.indexOf('Statut') + 1).setValue('Traité');
 
   // 2. Email si la personne en a donné un
@@ -85,14 +169,17 @@ function adminRepondreRenseignement(data, email) {
         const nom = (String(row[2] || '') + ' ' + String(row[3] || '')).trim() || 'Madame, Monsieur';
         const sujet = 'Réponse à votre demande de renseignement';
         const corps = _texteVersHtml(reponse) +
+          (blobEmail ? '<p style="margin:14px 0 0;font-size:14px;"><strong>Pièce jointe :</strong> ' + _texteVersHtml(pj.nom).replace(/<\/?p[^>]*>/g, '') + '</p>' : '') +
           '<p style="margin:18px 0 0;font-size:13px;color:#6B7280;">Vous pouvez aussi retrouver cette réponse sur ' +
           '<a href="' + CONFIG.SITE_URL + '/renseignements#suivi" style="color:' + CONFIG.COULEUR_TEAL + ';font-weight:600;">notre site</a>' +
           ' avec votre référence <strong>' + id + '</strong> et votre numéro de téléphone.</p>';
-        GmailApp.sendEmail(destinataire, sujet, reponse, {
+        const options = {
           htmlBody: construireEmailReponseAdmin('Renseignement', nom, sujet, corps, id),
           name: CONFIG.EXPEDITEUR_NOM,
           replyTo: CONFIG.ADMIN_EMAIL
-        });
+        };
+        if (blobEmail) options.attachments = [blobEmail];
+        GmailApp.sendEmail(destinataire, sujet, reponse, options);
         emailEnvoye = true;
       } catch (e) {
         console.error('[adminRepondreRenseignement] email', e.toString());
@@ -111,6 +198,7 @@ function adminRepondreRenseignement(data, email) {
     emailEnvoye: emailEnvoye,
     avertissement: avertissement,
     dateReponse: _dateFr(maintenant),
+    pieceJointe: pj.url ? pj : null,
     message: emailEnvoye
       ? 'Réponse enregistrée sur le site et envoyée à ' + destinataire + '.'
       : 'Réponse enregistrée : la personne la lira sur le site (Suivre ma demande).'
@@ -150,7 +238,11 @@ function renseignementSuivre(data) {
         formations: String(r[6] || '').split(' | ').filter(Boolean).map(f => nomAffichagePublic(f.trim())).join(', '),
         question: String(r[7] || ''),
         reponse: String(r[_colRensReponse() - 1] || ''),
-        dateReponse: String(r[_colRensDateReponse() - 1] || '')
+        dateReponse: String(r[_colRensDateReponse() - 1] || ''),
+        // Pièce jointe seulement si une réponse est publiée.
+        pieceJointe: (r[_colRensReponse() - 1] && r[_colRensPjUrl() - 1])
+          ? { nom: String(r[_colRensPjNom() - 1] || 'Pièce jointe'), url: String(r[_colRensPjUrl() - 1]) }
+          : null
       }
     });
   }
