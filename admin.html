@@ -1399,6 +1399,13 @@ async function apiCall(action, extra = {}) {
     gererSessionExpiree();
     throw new Error(result.message || 'Session expirée.');
   }
+  // Réponse d'un déploiement GAS plus ancien que cette page admin : on le
+  // dit clairement au lieu d'un "Action admin inconnue." incompréhensible.
+  if (result.status === 'error' && result.message === 'Action admin inconnue.') {
+    console.error('[apiCall] action "' + action + '" absente du déploiement GAS en ligne.');
+    result.message = 'Serveur Google Apps Script pas à jour : la version en ligne ne connaît pas cette fonction. '
+      + 'Dans Apps Script : Déployer > Gérer les déploiements > crayon > Version « Nouvelle version » > Déployer.';
+  }
   return result;
 }
 
