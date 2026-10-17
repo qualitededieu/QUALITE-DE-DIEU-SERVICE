@@ -4,7 +4,7 @@
    Chaque bloc vérifie que ses éléments existent avant de s'y brancher :
    une page qui n'a pas un élément donné ne doit jamais casser le reste.
 ================================================================== */
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
 
 function formatFCFA(n) { return Number(n || 0).toLocaleString('fr-BJ') + ' F CFA'; }
 
