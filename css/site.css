@@ -659,6 +659,45 @@ html.site-traduit body{top:0!important;position:static!important}
 .suivi-pj strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .suivi-pj small{font-size:12px;color:var(--gray-500)}
 .suivi-attente{background:var(--orange-50);border-color:var(--orange-100)}
+
+/* Pièce jointe de la réponse : aperçu, liens Drive, visionneuse plein écran */
+.suivi-pj-bloc{margin-top:16px;padding-top:14px;border-top:1px dashed var(--teal-100);display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.suivi-pj-apercu{position:relative;display:block;padding:0;border:1.5px solid var(--teal-100);border-radius:var(--radius-md);overflow:hidden;background:var(--white);cursor:zoom-in;max-width:100%}
+.suivi-pj-apercu img{display:block;max-width:100%;width:420px;max-height:320px;object-fit:contain;background:var(--gray-50)}
+.suivi-pj-loupe{position:absolute;right:10px;bottom:10px;width:38px;height:38px;border-radius:50%;background:rgba(4,52,44,0.78);color:var(--white);display:flex;align-items:center;justify-content:center;font-size:20px;transition:transform var(--transition)}
+.suivi-pj-apercu:hover .suivi-pj-loupe,.suivi-pj-apercu:focus-visible .suivi-pj-loupe{transform:scale(1.1)}
+.suivi-pj-nom{font-size:13.5px;font-weight:600;color:var(--teal-800);word-break:break-word}
+.suivi-pj-actions{display:flex;flex-wrap:wrap;gap:8px}
+.suivi-pj-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:50px;border:1.5px solid var(--teal-600);background:var(--white);color:var(--teal-700);font-family:inherit;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;transition:background var(--transition),color var(--transition)}
+.suivi-pj-btn:hover{background:var(--teal-600);color:var(--white)}
+.suivi-pj-bloc button.suivi-pj{width:100%;font-family:inherit;text-align:left;cursor:pointer;margin-top:0}
+
+.visionneuse{position:fixed;inset:0;z-index:10000;background:#031411;display:flex;flex-direction:column}
+.visionneuse[hidden]{display:none}
+.visionneuse-barre{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;color:var(--white);flex-wrap:wrap}
+.visionneuse-titre{font-family:'Sora',sans-serif;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.visionneuse-outils{display:flex;align-items:center;gap:6px}
+.visionneuse-outils button,.visionneuse-outils a{width:42px;height:42px;border-radius:50%;border:none;background:rgba(255,255,255,0.14);color:var(--white);font-size:21px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;transition:background var(--transition)}
+.visionneuse-outils button:hover,.visionneuse-outils a:hover{background:rgba(255,255,255,0.28)}
+.visionneuse-outils button:disabled{opacity:.35;cursor:default}
+.visionneuse-outils .visionneuse-fermer{background:var(--orange-500);color:var(--teal-900)}
+.visionneuse-taux{min-width:54px;text-align:center;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.visionneuse-scene{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;padding:8px 16px}
+.visionneuse-img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center center;transition:transform .12s ease-out;cursor:zoom-in;user-select:none;-webkit-user-drag:none;border-radius:6px}
+.visionneuse-img.zoome{cursor:grab}
+.visionneuse-img.zoome:active{cursor:grabbing}
+.visionneuse-chargement{color:var(--white);opacity:.8;display:flex;align-items:center;gap:8px;font-size:14px}
+.visionneuse-chargement .iconify{animation:spin 1s linear infinite}
+.visionneuse-erreur{color:var(--white);text-align:center;font-size:14px}
+.visionneuse-pdf{width:min(1000px,100%);height:100%;border:none;border-radius:8px;background:var(--white)}
+.visionneuse.mode-pdf [data-a="moins"],.visionneuse.mode-pdf [data-a="plus"],.visionneuse.mode-pdf [data-a="reset"],.visionneuse.mode-pdf .visionneuse-taux{display:none}
+.visionneuse-aide{color:rgba(255,255,255,0.6);font-size:12px;text-align:center;padding:6px 16px 14px;margin:0}
+@media(max-width:600px){
+  .visionneuse-barre{padding:10px 12px}
+  .visionneuse-titre{flex-basis:100%;order:2;font-size:13px}
+  .visionneuse-outils{width:100%;justify-content:space-between}
+  .visionneuse-outils button,.visionneuse-outils a{width:40px;height:40px}
+}
 .suivi-attente .suivi-lib{color:var(--orange-600)}
 @media(max-width:860px){.suivi-carte{grid-template-columns:1fr;padding:24px 18px;gap:20px}}
 /* Témoignages : consentement à la publication */
