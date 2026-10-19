@@ -93,16 +93,132 @@ MISE À JOUR — correctifs galerie, témoignages, renseignements
     js/renseignement.js          lien de téléchargement dans "Suivre ma demande"
     css/site.css                 style du lien de pièce jointe
 
-  DÉPLOIEMENT GAS — OBLIGATOIRE (sinon rien ne change côté serveur)
-    1. Dans le projet Apps Script du site, créer le fichier "galerie"
-       et y coller GAS/galerie.gs. Remplacer le contenu de temoignages,
-       renseignements_suivi, code et admin.
-    2. NE PAS ajouter admin_regularisation.gs dans ce même projet :
-       il redéclare les fonctions de regularisation.gs (le projet
-       entier planterait).
-    3. Déployer > Gérer les déploiements > crayon > Version : "Nouvelle
-       version" > Déployer. L'URL /exec reste la même.
-    4. Au premier envoi, Google peut redemander l'autorisation Drive :
-       accepter.
+  DÉPLOIEMENT GAS — LA SEULE MÉTHODE QUI MET À JOUR LE SITE
+    Le site appelle TOUJOURS cette adresse (js/site.js, admin.html...) :
+    https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec
+    Seul le déploiement qui porte CET identifiant compte.
+
+    1. Ouvrir LE projet Apps Script qui contient code, admin, carte...
+       (celui où l'URL ci-dessus apparaît dans Déployer > Gérer les
+       déploiements). Pas une copie, pas le projet "régularisation".
+    2. Remplacer/créer les fichiers : code, admin, temoignages,
+       renseignements_suivi, galerie (nouveau). Ctrl+S sur CHAQUE
+       fichier : l'icône de disquette doit disparaître.
+    3. NE PAS ajouter admin_regularisation.gs dans ce projet.
+    4. Menu déroulant des fonctions -> verifierDeploiement -> Exécuter.
+       Le journal doit afficher 4 lignes "OK". Une ligne "MANQUANT" =
+       fichier absent ou non enregistré.
+    5. Déployer > GÉRER LES DÉPLOIEMENTS (pas "Nouveau déploiement" :
+       il crée une AUTRE adresse que le site n'utilise pas) > choisir le
+       déploiement dont l'ID commence par AKfycbwbEkz8 > icône crayon
+       > Version : "Nouvelle version" (pas le numéro existant) > Déployer.
+    6. VÉRIFICATION : ouvrir l'URL ci-dessus dans le navigateur.
+       Attendu : "version":"2026-10-15 galerie + pièce jointe +
+       témoignages" et 4 modules à true.
+       Si on lit encore "LQD Service API v3.1 opérationnelle." : le
+       déploiement du site n'a PAS été mis à jour, recommencer l'étape 5.
 
   VERCEL : pousser admin.html, js/, css/ sur main (redéploiement auto).
+
+=====================================================================
+MISE À JOUR — COURS EN LIGNE PROTÉGÉS + FORUM (19 octobre 2026)
+=====================================================================
+  GAS (projet du site) : remplacer cours, forum, admin, code.
+  Puis Déployer > Gérer les déploiements > Nouvelle version sur :
+    - AKfycbwbEkz8...  (utilisé par le site)
+    - AKfycbxqsoRAJ... (utilisé par Vercel pour les paiements)
+  Vérifier : l'URL /exec affiche "2026-10-19 cours protégés + forum"
+  et 7 modules à true.
+
+  FACULTATIF mais recommandé : Éditeur Apps Script > Services > + >
+  "Drive API" > Ajouter. Masque Télécharger / Imprimer dans le lecteur
+  des fichiers envoyés depuis l'admin. Sans ce service, tout marche,
+  seule cette protection manque.
+
+  VERCEL : admin.html, espace-apprenant.html, vercel.json (autorise
+  le lecteur YouTube dans la page).
+
+  NOUVEAUX ONGLETS créés automatiquement dans le classeur :
+    "Consultations cours" (qui a ouvert quoi). L'onglet "Cours" reçoit
+    3 colonnes de plus : Module, Ordre, Fichier ID.
+
+=====================================================================
+MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
+=====================================================================
+  GAS : créer le fichier "formateurs" (GAS/formateurs.gs) et remplacer
+  "code" et "admin". Puis Nouvelle version sur LES DEUX déploiements
+  (AKfycbwbEkz8... et AKfycbxqsoRAJ...). L'URL /exec doit afficher
+  "2026-10-20 espace formateur" et 8 modules à true.
+  Au premier lancement, Google peut redemander l'autorisation (envoi
+  d'emails) : accepter.
+
+  VERCEL : espace-formateur.html, css/espace-formateur.css,
+  js/espace-formateur.js (nouveaux), admin.html, espace-apprenant.html,
+  robots.txt.
+
+  UTILISATION :
+    1. Admin > Formateurs > Nouveau formateur (email + filières).
+    2. Le formateur reçoit un email "Activer mon compte" (72 h) et
+       choisit son mot de passe.
+    3. Il se connecte sur /espace-formateur : mot de passe + code reçu
+       par email à chaque connexion.
+
+  ONGLETS CRÉÉS dans le classeur : Formateurs, Présences, Évaluations,
+  Notes. Les mots de passe ne sont PAS dans le classeur : ils sont
+  chiffrés dans les Propriétés du script (FORM_MDP_...). Ne pas
+  supprimer la propriété FORMATEUR_SECRET (sinon toutes les sessions
+  formateur sont coupées, sans perte de données).
+
+  COMPLÉMENT — CANDIDATURE -> COMPTE FORMATEUR (même mise à jour)
+    GAS : remplacer aussi "candidatures".
+    VERCEL : remplacer aussi postuler.html.
+    - Postuler (Formateur / Staff) : email, CV et pièce d'identité
+      obligatoires (contrôlés par la page ET par le serveur). Stage :
+      pièce d'identité obligatoire.
+    - Admin > Candidatures > fiche d'un candidat "Formateur / Staff"
+      passé en "Retenu" : bouton "Créer le compte formateur" (fenêtre
+      pré-remplie). La candidature garde l'ID du compte (colonne AC
+      "Compte formateur (ID)") : impossible d'en créer un second.
+    - Postuler : 3 choix séparés -> Formateur / Staff / Stage.
+      Formateur : email + CV + pièce obligatoires (accès possible à
+      l'espace formateur). Staff (administratif) : CV + pièce
+      obligatoires, email facultatif, JAMAIS de compte formateur.
+      Les anciennes candidatures "Formateur / Staff" restent classées
+      "Formateur".
+
+  CORRECTIF + OPTION B (connexion formateur) — version 2026-10-21
+    Vérification : l URL /exec doit afficher "2026-10-21 formateur mdp v2
+    + appareil 30 j" et "motDePasseFormateur": true.
+    - Corrigé : "Erreur interne" au moment de définir le mot de passe
+      (formateurs.gs, calcul de l'empreinte du mot de passe).
+    - Après le code, case "Se souvenir de cet appareil pendant 30 jours"
+      (cochée par défaut) : ensuite email + mot de passe suffisent sur
+      cet appareil. Code redemandé : nouvel appareil, après 30 jours,
+      après un changement de mot de passe, si le compte est désactivé,
+      ou après "Ne plus reconnaître cet appareil" (page Accueil).
+
+  NOUVEAUX / ANCIENS APPRENANTS — version 2026-10-22
+    GAS : remplacer code, cours, formateurs, admin -> Nouvelle version
+    sur LES DEUX déploiements. Vérification : l URL /exec doit afficher
+    "2026-10-22 phases apprenants + accès anciens" et "accesAnciens": true.
+    VERCEL : admin.html, espace-formateur.html, js/espace-formateur.js,
+    espace-apprenant.html.
+    - 3 phases calculées pour chaque apprenant :
+        À venir      : confirmé, date d entrée pas encore atteinte ;
+        En formation : entre la date d entrée et la date de fin ;
+        Ancien       : statut "Terminé" OU date de fin dépassée.
+    - Le formateur ne voit que "À venir" et "En formation". Badge
+      "Nouveau" = entrée depuis moins de 30 jours. Email automatique aux
+      formateurs de la filière quand un dossier passe en "Confirmé".
+    - Anciens : invisibles par défaut. Le formateur fait une demande
+      motivée (Mes apprenants > Anciens apprenants). L admin accorde
+      7, 30 ou 90 jours (Admin > Formateurs > Demandes d accès), refuse,
+      ou retire l accès. Lecture seule : un ancien n est jamais ajouté à
+      une nouvelle séance ou évaluation.
+    - Un ancien garde les supports publiés jusqu à sa date de fin. Il
+      ne voit pas les supports ajoutés après, et ne reçoit plus d email
+      de nouveau support.
+    ATTENTION : la colonne "Date fin" du classeur doit être juste. Si
+    elle est vide, elle est estimée (date d inscription + durée de la
+    filière) : un apprenant encore actif peut alors passer "Ancien".
+    Onglet créé : "Accès anciens apprenants".

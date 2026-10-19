@@ -30,9 +30,31 @@ const FORMATEURS = {
   MDP_MIN:            8,
   ITERATIONS:         300,
   ECHECS_MAX:         5,
+  APPAREIL_JOURS:     30,   // option B : appareil reconnu = pas de code pendant 30 jours
+  APPAREILS_MAX:      5,
   STATUTS_PRESENCE:   ['Présent', 'Absent', 'Retard', 'Excusé'],
-  STATUTS_APPRENANT:  ['Confirmé', 'Migré', 'Terminé']
+  STATUTS_APPRENANT:  ['Confirmé', 'Migré', 'Terminé'],
+  NOUVEAU_JOURS:      30,                 // badge "Nouveau" : entré depuis moins de 30 jours
+  FEUILLE_ACCES:      'Accès anciens apprenants',
+  DUREES_ACCES:       [7, 30, 90]         // jours accordés par l'admin
 };
+const ENTETES_ACCES = ['ID', 'Date demande', 'Formateur', 'Nom formateur', 'Filière', 'Motif', 'Statut', 'Durée (jours)', 'Jusqu\'au', 'Traité par', 'Date traitement'];
+
+/* ------------------------------------------------------------------
+   PHASE D'UN APPRENANT (octobre 2026)
+   - "avenir"  : date d'entrée pas encore atteinte ;
+   - "enCours" : en formation ;
+   - "termine" : statut "Terminé" OU date de fin dépassée.
+   Le formateur ne voit que "avenir" et "enCours" ; les anciens
+   ("termine") ne sont visibles que sur autorisation de l'admin.
+------------------------------------------------------------------ */
+function _phaseApprenant(statut, dateEntreeIso, dateFinIso, aujourdhuiIso) {
+  const auj = aujourdhuiIso || _dateIso(new Date());
+  if (statut === 'Terminé') return 'termine';
+  if (dateFinIso && dateFinIso < auj) return 'termine';
+  if (dateEntreeIso && dateEntreeIso > auj) return 'avenir';
+  return 'enCours';
+}
 
 const ENTETES_FORMATEURS = ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Filières', 'Statut', 'Créé le', 'Dernière connexion'];
 const ENTETES_PRESENCES  = ['Séance ID', 'Date séance', 'Filière', 'Intitulé', 'Formateur', 'Dossier ID', 'Apprenant', 'Statut', 'Remarque', 'Saisi le'];
@@ -90,23 +112,44 @@ function _secretFormateur() {
 
 function _b64(bytes) { return Utilities.base64EncodeWebSafe(bytes); }
 
-function _empreinteMdp(mdp, sel) {
-  let h = Utilities.computeHmacSha256Signature(String(mdp), sel);
-  for (let i = 0; i < FORMATEURS.ITERATIONS; i++) h = Utilities.computeHmacSha256Signature(h.concat(Utilities.newBlob(sel).getBytes()), sel);
-  return _b64(h);
+// Empreinte du mot de passe — version 2 : UNIQUEMENT la forme
+// computeHmacSha256Signature(texte, texte), la plus simple et la plus sûre
+// d'Apps Script (la version 1 utilisait des tableaux d'octets ; un mélange
+// octets/texte provoquait "Erreur interne"). Une empreinte v1 éventuelle
+// reste vérifiable (voir _verifierMdp).
+function _empreinteMdp(mdp, sel, version) {
+  if (version === 1) {
+    const cle = Utilities.newBlob(String(sel)).getBytes();
+    let h1 = Utilities.computeHmacSha256Signature(Utilities.newBlob(String(mdp)).getBytes(), cle);
+    for (let i = 0; i < FORMATEURS.ITERATIONS; i++) h1 = Utilities.computeHmacSha256Signature(h1.concat(cle), cle);
+    return _b64(h1);
+  }
+  const s = String(sel);
+  let h = _b64(Utilities.computeHmacSha256Signature(String(mdp), s));
+  for (let i = 0; i < FORMATEURS.ITERATIONS; i++) h = _b64(Utilities.computeHmacSha256Signature(h + s, s));
+  return h;
+}
+
+// Auto-test lancé par le diagnostic (doGet / verifierDeploiement) : prouve
+// sur le VRAI serveur que mot de passe, jeton et appareil fonctionnent.
+function _autoTestFormateur() {
+  const h = _empreinteMdp('Test2026', 'sel-test');
+  if (h !== _empreinteMdp('Test2026', 'sel-test') || h === _empreinteMdp('Test2027', 'sel-test')) throw new Error('empreinte incohérente');
+  if (_empreinteCle('cle-test').length < 20) throw new Error('empreinte appareil vide');
+  return true;
 }
 
 function _cleMdp(email) { return 'FORM_MDP_' + email; }
 
 function _definirMdp(email, mdp) {
   const sel = Utilities.getUuid();
-  _props().setProperty(_cleMdp(email), JSON.stringify({ sel: sel, h: _empreinteMdp(mdp, sel) }));
+  _props().setProperty(_cleMdp(email), JSON.stringify({ v: 2, sel: sel, h: _empreinteMdp(mdp, sel) }));
 }
 
 function _verifierMdp(email, mdp) {
   const brut = _props().getProperty(_cleMdp(email));
   if (!brut) return false;
-  try { const o = JSON.parse(brut); return _empreinteMdp(mdp, o.sel) === o.h; } catch (e) { return false; }
+  try { const o = JSON.parse(brut); return _empreinteMdp(mdp, o.sel, o.v === 2 ? 2 : 1) === o.h; } catch (e) { return false; }
 }
 
 function _mdpRobuste(mdp) {
@@ -217,6 +260,44 @@ function _envoyerInvitation(f, reinitialisation) {
   }
 }
 
+/* ----------------- Appareils de confiance (option B) -----------------
+   Après un code validé, le formateur peut faire reconnaître son appareil
+   30 jours : la page garde une clé secrète aléatoire, le serveur ne
+   conserve que son EMPREINTE (SHA-256). Email + mot de passe restent
+   obligatoires à chaque connexion ; seul le code est épargné.
+   Toutes les clés sont annulées : changement de mot de passe, compte
+   désactivé, ou "Ne plus reconnaître cet appareil".
+--------------------------------------------------------------------- */
+function _empreinteCle(cle) {
+  return _b64(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(cle)));
+}
+function _appareils(email) {
+  try { return JSON.parse(_props().getProperty('FORM_APP_' + email) || '[]').filter(a => a.x > Date.now()); }
+  catch (e) { return []; }
+}
+function _enregistrerAppareils(email, liste) {
+  if (liste.length) _props().setProperty('FORM_APP_' + email, JSON.stringify(liste));
+  else _props().deleteProperty('FORM_APP_' + email);
+}
+function _oublierTousAppareils(email) { _props().deleteProperty('FORM_APP_' + email); }
+function _appareilReconnu(email, cle) {
+  if (!cle || String(cle).length < 40) return false;
+  const h = _empreinteCle(cle);
+  return _appareils(email).some(a => a.h === h);
+}
+function _nouvelAppareil(email) {
+  const cle = (Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+  const liste = _appareils(email);
+  liste.push({ h: _empreinteCle(cle), x: Date.now() + FORMATEURS.APPAREIL_JOURS * 86400000 });
+  _enregistrerAppareils(email, liste.slice(-FORMATEURS.APPAREILS_MAX));   // 5 appareils maximum
+  return cle;
+}
+
+function _connexionReussie(f, extra) {
+  try { _feuilleFormation(FORMATEURS.FEUILLE, ENTETES_FORMATEURS).getRange(f.ligne, 9).setValue(new Date()); } catch (e) {}
+  return reponseJSON(Object.assign({ status: 'success', token: _jetonFormateur(f.email), profil: _profilPublic(f) }, extra || {}));
+}
+
 /* ======================= CONNEXION (public) ======================= */
 
 function _compterEchec(email) {
@@ -239,11 +320,14 @@ function formateurLogin(data) {
     _compterEchec(email);
     return reponseJSON({ status: 'error', message: generique });
   }
+  // Appareil reconnu : mot de passe vérifié, pas de code.
+  if (data.appareil && _appareilReconnu(email, data.appareil)) return _connexionReussie(f, { appareilReconnu: true });
   const otp = genererOTP();
   _props().setProperty('FORM_OTP_' + email, JSON.stringify({ o: otp, x: Date.now() + FORMATEURS.OTP_MINUTES * 60000, n: 0 }));
   _emailFormateur(email, 'Votre code de connexion : ' + otp, 'Code de connexion',
     `<p>Votre code de connexion à l'espace formateur :</p><p style="font-size:32px;font-weight:800;letter-spacing:8px;color:${CONFIG.COULEUR_DARK};margin:16px 0;">${otp}</p><p style="font-size:13px;color:#6B7280;">Valable ${FORMATEURS.OTP_MINUTES} minutes. Ne le communiquez à personne.</p>`);
-  return reponseJSON({ status: 'otp_sent', message: 'Un code à 6 chiffres vient d\'être envoyé à ' + email + '.' });
+  // appareilInconnu : la clé envoyée (expirée ou annulée) peut être effacée par la page.
+  return reponseJSON({ status: 'otp_sent', appareilInconnu: !!data.appareil, message: 'Un code à 6 chiffres vient d\'être envoyé à ' + email + '.' });
 }
 
 function formateurVerifierOtp(data) {
@@ -261,8 +345,7 @@ function formateurVerifierOtp(data) {
   _props().deleteProperty(cle);
   const f = _formateurParEmail(email);
   if (!f || f.statut !== 'Actif') return reponseJSON({ status: 'error', message: 'Compte désactivé.' });
-  try { _feuilleFormation(FORMATEURS.FEUILLE, ENTETES_FORMATEURS).getRange(f.ligne, 9).setValue(new Date()); } catch (e) {}
-  return reponseJSON({ status: 'success', token: _jetonFormateur(email), profil: _profilPublic(f) });
+  return _connexionReussie(f, data.seSouvenir === true ? { appareil: _nouvelAppareil(email), appareilJours: FORMATEURS.APPAREIL_JOURS } : {});
 }
 
 // Définir le mot de passe depuis le lien reçu (invitation ou oubli).
@@ -278,6 +361,7 @@ function formateurDefinirMdp(data) {
   const f = _formateurParEmail(l.e);
   if (!f || f.statut !== 'Actif') return reponseJSON({ status: 'error', message: 'Compte désactivé.' });
   _definirMdp(f.email, String(data.password));
+  _oublierTousAppareils(f.email);   // nouveau mot de passe = tous les appareils doivent revalider un code
   _props().deleteProperty(cle);
   return reponseJSON({ status: 'success', email: f.email, message: 'Mot de passe enregistré. Vous pouvez vous connecter.' });
 }
@@ -302,7 +386,13 @@ function _profilPublic(f) {
 /* ======================= DONNÉES DU FORMATEUR ======================= */
 
 // Apprenants des filières du formateur — sans paiements ni pièces.
-function _apprenantsDuFormateur(f) {
+// tous = true : usage interne (feuilles d'appel / notes existantes).
+// Sinon : en formation + à venir, plus les anciens des filières pour
+// lesquelles l'admin a accordé un accès temporaire.
+function _apprenantsDuFormateur(f, tous) {
+  const auj = _dateIso(new Date());
+  const seuilNouveau = _dateIso(new Date(Date.now() - FORMATEURS.NOUVEAU_JOURS * 86400000));
+  const acces = tous ? {} : _accesAnciens(f);
   const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
   const feuille = ss && ss.getSheetByName('Toutes les inscriptions');
   if (!feuille) return [];
@@ -315,10 +405,17 @@ function _apprenantsDuFormateur(f) {
     const communes = f.filieres.filter(k => cles.indexOf(k) !== -1);
     if (!communes.length) return;
     const a = _mapperApprenantInscription(r);
+    const dateEntree = _dateIso(a.dateEntree), dateFin = _dateIso(a.dateFin);
+    const phase = _phaseApprenant(statut, dateEntree, dateFin, auj);
+    if (!tous && phase === 'termine' && !communes.some(k => acces[k])) return;
+    const dateInscription = _dateIso(r[1]);
     liste.push({
       id: id, prenom: a.prenom, nom: a.nom, sexe: a.sexe, telephone: a.telephone, email: a.email,
       filiere: a.filiere, filieresCles: communes, statut: statut,
-      dateEntree: _dateIso(a.dateEntree), dateFin: _dateIso(a.dateFin), photoUrl: a.photoUrl
+      dateEntree: dateEntree, dateFin: dateFin, photoUrl: a.photoUrl,
+      phase: phase,
+      nouveau: phase !== 'termine' && (phase === 'avenir' || (dateEntree || dateInscription) >= seuilNouveau),
+      accesJusquAu: phase === 'termine' ? communes.map(k => acces[k]).filter(Boolean).sort().pop() || '' : ''
     });
   });
   return liste.sort((x, y) => (x.nom + x.prenom).localeCompare(y.nom + y.prenom, 'fr'));
@@ -335,7 +432,7 @@ function formateurTableau(data) {
   const s = _sessionFormateur(data.token);
   if (s.erreur) return _erreurSession(s);
   const f = s.formateur;
-  const apprenants = _apprenantsDuFormateur(f);
+  const apprenants = _apprenantsDuFormateur(f).filter(a => a.phase !== 'termine');
   const presences = _lirePresences().filter(p => _filiereAutorisee(f, p.filiere));
   const evals = _lireEvaluations().filter(e => _filiereAutorisee(f, e.filiere));
   const forum = _getOrCreateFeuilleForum().getDataRange().getValues().slice(1).filter(r => r[0]).map(_ligneForumVersObjet)
@@ -348,12 +445,17 @@ function formateurTableau(data) {
     profil: _profilPublic(f),
     stats: {
       apprenants: apprenants.length,
-      enFormation: apprenants.filter(a => _enFormationLe(a, _dateIso(new Date()))).length,
+      enFormation: apprenants.filter(a => a.phase === 'enCours').length,
+      aVenir: apprenants.filter(a => a.phase === 'avenir').length,
+      nouveaux: apprenants.filter(a => a.nouveau).length,
       seances: Object.keys(seances).length,
       tauxPresence: presences.length ? Math.round(presents / presences.length * 100) : null,
       evaluations: evals.length,
       questionsEnAttente: forum.length
-    }
+    },
+    nouveaux: apprenants.filter(a => a.nouveau)
+      .sort((x, y) => String(y.dateEntree).localeCompare(String(x.dateEntree)))
+      .map(a => ({ prenom: a.prenom, nom: a.nom, filiere: a.filiere, dateEntree: a.dateEntree, phase: a.phase }))
   });
 }
 
@@ -373,7 +475,9 @@ function formateurApprenants(data) {
     a.tauxPresence = mesPres.length ? Math.round(mesPres.filter(p => p.statut === 'Présent' || p.statut === 'Retard').length / mesPres.length * 100) : null;
     a.moyenne = _moyenneSur20(evals, notes.filter(n => n.dossierId === a.id));
   });
-  return reponseJSON({ status: 'success', apprenants: apprenants });
+  const acces = _accesAnciens(f);
+  return reponseJSON({ status: 'success', apprenants: apprenants,
+    accesAnciens: Object.keys(acces).map(k => ({ filiere: k, filiereNom: nomAffichagePublic(k), jusquAu: acces[k] })) });
 }
 
 /* ============================ PRÉSENCES ============================ */
@@ -420,7 +524,7 @@ function formateurSeanceGet(data) {
     lignes.forEach(p => { existantes[p.dossierId] = { statut: p.statut, remarque: p.remarque }; });
   }
   if (!_filiereAutorisee(f, filiere)) return reponseJSON({ status: 'error', message: 'Filière non attribuée à votre compte.' });
-  const liste = _apprenantsDuFormateur(f)
+  const liste = _apprenantsDuFormateur(f, true)
     .filter(a => a.filieresCles.indexOf(filiere) !== -1 && (existantes[a.id] || _enFormationLe(a, date)))
     .map(a => ({ id: a.id, prenom: a.prenom, nom: a.nom, photoUrl: a.photoUrl,
       statut: existantes[a.id] ? existantes[a.id].statut : 'Présent', remarque: existantes[a.id] ? existantes[a.id].remarque : '' }));
@@ -442,13 +546,15 @@ function formateurSeanceEnregistrer(data) {
 
   // Seuls les apprenants de la filière du formateur sont acceptés.
   const autorises = {};
-  _apprenantsDuFormateur(f).filter(a => a.filieresCles.indexOf(filiere) !== -1).forEach(a => { autorises[a.id] = a; });
+  _apprenantsDuFormateur(f, true).filter(a => a.filieresCles.indexOf(filiere) !== -1).forEach(a => { autorises[a.id] = a; });
   const now = new Date();
   const id = String(data.id || '') || genererID('SEA');
+  const dejaDansSeance = {};
+  if (data.id) _lirePresences().filter(p => p.seanceId === id).forEach(p => { dejaDansSeance[p.dossierId] = true; });
   const nouvelles = [];
   for (const p of lignesIn) {
     const a = autorises[String(p.dossierId || '')];
-    if (!a) return reponseJSON({ status: 'error', message: 'Apprenant non autorisé dans cette séance.' });
+    if (!a || (!dejaDansSeance[a.id] && !_enFormationLe(a, date))) return reponseJSON({ status: 'error', message: 'Apprenant non autorisé dans cette séance.' });
     if (FORMATEURS.STATUTS_PRESENCE.indexOf(p.statut) === -1) return reponseJSON({ status: 'error', message: 'Statut de présence invalide.' });
     nouvelles.push([id, date, filiere, intitule, f.email, a.id, (a.prenom + ' ' + a.nom).trim(), p.statut, _txtF(p.remarque, 200), now]);
   }
@@ -548,7 +654,7 @@ function formateurEvalGet(data) {
     _lireNotes().filter(n => n.evalId === id).forEach(n => { existantes[n.dossierId] = n; });
   }
   if (!_filiereAutorisee(f, ev.filiere)) return reponseJSON({ status: 'error', message: 'Filière non attribuée à votre compte.' });
-  const liste = _apprenantsDuFormateur(f)
+  const liste = _apprenantsDuFormateur(f, true)
     .filter(a => a.filieresCles.indexOf(ev.filiere) !== -1 && (existantes[a.id] || _enFormationLe(a, ev.date)))
     .map(a => ({ id: a.id, prenom: a.prenom, nom: a.nom,
       note: existantes[a.id] ? existantes[a.id].note : null, appreciation: existantes[a.id] ? existantes[a.id].appreciation : '' }));
@@ -572,12 +678,14 @@ function formateurEvalEnregistrer(data) {
   if (!(coefficient >= 0.5 && coefficient <= 10)) return reponseJSON({ status: 'error', message: 'Coefficient entre 0,5 et 10.' });
 
   const autorises = {};
-  _apprenantsDuFormateur(f).filter(a => a.filieresCles.indexOf(filiere) !== -1).forEach(a => { autorises[a.id] = a; });
+  _apprenantsDuFormateur(f, true).filter(a => a.filieresCles.indexOf(filiere) !== -1).forEach(a => { autorises[a.id] = a; });
   const id = String(data.id || '') || genererID('EVA');
+  const dejaNotes = {};
+  if (data.id) _lireNotes().filter(n => n.evalId === id).forEach(n => { dejaNotes[n.dossierId] = true; });
   const lignesNotes = [];
   for (const n of (Array.isArray(data.notes) ? data.notes : [])) {
     const a = autorises[String(n.dossierId || '')];
-    if (!a) return reponseJSON({ status: 'error', message: 'Apprenant non autorisé dans cette évaluation.' });
+    if (!a || (!dejaNotes[a.id] && !_enFormationLe(a, date))) return reponseJSON({ status: 'error', message: 'Apprenant non autorisé dans cette évaluation.' });
     let note = n.note === '' || n.note === null || n.note === undefined ? '' : Number(String(n.note).replace(',', '.'));
     if (note !== '' && (isNaN(note) || note < 0 || note > bareme)) return reponseJSON({ status: 'error', message: 'Note invalide pour ' + a.prenom + ' ' + a.nom + ' (entre 0 et ' + bareme + ').' });
     if (note !== '') note = Math.round(note * 100) / 100;
@@ -700,6 +808,18 @@ function formateurForumRepondre(data) {
 
 /* ================= CÔTÉ APPRENANT : notes publiées + assiduité ================= */
 
+// "Ne plus reconnaître cet appareil" (depuis l'espace formateur).
+function formateurOublierAppareil(data) {
+  const s = _sessionFormateur(data.token);
+  if (s.erreur) return _erreurSession(s);
+  if (data.tous === true) _oublierTousAppareils(s.formateur.email);
+  else if (data.appareil) {
+    const h = _empreinteCle(data.appareil);
+    _enregistrerAppareils(s.formateur.email, _appareils(s.formateur.email).filter(a => a.h !== h));
+  }
+  return reponseJSON({ status: 'success' });
+}
+
 function apprenantSuivi(data) {
   const session = _sessionApprenant(data.token);
   if (session.erreur) return _reponseSession(session);
@@ -751,7 +871,7 @@ function _candidaturePourCompte(candidatureId) {
   const d = f.getDataRange().getValues();
   for (let i = 1; i < d.length; i++) {
     if (String(d[i][0]).trim() !== candidatureId) continue;
-    if (String(d[i][1]) !== 'formateur') return { erreur: 'Cette candidature n\'est pas de type Formateur / Staff.' };
+    if (String(d[i][1]) !== 'formateur') return { erreur: 'Cette candidature n\'est pas de type Formateur (un poste Staff ou un stage ne donne pas accès à l\'espace formateur).' };
     if (String(d[i][19]) !== 'Retenu') return { erreur: 'Passez d\'abord la candidature en « Retenu ».' };
     if (String(d[i][28] || '').trim()) return { erreur: 'Un compte formateur a déjà été créé pour cette candidature (' + d[i][28] + ').' };
     return { feuille: f, ligne: i + 1 };
@@ -804,6 +924,7 @@ function adminFormateurModifier(data, email) {
   const feuille = _feuilleFormation(FORMATEURS.FEUILLE, ENTETES_FORMATEURS);
   feuille.getRange(f.ligne, 2, 1, 2).setValues([[prenom, nom]]);
   feuille.getRange(f.ligne, 5, 1, 3).setValues([[tel, fil.cles.join(' | '), statut]]);
+  if (statut === 'Désactivé') _oublierTousAppareils(f.email);
   console.log('[Admin:' + email + '] Formateur modifié', f.email, statut);
   return reponseJSON({ status: 'success' });
 }
@@ -816,6 +937,120 @@ function adminFormateurInviter(data, email) {
   return reponseJSON({ status: 'success', message: 'Invitation renvoyée à ' + f.email + '.' });
 }
 
+
+/* ============ ACCÈS AUX ANCIENS APPRENANTS (sur autorisation) ============
+   Le formateur demande, avec un motif ; l'admin accorde (7, 30 ou 90
+   jours) ou refuse, et peut retirer un accès accordé. L'accès est en
+   LECTURE : liste, contacts, assiduité, moyenne. Un ancien n'est jamais
+   ajouté à une nouvelle séance ni à une nouvelle évaluation.
+========================================================================== */
+function _lireDemandesAcces() {
+  const f = _feuilleFormation(FORMATEURS.FEUILLE_ACCES, ENTETES_ACCES);
+  if (!f) return [];
+  const auj = _dateIso(new Date());
+  return f.getDataRange().getValues().map((r, i) => ({
+    ligne: i + 1, id: String(r[0] || ''), date: r[1] instanceof Date ? r[1].toISOString() : String(r[1] || ''),
+    formateur: String(r[2] || '').toLowerCase(), nomFormateur: String(r[3] || ''), filiere: String(r[4] || ''),
+    filiereNom: nomAffichagePublic(String(r[4] || '')), motif: String(r[5] || ''), statut: String(r[6] || 'En attente'),
+    jours: Number(r[7]) || 0, jusquAu: _dateIso(r[8]), traitePar: String(r[9] || ''),
+    dateTraitement: r[10] instanceof Date ? r[10].toISOString() : String(r[10] || '')
+  })).slice(1).filter(d => d.id).map(d => {
+    if (d.statut === 'Accordée' && d.jusquAu && d.jusquAu < auj) d.statut = 'Expirée';
+    return d;
+  });
+}
+
+// { cléFilière: 'aaaa-mm-jj' } — accès en cours de validité du formateur.
+function _accesAnciens(f) {
+  const acces = {};
+  _lireDemandesAcces().filter(d => d.formateur === f.email && d.statut === 'Accordée' && _filiereAutorisee(f, d.filiere))
+    .forEach(d => { if (!acces[d.filiere] || acces[d.filiere] < d.jusquAu) acces[d.filiere] = d.jusquAu; });
+  return acces;
+}
+
+function formateurDemandeAnciens(data) {
+  const s = _sessionFormateur(data.token);
+  if (s.erreur) return _erreurSession(s);
+  const f = s.formateur;
+  const filiere = cleFiliere(data.filiere);
+  const motif = _txtF(data.motif, 500);
+  if (!_filiereAutorisee(f, filiere)) return reponseJSON({ status: 'error', message: 'Filière non attribuée à votre compte.' });
+  if (motif.length < 10) return reponseJSON({ status: 'error', message: 'Expliquez en quelques mots pourquoi vous avez besoin de cet accès.' });
+  const demandes = _lireDemandesAcces().filter(d => d.formateur === f.email && d.filiere === filiere);
+  if (demandes.some(d => d.statut === 'En attente')) return reponseJSON({ status: 'error', message: 'Une demande est déjà en attente pour cette filière.' });
+  const active = demandes.filter(d => d.statut === 'Accordée')[0];
+  if (active) return reponseJSON({ status: 'error', message: 'Vous avez déjà accès aux anciens apprenants de cette filière jusqu\'au ' + active.jusquAu + '.' });
+  const id = genererID('ACC');
+  _feuilleFormation(FORMATEURS.FEUILLE_ACCES, ENTETES_ACCES).appendRow([id, new Date(), f.email, f.prenom + ' ' + f.nom, filiere, motif, 'En attente', '', '', '', '']);
+  try {
+    _emailFormateur(CONFIG.ADMIN_EMAIL, 'Demande d\'accès aux anciens apprenants — ' + f.prenom + ' ' + f.nom, 'Demande d\'accès aux anciens apprenants',
+      `<p><strong>${f.prenom} ${f.nom}</strong> (${f.email}) demande l'accès aux anciens apprenants de la filière <strong>${nomAffichagePublic(filiere)}</strong>.</p><p>Motif : « ${motif} »</p><p>Accordez ou refusez la demande dans l'admin, page <strong>Formateurs</strong>.</p>`);
+  } catch (e) { console.error('[formateurDemandeAnciens] email admin', e.toString()); }
+  return reponseJSON({ status: 'success', message: 'Demande envoyée à l\'administration. Vous serez prévenu par email.' });
+}
+
+function formateurDemandesLister(data) {
+  const s = _sessionFormateur(data.token);
+  if (s.erreur) return _erreurSession(s);
+  const demandes = _lireDemandesAcces().filter(d => d.formateur === s.formateur.email)
+    .map(d => ({ id: d.id, date: d.date, filiere: d.filiere, filiereNom: d.filiereNom, motif: d.motif, statut: d.statut, jusquAu: d.jusquAu }))
+    .reverse();
+  return reponseJSON({ status: 'success', demandes: demandes });
+}
+
+function adminDemandesAccesLister(data, email) {
+  const ordre = { 'En attente': 0, 'Accordée': 1, 'Expirée': 2, 'Refusée': 3, 'Retirée': 4 };
+  const demandes = _lireDemandesAcces().map(d => { delete d.ligne; return d; })
+    .sort((a, b) => (ordre[a.statut] - ordre[b.statut]) || String(b.date).localeCompare(String(a.date)));
+  return reponseJSON({ status: 'success', demandes: demandes, enAttente: demandes.filter(d => d.statut === 'En attente').length });
+}
+
+function adminDemandeAccesTraiter(data, email) {
+  const d = _lireDemandesAcces().filter(x => x.id === String(data.id || ''))[0];
+  if (!d) return reponseJSON({ status: 'error', message: 'Demande introuvable.' });
+  const decision = String(data.decision || '');
+  const feuille = _feuilleFormation(FORMATEURS.FEUILLE_ACCES, ENTETES_ACCES);
+  let jours = '', jusquAu = '';
+  if (decision === 'Accordée') {
+    if (d.statut !== 'En attente') return reponseJSON({ status: 'error', message: 'Cette demande a déjà été traitée.' });
+    jours = Number(data.jours);
+    if (FORMATEURS.DUREES_ACCES.indexOf(jours) === -1) return reponseJSON({ status: 'error', message: 'Durée invalide (7, 30 ou 90 jours).' });
+    jusquAu = _dateIso(new Date(Date.now() + jours * 86400000));
+  } else if (decision === 'Refusée') {
+    if (d.statut !== 'En attente') return reponseJSON({ status: 'error', message: 'Cette demande a déjà été traitée.' });
+  } else if (decision === 'Retirée') {
+    if (d.statut !== 'Accordée') return reponseJSON({ status: 'error', message: 'Seul un accès en cours peut être retiré.' });
+    jours = d.jours; jusquAu = _dateIso(new Date());
+  } else return reponseJSON({ status: 'error', message: 'Décision invalide.' });
+  // Retrait : on remet la fin à hier pour couper l'accès immédiatement.
+  if (decision === 'Retirée') jusquAu = _dateIso(new Date(Date.now() - 86400000));
+  feuille.getRange(d.ligne, 7, 1, 5).setValues([[decision, jours, jusquAu, email, new Date()]]);
+  if (decision !== 'Retirée') {
+    try {
+      const texte = decision === 'Accordée'
+        ? `<p>Votre demande d'accès aux anciens apprenants de la filière <strong>${d.filiereNom}</strong> est <strong>accordée</strong> pour ${jours} jours (jusqu'au ${jusquAu}).</p><p>Ils apparaissent dans l'onglet « Apprenants » de votre espace, en lecture seule.</p>`
+        : `<p>Votre demande d'accès aux anciens apprenants de la filière <strong>${d.filiereNom}</strong> n'a pas été accordée.</p><p>Pour en parler, contactez l'administration.</p>`;
+      _emailFormateur(d.formateur, 'Votre demande d\'accès aux anciens apprenants', 'Demande ' + (decision === 'Accordée' ? 'accordée' : 'refusée'), texte);
+    } catch (e) { console.error('[adminDemandeAccesTraiter] email', e.toString()); }
+  }
+  console.log('[Admin:' + email + '] Accès anciens ' + d.id + ' -> ' + decision);
+  return reponseJSON({ status: 'success' });
+}
+
+/* ========== NOUVEL APPRENANT : prévenir les formateurs de la filière ========== */
+// Appelée par adminUpdateStatut (admin.gs) quand un dossier passe à "Confirmé".
+function notifierFormateursNouvelApprenant(row) {
+  const cles = clesFilieres(String(row[22] || ''));
+  const a = _mapperApprenantInscription(row);
+  const entree = _dateIso(a.dateEntree);
+  _lireFormateurs().filter(f => f.statut === 'Actif' && f.filieres.some(k => cles.indexOf(k) !== -1)).forEach(f => {
+    try {
+      _emailFormateur(f.email, 'Nouvel apprenant : ' + a.prenom + ' ' + a.nom, 'Un nouvel apprenant rejoint votre filière',
+        `<p>Bonjour ${f.prenom},</p><p><strong>${a.prenom} ${a.nom}</strong> vient d'être confirmé(e) en <strong>${a.filiere}</strong>${entree ? ' — entrée le ' + entree : ''}.</p><p>Il (elle) apparaît dans votre espace formateur avec le badge « Nouveau ».</p><p><a href="${CONFIG.SITE_URL}/espace-formateur" style="color:${CONFIG.COULEUR_TEAL};font-weight:700;">Ouvrir mon espace formateur</a></p>`);
+    } catch (e) { console.error('[notifierFormateursNouvelApprenant]', f.email, e.toString()); }
+  });
+}
+
 /* ============================ AIGUILLAGE ============================ */
 
 function routerFormateur(data, action) {
@@ -825,6 +1060,9 @@ function routerFormateur(data, action) {
       case 'formateur_verify_otp':       return formateurVerifierOtp(data);
       case 'formateur_definir_mdp':      return formateurDefinirMdp(data);
       case 'formateur_mdp_oublie':       return formateurMdpOublie(data);
+      case 'formateur_oublier_appareil': return formateurOublierAppareil(data);
+      case 'formateur_demande_anciens':  return formateurDemandeAnciens(data);
+      case 'formateur_demandes_lister':  return formateurDemandesLister(data);
       case 'formateur_tableau':          return formateurTableau(data);
       case 'formateur_apprenants':       return formateurApprenants(data);
       case 'formateur_seances_lister':   return formateurSeancesLister(data);
@@ -845,7 +1083,10 @@ function routerFormateur(data, action) {
       default: return reponseJSON({ status: 'error', message: 'Action formateur inconnue.' });
     }
   } catch (err) {
-    console.error('[routerFormateur] ' + action, err.toString());
-    return reponseJSON({ status: 'error', message: 'Erreur interne. Réessayez dans un instant.' });
+    // La cause exacte est renvoyée (sans donnée personnelle) et journalisée
+    // dans Apps Script > Exécutions : indispensable pour diagnostiquer.
+    const ref = Utilities.formatDate(new Date(), 'Africa/Porto-Novo', 'HHmmss');
+    console.error('[routerFormateur] ' + action + ' réf. ' + ref, err && err.stack ? err.stack : String(err));
+    return reponseJSON({ status: 'error', message: 'Erreur interne (réf. ' + ref + ' — ' + action + ' : ' + String(err && err.message || err).slice(0, 140) + '). Transmettez ce message à l\'administrateur.' });
   }
 }

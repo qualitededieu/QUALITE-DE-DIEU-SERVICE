@@ -991,6 +991,14 @@
         </p>
         <div id="formateurs-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
       </div>
+
+      <div class="table-card" style="margin-top:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:key"></span> Demandes d'accès aux anciens apprenants <span id="acces-compteur" class="gal-compteur"></span></span>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">Par défaut, un formateur ne voit que les apprenants en formation ou à venir. Ici, vous accordez (7, 30 ou 90 jours, en lecture seule), refusez ou retirez l'accès aux anciens d'une filière.</p>
+        <div id="acces-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
     </div>
 
     <div class="page" id="page-forum">
@@ -4451,7 +4459,46 @@ function creerCompteDepuisCandidature(id) {
   }
 }
 
+async function chargerDemandesAccesAdmin() {
+  const zone = document.getElementById('acces-container');
+  try {
+    const r = await apiCall('admin_demandes_acces_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    document.getElementById('acces-compteur').textContent = r.enAttente ? r.enAttente + ' en attente' : '';
+    if (!r.demandes.length) { zone.innerHTML = '<div class="empty-state"><p>Aucune demande.</p></div>'; return; }
+    const badge = { 'En attente': 'badge-orange', 'Accordée': 'badge-green', 'Refusée': 'badge-red', 'Expirée': 'badge-teal', 'Retirée': 'badge-teal' };
+    zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Demande</th><th>Formateur</th><th>Filière</th><th>Motif</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${r.demandes.map(d => `<tr>
+        <td style="font-size:12px;">${d.date ? new Date(d.date).toLocaleDateString('fr-FR') : '—'}</td>
+        <td><strong>${_escAdmin(_clairCours(d.nomFormateur))}</strong><br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(d.formateur)}</span></td>
+        <td style="font-size:12px;">${_escAdmin(d.filiereNom)}</td>
+        <td style="font-size:12px;max-width:260px;">${_escAdmin(_clairCours(d.motif))}</td>
+        <td><span class="badge ${badge[d.statut] || 'badge-teal'}">${_escAdmin(d.statut)}</span>${d.jusquAu && d.statut === 'Accordée' ? `<br><span style="font-size:11px;color:var(--text-3);">jusqu'au ${new Date(d.jusquAu + 'T12:00:00').toLocaleDateString('fr-FR')}</span>` : ''}</td>
+        <td style="white-space:nowrap;">${d.statut === 'En attente' ? `
+          <select class="filter-select" id="duree-${_escAdmin(d.id)}" style="min-width:90px;"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select>
+          <button class="btn btn-primary btn-sm" onclick="traiterDemandeAcces('${_escAdmin(d.id)}','Accordée')">Accorder</button>
+          <button class="btn btn-ghost btn-sm" onclick="traiterDemandeAcces('${_escAdmin(d.id)}','Refusée')">Refuser</button>`
+          : (d.statut === 'Accordée' ? `<button class="btn btn-ghost btn-sm" onclick="traiterDemandeAcces('${_escAdmin(d.id)}','Retirée')">Retirer l'accès</button>` : '')}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+async function traiterDemandeAcces(id, decision) {
+  if (decision === 'Retirée' && !confirm('Retirer l\'accès aux anciens apprenants dès maintenant ?')) return;
+  const sel = document.getElementById('duree-' + id);
+  try {
+    const r = await apiCall('admin_demande_acces_traiter', { id, decision, jours: sel ? Number(sel.value) : 0 });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(decision === 'Accordée' ? 'Accès accordé : le formateur est prévenu par email.' : (decision === 'Refusée' ? 'Demande refusée : le formateur est prévenu.' : 'Accès retiré.'), 'success');
+    chargerDemandesAccesAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
 async function chargerFormateursAdmin() {
+  chargerDemandesAccesAdmin();
   const zone = document.getElementById('formateurs-container');
   zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   try {

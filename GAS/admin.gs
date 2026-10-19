@@ -85,6 +85,8 @@ function routerAdmin(data, action) {
       case 'admin_formateur_creer':    return requireAuth(data, adminFormateurCreer);
       case 'admin_formateur_modifier': return requireAuth(data, adminFormateurModifier);
       case 'admin_formateur_inviter':  return requireAuth(data, adminFormateurInviter);
+      case 'admin_demandes_acces_lister': return requireAuth(data, adminDemandesAccesLister);
+      case 'admin_demande_acces_traiter': return requireAuth(data, adminDemandeAccesTraiter);
 
       case 'admin_forum_lister':    return requireAuth(data, adminForumLister);
       case 'admin_forum_repondre':  return requireAuth(data, adminForumRepondre);
@@ -423,6 +425,13 @@ function adminUpdateStatut(data, email) {
     return reponseJSON({ status: 'error', message: 'ID ou statut invalide.' });
   }
 
+  // Statut précédent : pour ne prévenir les formateurs qu'au PASSAGE à "Confirmé".
+  let ancienStatut = '';
+  try {
+    const l = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME).getSheetByName('Toutes les inscriptions').getDataRange().getValues().find(r => r[0] === id);
+    ancienStatut = l ? String(l[28] || '').trim() : '';
+  } catch (e) {}
+
   const res = mettreAJourColonnePrecise('Toutes les inscriptions', id, 'Statut dossier', statut);
   if (!res) return reponseJSON({ status: 'error', message: `Dossier ${id} non trouvé.` });
 
@@ -434,6 +443,10 @@ function adminUpdateStatut(data, email) {
       const formations = String(row[22]).split(' | ');
       const nomFeuille = formations.length === 1 ? formations[0] : 'Multi-formations';
       mettreAJourColonnePrecise(nomFeuille, id, 'Statut dossier', statut);
+      // Nouvel apprenant confirmé : email aux formateurs de sa filière.
+      if (statut === 'Confirmé' && ancienStatut !== 'Confirmé' && typeof notifierFormateursNouvelApprenant === 'function') {
+        try { notifierFormateursNouvelApprenant(row); } catch (e) { console.error('[updateStatut notif formateurs]', e); }
+      }
     }
   } catch(e) { console.error('[updateStatut propagation]', e); }
 

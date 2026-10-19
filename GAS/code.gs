@@ -311,7 +311,7 @@ function doPost(e) {
 // Marqueur de version : à changer à chaque mise à jour du code GAS.
 // Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
 // c'est la preuve que le déploiement EN LIGNE contient bien ce code.
-const VERSION_API = '2026-10-20 espace formateur';
+const VERSION_API = '2026-10-22 phases apprenants + accès anciens';
 
 // Liste des modules attendus : true = présent ET à jour dans le code exécuté.
 // ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
@@ -331,8 +331,10 @@ function _etatModules() {
     pieceJointeRenseignement: presente('_preparerPieceJointeRens'),
     coursProteges:            presente('coursOuvrir') && presente('_sessionApprenant'),
     espaceFormateur:          presente('routerFormateur') && presente('apprenantSuivi'),
+    accesAnciens:             presente('formateurDemandeAnciens') && presente('adminDemandeAccesTraiter') && presente('_coursAccessible'),
+    motDePasseFormateur:      (() => { try { return _autoTestFormateur(); } catch (e) { return false; } })(),
     doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1,
-    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1
+    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1 && source('routerAdmin').indexOf('admin_demande_acces_traiter') !== -1
   };
 }
 
@@ -351,6 +353,9 @@ function verifierDeploiement() {
   const m = _etatModules();
   console.log('Version du code dans l\'éditeur : ' + VERSION_API);
   Object.keys(m).forEach(k => console.log((m[k] ? 'OK       ' : 'PROBLÈME ') + k));
+  if (!m.motDePasseFormateur) {
+    try { _autoTestFormateur(); } catch (e) { console.log('==> Détail du problème mot de passe formateur : ' + (e && e.message)); }
+  }
 
   const doublons = [];
   if (!m.doPostAJour)      doublons.push('function doPost (doit exister UNIQUEMENT dans le fichier "code")');

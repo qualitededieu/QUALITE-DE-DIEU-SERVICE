@@ -40,6 +40,8 @@
         <p class="auth-info" id="otp-info"></p>
         <label for="otp-code">Code à 6 chiffres</label>
         <input type="text" id="otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" class="champ-otp" required />
+        <label class="case"><input type="checkbox" id="otp-souvenir" checked /> Se souvenir de cet appareil pendant 30 jours</label>
+        <p class="discret" style="margin:0;">Plus de code à saisir sur ce téléphone ou cet ordinateur. Décochez sur un appareil partagé.</p>
         <button type="submit" class="btn btn-plein btn-large" id="btn-otp"><span class="iconify" data-icon="tabler:shield-check"></span> Me connecter</button>
         <button type="button" class="lien" id="lien-retour-login">Changer d'email</button>
       </form>
@@ -98,11 +100,19 @@
       <section class="panneau actif" id="p-accueil">
         <h2 class="titre-panneau">Bonjour <span id="f-prenom"></span></h2>
         <div class="stats" id="stats"></div>
+        <div class="carte" id="bloc-nouveaux" hidden>
+          <h2 class="titre-carte"><span class="iconify" data-icon="tabler:user-plus"></span> Nouveaux apprenants (30 derniers jours et à venir)</h2>
+          <div id="liste-nouveaux"></div>
+        </div>
         <div class="actions-rapides">
           <button type="button" class="btn btn-plein" data-aller="presences" data-action="appel"><span class="iconify" data-icon="tabler:checklist"></span> Faire l'appel</button>
           <button type="button" class="btn btn-contour" data-aller="notes" data-action="eval"><span class="iconify" data-icon="tabler:pencil-plus"></span> Saisir des notes</button>
           <button type="button" class="btn btn-contour" data-aller="cours"><span class="iconify" data-icon="tabler:upload"></span> Ajouter un support</button>
         </div>
+        <p class="discret" id="appareil-info" style="margin-top:22px;" hidden>
+          <span class="iconify" data-icon="tabler:device-mobile-check"></span> Cet appareil est reconnu : pas de code à la connexion.
+          <button type="button" class="lien" id="btn-oublier-appareil">Ne plus reconnaître cet appareil</button>
+        </p>
       </section>
 
       <!-- Apprenants -->
@@ -110,8 +120,22 @@
         <div class="barre-outils">
           <input type="search" id="rech-apprenant" placeholder="Rechercher un apprenant..." aria-label="Rechercher un apprenant" />
           <select id="filtre-filiere-app" aria-label="Filtrer par filière"></select>
+          <select id="filtre-phase-app" aria-label="Filtrer par situation">
+            <option value="">En formation et à venir</option>
+            <option value="nouveau">Nouveaux seulement</option>
+            <option value="avenir">À venir</option>
+            <option value="termine">Anciens (accès accordé)</option>
+          </select>
         </div>
         <div id="liste-apprenants" class="grille-cartes"></div>
+
+        <!-- Anciens apprenants : visibles uniquement sur autorisation de l'admin -->
+        <div class="carte" style="margin-top:18px;">
+          <h2 class="titre-carte"><span class="iconify" data-icon="tabler:archive"></span> Anciens apprenants</h2>
+          <p class="discret" id="anciens-info">Les apprenants qui ont terminé leur formation ne sont visibles que sur autorisation de la direction, en lecture seule.</p>
+          <div id="liste-demandes"></div>
+          <div class="pied-form"><button type="button" class="btn btn-contour btn-petit" id="btn-demande-anciens"><span class="iconify" data-icon="tabler:key"></span> Demander l'accès aux anciens</button></div>
+        </div>
       </section>
 
       <!-- Présences -->

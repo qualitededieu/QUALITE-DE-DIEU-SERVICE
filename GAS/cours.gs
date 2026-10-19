@@ -147,9 +147,22 @@ function _sessionApprenant(token) {
     if (COURS.STATUTS_ACTIFS.indexOf(statut) === -1) {
       return { erreur: 'Votre accès aux cours est suspendu. Contactez le centre au 01 97 95 12 30.', sessionExpiree: true };
     }
-    return { apprenant: _mapperApprenantInscription(donnees[i]) };
+    const apprenant = _mapperApprenantInscription(donnees[i]);
+    const dateFinIso = _dateIso(apprenant.dateFin);
+    return { apprenant: apprenant, statut: statut, dateFinIso: dateFinIso,
+             phase: _phaseApprenant(statut, _dateIso(apprenant.dateEntree), dateFinIso) };
   }
   return expiree;
+}
+
+// Règle d'octobre 2026 : un ANCIEN apprenant (formation terminée) garde
+// les supports publiés jusqu'à sa date de fin, mais ne reçoit plus les
+// supports publiés après (ni l'email de nouveau support).
+function _coursAccessible(c, session, mesCles) {
+  if (!_apprenantPeutVoir(c, mesCles)) return false;
+  if (session.phase !== 'termine' || !session.dateFinIso) return true;
+  const ajout = _dateIso(c.dateAjout);
+  return !ajout || ajout <= session.dateFinIso;
 }
 
 function _reponseSession(session) {
@@ -190,7 +203,7 @@ function coursListerApprenant(data) {
   const tous = _lireCours();
   if (!tous) return reponseJSON({ status: 'error', message: 'Erreur serveur.' });
   const mesCles = clesFilieres(session.apprenant.filiere);
-  const cours = _trierCours(tous.filter(c => _apprenantPeutVoir(c, mesCles))).map(c => ({
+  const cours = _trierCours(tous.filter(c => _coursAccessible(c, session, mesCles))).map(c => ({
     id:          c.id,
     titre:       c.titre,
     type:        c.type,
@@ -199,7 +212,8 @@ function coursListerApprenant(data) {
     dateAjout:   c.dateAjout,
     mode:        _lectureCours(c).mode
   }));
-  return reponseJSON({ status: 'success', cours: cours });
+  return reponseJSON({ status: 'success', cours: cours,
+    formationTerminee: session.phase === 'termine', dateFin: session.dateFinIso });
 }
 
 // Ouverture d'un support : contrôle d'accès + enregistrement de la consultation.
@@ -210,7 +224,7 @@ function coursOuvrir(data) {
   const id = String(data.id || '').trim();
   const tous = _lireCours() || [];
   const c = tous.filter(x => x.id === id)[0];
-  if (!c || !_apprenantPeutVoir(c, clesFilieres(session.apprenant.filiere))) {
+  if (!c || !_coursAccessible(c, session, clesFilieres(session.apprenant.filiere))) {
     return reponseJSON({ status: 'error', message: 'Ce support n\'est plus disponible.' });
   }
 
@@ -321,6 +335,9 @@ function _notifierNouveauCours(c) {
     const statut = String(r[28] || '').trim();
     const mail = String(r[10] || '').trim().toLowerCase();
     if (COURS.STATUTS_ACTIFS.indexOf(statut) === -1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return;
+    // Anciens apprenants : pas d'email pour un support publié après leur formation.
+    const m = _mapperApprenantInscription(r);
+    if (_phaseApprenant(statut, _dateIso(m.dateEntree), _dateIso(m.dateFin)) === 'termine') return;
     if (c.filiere !== 'Tous' && clesFilieres(String(r[22] || '')).indexOf(cleFiliere(c.filiere)) === -1) return;
     if (emails.indexOf(mail) === -1) emails.push(mail);
   });

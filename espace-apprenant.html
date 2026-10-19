@@ -938,14 +938,18 @@
           liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${_txt(result.message || 'Erreur.')}</div>`;
           return;
         }
+        // Formation terminée : accès conservé aux supports de sa période uniquement.
+        const avisAncien = result.formationTerminee
+          ? `<div class="carte-bloc" style="margin-bottom:12px;padding:14px 16px;font-size:13.5px;color:var(--teal-800);background:var(--teal-50);">Votre formation est terminée${result.dateFin ? ' (' + _txt(new Date(result.dateFin + 'T12:00:00').toLocaleDateString('fr-FR')) + ')' : ''} : vous gardez l'accès aux supports publiés pendant votre formation. Les nouveaux supports sont réservés aux apprenants en cours.</div>`
+          : '';
         if (!result.cours.length) {
-          liste.innerHTML = '';
+          liste.innerHTML = avisAncien;
           vide.style.display = 'block';
           return;
         }
         // Regroupement par module (ordre fourni par le serveur).
         let moduleCourant = null;
-        liste.innerHTML = result.cours.map(c => {
+        liste.innerHTML = avisAncien + result.cours.map(c => {
           const nomModule = c.module || 'Autres supports';
           const entete = nomModule !== moduleCourant ? `<div class="cours-module">${_txt(nomModule)}</div>` : '';
           moduleCourant = nomModule;

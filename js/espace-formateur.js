@@ -9,6 +9,7 @@
 
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
   const CLE_SESSION = 'lqd_formateur';
+  const CLE_APPAREILS = 'lqd_formateur_appareils';   // { email: clé } — option B, 30 jours
   const STATUTS = ['Présent', 'Absent', 'Retard', 'Excusé'];
   const ABREV = { 'Présent': 'P', 'Absent': 'A', 'Retard': 'R', 'Excusé': 'E' };
   const FICHIER_MAX = 25 * 1024 * 1024;
@@ -88,6 +89,16 @@
   // Erreur réseau ou serveur, sans doublon quand la session a expiré.
   function echec(e) { if (e && e.message !== 'session') toast(/fetch|network/i.test(e.message) ? 'Connexion interrompue. Réessayez.' : e.message, true); }
 
+  /* ---------------- Appareil de confiance (stockage local) ---------------- */
+  function lireAppareils() {
+    try { return JSON.parse(localStorage.getItem(CLE_APPAREILS) || '{}') || {}; } catch (x) { return {}; }
+  }
+  function cleAppareil(email) { return lireAppareils()[String(email).toLowerCase()] || ''; }
+  function memoriserAppareil(email, cle) {
+    try { const a = lireAppareils(); if (cle) a[String(email).toLowerCase()] = cle; else delete a[String(email).toLowerCase()]; localStorage.setItem(CLE_APPAREILS, JSON.stringify(a)); }
+    catch (x) { /* navigation privée : le code sera simplement redemandé */ }
+  }
+
   /* ============================ Connexion ============================ */
 
   function etape(id) {
@@ -117,7 +128,9 @@
     if (!mdp) return messageAuth('Saisissez votre mot de passe.');
     avecBouton($('btn-login'), async () => {
       try {
-        const r = await api('formateur_login', { email: email, password: mdp });
+        const r = await api('formateur_login', { email: email, password: mdp, appareil: cleAppareil(email) });
+        if (r.appareilInconnu) memoriserAppareil(email, '');           // clé expirée ou annulée
+        if (r.status === 'success') return connecte(r, email);         // appareil reconnu : pas de code
         if (r.status !== 'otp_sent') return messageAuth(r.message || 'Connexion impossible.');
         $('otp-info').textContent = r.message;
         etape('form-otp');
@@ -133,15 +146,22 @@
     if (code.length !== 6) return messageAuth('Le code contient 6 chiffres.');
     avecBouton($('btn-otp'), async () => {
       try {
-        const r = await api('formateur_verify_otp', { email: $('login-email').value.trim(), otp: code });
+        const email = $('login-email').value.trim();
+        const r = await api('formateur_verify_otp', { email: email, otp: code, seSouvenir: $('otp-souvenir').checked });
         if (r.status !== 'success') return messageAuth(r.message || 'Code refusé.');
-        session = { token: r.token, profil: r.profil };
-        try { sessionStorage.setItem(CLE_SESSION, JSON.stringify(session)); } catch (x) { /* navigation privée : session en mémoire */ }
-        $('login-mdp').value = '';
-        ouvrirApplication();
+        if (r.appareil) memoriserAppareil(email, r.appareil);
+        connecte(r, email);
       } catch (err) { messageAuth('Connexion au serveur impossible. Vérifiez votre réseau.'); }
     });
   });
+
+  function connecte(r, email) {
+    session = { token: r.token, profil: r.profil, email: String(email).toLowerCase() };
+    try { sessionStorage.setItem(CLE_SESSION, JSON.stringify(session)); } catch (x) { /* navigation privée : session en mémoire */ }
+    $('login-mdp').value = '';
+    ouvrirApplication();
+    if (r.appareilReconnu) toast('Appareil reconnu : connexion sans code.');
+  }
 
   $('form-oubli').addEventListener('submit', e => {
     e.preventDefault();
@@ -201,8 +221,18 @@
     $('f-filieres').textContent = p.filieres.map(f => f.nom).join(' · ');
     ['filtre-filiere-app'].forEach(id => optionsFilieres($(id), true));
     ['appel-filiere', 'eval-filiere', 'c-filiere'].forEach(id => optionsFilieres($(id), false));
+    $('appareil-info').hidden = !cleAppareil(p.email);
     afficherOnglet('accueil');
   }
+
+  $('btn-oublier-appareil').addEventListener('click', async () => {
+    if (!confirm('Ne plus reconnaître cet appareil ? Le code par email sera de nouveau demandé à la prochaine connexion.')) return;
+    const email = session.profil.email;
+    try { await api('formateur_oublier_appareil', { appareil: cleAppareil(email) }); } catch (e) { if (e.message === 'session') return; }
+    memoriserAppareil(email, '');
+    $('appareil-info').hidden = true;
+    toast('Cet appareil n\'est plus reconnu.');
+  });
 
   const chargeurs = {
     accueil: chargerAccueil, apprenants: chargerApprenants, presences: chargerSeances,
@@ -230,8 +260,9 @@
       if (r.status !== 'success') throw new Error(r.message);
       const s = r.stats;
       $('stats').innerHTML = [
-        [s.apprenants, 'apprenants suivis'],
-        [s.enFormation, 'en formation aujourd\'hui'],
+        [s.enFormation, 'en formation'],
+        [s.nouveaux, 'nouveaux (30 j / à venir)', s.nouveaux > 0],
+        [s.aVenir, 'à venir'],
         [s.seances, 'séances enregistrées'],
         [s.tauxPresence === null ? '—' : s.tauxPresence + ' %', 'taux de présence'],
         [s.evaluations, 'évaluations'],
@@ -240,6 +271,12 @@
       const pas = $('pastille-questions');
       pas.hidden = !s.questionsEnAttente;
       pas.textContent = s.questionsEnAttente;
+      const n = r.nouveaux || [];
+      $('bloc-nouveaux').hidden = !n.length;
+      $('liste-nouveaux').innerHTML = n.map(a => `<div class="ligne" style="box-shadow:none;border:1px solid var(--gris-100);margin-bottom:8px;">
+          <div class="ligne-corps"><strong>${esc(a.prenom)} ${esc(a.nom)}</strong><span class="discret">${esc(a.filiere)}</span></div>
+          <span class="badge ${a.phase === 'avenir' ? 'orange' : 'vert'}">${a.phase === 'avenir' ? 'Arrive le ' + dateFr(a.dateEntree) : 'Entré(e) le ' + dateFr(a.dateEntree)}</span>
+        </div>`).join('');
     } catch (e) { $('stats').innerHTML = ''; echec(e); }
   }
 
@@ -250,22 +287,33 @@
       const r = await api('formateur_apprenants');
       if (r.status !== 'success') throw new Error(r.message);
       apprenantsCache = r.apprenants;
+      accesAnciens = r.accesAnciens || [];
       rendreApprenants();
+      chargerDemandes();
     } catch (e) { $('liste-apprenants').innerHTML = ''; echec(e); }
   }
 
   function rendreApprenants() {
     const q = $('rech-apprenant').value.trim().toLowerCase();
     const fil = $('filtre-filiere-app').value;
+    const phase = $('filtre-phase-app').value;
     const liste = apprenantsCache.filter(a =>
       (!fil || a.filieresCles.indexOf(fil) !== -1) &&
+      (phase === 'termine' ? a.phase === 'termine' : a.phase !== 'termine') &&
+      (phase !== 'nouveau' || a.nouveau) && (phase !== 'avenir' || a.phase === 'avenir') &&
       (!q || (a.prenom + ' ' + a.nom + ' ' + a.id + ' ' + a.telephone).toLowerCase().indexOf(q) !== -1));
-    if (!liste.length) { $('liste-apprenants').innerHTML = '<div class="vide">Aucun apprenant.</div>'; return; }
-    const badge = s => `<span class="badge ${s === 'Terminé' ? '' : 'vert'}">${esc(s)}</span>`;
+    if (!liste.length) {
+      $('liste-apprenants').innerHTML = `<div class="vide">${phase === 'termine' ? 'Aucun ancien apprenant visible : demandez l\'accès ci-dessous.' : 'Aucun apprenant.'}</div>`;
+      return;
+    }
+    const badge = a => a.phase === 'termine'
+      ? `<span class="badge">Ancien — lecture jusqu'au ${dateFr(a.accesJusquAu)}</span>`
+      : (a.phase === 'avenir' ? `<span class="badge orange">À venir — arrive le ${dateFr(a.dateEntree)}</span>`
+        : `<span class="badge vert">En formation</span>${a.nouveau ? ' <span class="badge orange">Nouveau</span>' : ''}`);
     $('liste-apprenants').innerHTML = liste.map(a => `
       <article class="app-carte">
         <div class="app-tete">${avatar(a)}<div><strong>${esc(a.prenom)} ${esc(a.nom)}</strong><span class="discret">${esc(a.filiere)} — ${esc(a.id)}</span></div></div>
-        <div>${badge(a.statut)} <span class="discret">${dateFr(a.dateEntree)} → ${dateFr(a.dateFin)}</span></div>
+        <div>${badge(a)} <span class="discret">${dateFr(a.dateEntree)} → ${dateFr(a.dateFin)}</span></div>
         <div class="app-chiffres">
           <span>Présence <b>${a.tauxPresence === null ? '—' : a.tauxPresence + ' %'}</b></span>
           <span>Absences <b>${a.absences}</b></span>
@@ -280,6 +328,45 @@
   }
   $('rech-apprenant').addEventListener('input', rendreApprenants);
   $('filtre-filiere-app').addEventListener('change', rendreApprenants);
+  $('filtre-phase-app').addEventListener('change', rendreApprenants);
+
+  /* ------------- Anciens apprenants : demandes d'accès à la direction ------------- */
+  let accesAnciens = [];
+  async function chargerDemandes() {
+    try {
+      const r = await api('formateur_demandes_lister');
+      if (r.status !== 'success') throw new Error(r.message);
+      const acces = accesAnciens.map(x => `<span class="badge vert">Accès ${esc(x.filiereNom)} jusqu'au ${dateFr(x.jusquAu)}</span>`).join(' ');
+      const coul = { 'En attente': 'orange', 'Accordée': 'vert', 'Refusée': 'rouge', 'Expirée': '', 'Retirée': '' };
+      $('liste-demandes').innerHTML = (acces ? `<p>${acces} — choisissez « Anciens (accès accordé) » dans le filtre ci-dessus.</p>` : '')
+        + r.demandes.slice(0, 5).map(d => `<div class="ligne" style="box-shadow:none;border:1px solid var(--gris-100);margin-bottom:8px;">
+            <div class="ligne-corps"><strong>${esc(d.filiereNom)}</strong><span class="discret">Demandé le ${dateFr(d.date)} — « ${esc(d.motif)} »</span></div>
+            <span class="badge ${coul[d.statut] || ''}">${esc(d.statut)}${d.statut === 'Accordée' ? ' jusqu\'au ' + dateFr(d.jusquAu) : ''}</span>
+          </div>`).join('');
+    } catch (e) { echec(e); }
+  }
+  $('btn-demande-anciens').addEventListener('click', () => {
+    $('fenetre-titre').textContent = 'Demander l\'accès aux anciens apprenants';
+    $('fenetre-corps').innerHTML = `
+      <p class="discret">La demande part à la direction. Si elle est accordée, vous verrez les anciens apprenants de la filière en lecture seule (contacts, assiduité, moyenne), pour une durée limitée.</p>
+      <label for="dem-filiere">Filière</label><select id="dem-filiere">${session.profil.filieres.map(f => `<option value="${esc(f.cle)}">${esc(f.nom)}</option>`).join('')}</select>
+      <label for="dem-motif">Motif de la demande</label><textarea id="dem-motif" maxlength="500" placeholder="Ex. : contacter les anciens pour une journée portes ouvertes"></textarea>
+      <div class="pied-form"><button type="button" class="btn btn-plein" id="btn-dem-envoyer"><span class="iconify" data-icon="tabler:send"></span> Envoyer la demande</button></div>`;
+    $('fenetre').hidden = false;
+    $('btn-dem-envoyer').addEventListener('click', () => {
+      const motif = $('dem-motif').value.trim();
+      if (motif.length < 10) return toast('Expliquez en quelques mots pourquoi vous avez besoin de cet accès.', true);
+      avecBouton($('btn-dem-envoyer'), async () => {
+        try {
+          const r = await api('formateur_demande_anciens', { filiere: $('dem-filiere').value, motif: motif });
+          if (r.status !== 'success') throw new Error(r.message);
+          $('fenetre').hidden = true;
+          toast(r.message);
+          chargerDemandes();
+        } catch (e) { echec(e); }
+      });
+    });
+  });
 
   /* ---------------------------- Présences ---------------------------- */
   async function chargerSeances() {
