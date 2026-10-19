@@ -264,7 +264,7 @@
                   <span class="field-error" id="err-telephone">Numéro invalide.</span>
                 </div>
                 <div class="form-group">
-                  <label>E-mail <span class="opt">(optionnel)</span></label>
+                  <label>E-mail <span class="opt" id="emailOptTag">(optionnel)</span><span class="req" id="emailReqTag" style="display:none;">*</span></label>
                   <input type="email" id="email" placeholder="vous@exemple.com" />
                   <span class="field-error" id="err-email">E-mail invalide.</span>
                 </div>
@@ -610,7 +610,11 @@
       document.getElementById('blocFormateur').style.display = type === 'formateur' ? '' : 'none';
       document.getElementById('blocStage').style.display     = type === 'stage'     ? '' : 'none';
       document.getElementById('docCV').style.display    = type === 'formateur' ? '' : 'none';
-      document.getElementById('docPiece').style.display = type === 'stage'     ? '' : 'none';
+      // Pièce d'identité demandée à TOUS les candidats (oct. 2026), et email
+      // obligatoire pour un formateur : il sert à créer son accès.
+      document.getElementById('docPiece').style.display = '';
+      document.getElementById('emailOptTag').style.display = type === 'formateur' ? 'none' : '';
+      document.getElementById('emailReqTag').style.display = type === 'formateur' ? '' : 'none';
 
       if (type !== 'stage') {
         document.getElementById('ancienApprenantCheckbox').checked = false;
@@ -759,7 +763,10 @@
         const tel = document.getElementById('telephone').value.trim();
         ok = marquerErreur('telephone', '', tel.replace(/[^0-9]/g, '').length >= 8) && ok;
         const email = document.getElementById('email').value.trim();
-        ok = marquerErreur('email', '', !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) && ok;
+        const emailObligatoire = typeChoisi === 'formateur';
+        const errEmail = document.getElementById('err-email');
+        errEmail.textContent = emailObligatoire && !email ? 'L\'e-mail est obligatoire pour un formateur (il servira à créer votre accès).' : 'E-mail invalide.';
+        ok = marquerErreur('email', '', emailObligatoire ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : (!email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) && ok;
       }
 
       if (n === 2) {
@@ -784,6 +791,7 @@
       if (n === 3) {
         if (typeChoisi === 'formateur') {
           ok = marquerErreur('cv', '', !!fichiers.cv.base64) && ok;
+          ok = marquerErreur('piece', '', !!fichiers.piece.base64) && ok;
         } else {
           ok = marquerErreur('piece', '', !!fichiers.piece.base64) && ok;
           if (ancienApprenantActif && ancienApprenantVerifie) {

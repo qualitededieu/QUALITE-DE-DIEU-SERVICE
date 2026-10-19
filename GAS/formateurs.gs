@@ -742,6 +742,23 @@ function adminFormateursLister(data, email) {
   return reponseJSON({ status: 'success', formateurs: liste });
 }
 
+// Candidature "Formateur / Staff" passée en "Retenu" et sans compte :
+// seule source autorisée pour un compte créé depuis la page Candidatures.
+function _candidaturePourCompte(candidatureId) {
+  const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+  const f = ss && ss.getSheetByName('Candidatures');
+  if (!f) return { erreur: 'Candidature introuvable.' };
+  const d = f.getDataRange().getValues();
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][0]).trim() !== candidatureId) continue;
+    if (String(d[i][1]) !== 'formateur') return { erreur: 'Cette candidature n\'est pas de type Formateur / Staff.' };
+    if (String(d[i][19]) !== 'Retenu') return { erreur: 'Passez d\'abord la candidature en « Retenu ».' };
+    if (String(d[i][28] || '').trim()) return { erreur: 'Un compte formateur a déjà été créé pour cette candidature (' + d[i][28] + ').' };
+    return { feuille: f, ligne: i + 1 };
+  }
+  return { erreur: 'Candidature introuvable.' };
+}
+
 function adminFormateurCreer(data, email) {
   const prenom = _txtF(data.prenom, 60), nom = _txtF(data.nom, 60);
   const mail = String(data.email || '').trim().toLowerCase();
@@ -752,10 +769,21 @@ function adminFormateurCreer(data, email) {
   if (fil.erreur) return reponseJSON({ status: 'error', message: fil.erreur });
   if (_formateurParEmail(mail)) return reponseJSON({ status: 'error', message: 'Un formateur existe déjà avec cet email.' });
   if (ADMIN_CONFIG.EMAILS_AUTORISES.map(e => e.toLowerCase()).indexOf(mail) !== -1) return reponseJSON({ status: 'error', message: 'Cet email est un compte administrateur : utilisez une autre adresse pour le compte formateur.' });
+  const candidatureId = String(data.candidatureId || '').trim();
+  let cand = null;
+  if (candidatureId) {
+    cand = _candidaturePourCompte(candidatureId);
+    if (cand.erreur) return reponseJSON({ status: 'error', message: cand.erreur });
+  }
 
   const feuille = _feuilleFormation(FORMATEURS.FEUILLE, ENTETES_FORMATEURS);
   const id = genererID('FOR');
   feuille.appendRow([id, prenom, nom, mail, tel, fil.cles.join(' | '), 'Actif', new Date(), '']);
+  // Trace dans la candidature (colonne AC) : évite un deuxième compte.
+  if (cand) {
+    if (String(cand.feuille.getRange(1, 29).getValue()) !== 'Compte formateur (ID)') cand.feuille.getRange(1, 29).setValue('Compte formateur (ID)');
+    cand.feuille.getRange(cand.ligne, 29).setValue(id);
+  }
   const f = _formateurParEmail(mail);
   let invitation = true;
   try { _envoyerInvitation(f, false); } catch (e) { invitation = false; console.error('[adminFormateurCreer] invitation', e.toString()); }

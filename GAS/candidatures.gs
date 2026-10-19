@@ -9,7 +9,8 @@ const ENTETES_CANDIDATURE = [
   'Traité par', 'Date traitement',
   'Sexe', 'Date début stage', 'Date fin stage',
   'Missions stage (JSON)',
-  'Ancien apprenant (Dossier LQD)', 'Formation LQD suivie'
+  'Ancien apprenant (Dossier LQD)', 'Formation LQD suivie',
+  'Compte formateur (ID)'   // oct. 2026 : rempli quand l'admin crée le compte depuis la candidature
 ];
 
 const STATUTS_CANDIDATURE_VALIDES = ['Nouveau', 'Vu', 'Contacté', 'Retenu', 'Terminé', 'Rejeté'];
@@ -115,6 +116,14 @@ function enregistrerCandidature(data) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return reponseJSON({ status: 'error', message: 'E-mail invalide.' });
   }
+  // Documents et email exigés AUSSI côté serveur (avant : contrôlés par la
+  // page seulement, donc contournables). L'email d'un formateur est
+  // indispensable : il sert à créer son accès à l'espace formateur.
+  if (type === 'formateur') {
+    if (!email) return reponseJSON({ status: 'error', message: 'L\'e-mail est obligatoire pour une candidature Formateur / Staff : il servira à créer votre accès.' });
+    if (!data.cvBase64) return reponseJSON({ status: 'error', message: 'Le CV est requis.' });
+  }
+  if (!data.pieceBase64) return reponseJSON({ status: 'error', message: 'La pièce d\'identité est requise.' });
 
   // Ancien apprenant du centre postulant à un stage — le client indique
   // avoir vérifié un dossier, mais on ne fait JAMAIS confiance à cette
@@ -188,7 +197,8 @@ function enregistrerCandidature(data) {
     cvId, lettreId, pieceId, recoId,
     'Nouveau', '', '',
     nettoyer(data.sexe || ''), '', '', '',
-    ancienApprenantDossier, ancienApprenantFiliere
+    ancienApprenantDossier, ancienApprenantFiliere,
+    ''   // Compte formateur (ID)
   ]);
   forcerTelephoneTexte(feuille, 6, telephone);
 
@@ -227,7 +237,8 @@ function adminGetCandidatures(data, email) {
       sexe: String(r[22] || '').trim(), dateDebutStage: r[23] || '', dateFinStage: r[24] || '',
       missionsStage: _parseMissionsStageJSON(r[25]),
       ancienApprenantDossier: String(r[26] || '').trim(),
-      ancienApprenantFiliere: String(r[27] || '').trim()
+      ancienApprenantFiliere: String(r[27] || '').trim(),
+      compteFormateur: String(r[28] || '').trim()
     });
   }
   candidatures.sort((a, b) => new Date(b.dateCandidature) - new Date(a.dateCandidature));

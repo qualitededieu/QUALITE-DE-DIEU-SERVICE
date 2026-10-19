@@ -2642,7 +2642,7 @@ function renderTableauCandidatures(candidatures) {
         <td><strong>${c.prenom} ${c.nom}</strong><br/><span class="mono">${c.telephone}</span></td>
         <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}${c.ancienApprenantDossier ? `<br/><span style="color:#F5A623;font-weight:600;font-size:11px;">Ancien apprenant</span>` : ''}</td>
         <td style="font-size:12px;color:var(--text-3);">${c.domaine || '—'}</td>
-        <td>${badgeCandStatut(c.statut)}</td>
+        <td>${badgeCandStatut(c.statut)}${c.compteFormateur ? '<br/><span style="font-size:11px;color:var(--teal-l);">Compte formateur créé</span>' : ''}</td>
         <td>
           <button class="btn btn-ghost btn-sm" title="Voir" onclick="ouvrirCandidature('${c.id}')">
             <span class="iconify" data-icon="tabler:eye"></span>
@@ -2742,7 +2742,16 @@ function renderModalCandidature(c) {
       </select>
       ${c.type === 'stage' ? `<p style="font-size:11px;color:var(--text-3);margin-top:6px;">"Terminé" rend l'attestation de fin de stage accessible au candidat (avec la période ci-dessus renseignée).</p>` : ''}
     </div>
-    ${c.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${c.traitePar} le ${c.dateTraitement}</p>` : ''}`;
+    ${c.traitePar ? `<p style="font-size:12px;color:var(--text-3);margin-top:8px;">Traité par ${c.traitePar} le ${c.dateTraitement}</p>` : ''}
+    ${c.type === 'formateur' ? `
+    <div class="modal-section-title">Accès à l'espace formateur</div>
+    ${c.compteFormateur
+      ? `<p style="font-size:13px;color:var(--teal-l);margin-bottom:8px;"><span class="iconify" data-icon="tabler:circle-check"></span> Compte formateur créé (<span class="mono">${_escAdmin(c.compteFormateur)}</span>).</p>
+         <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-cand'); naviguer('formateurs');"><span class="iconify" data-icon="tabler:school"></span> Voir les formateurs</button>`
+      : (c.statut === 'Retenu'
+        ? `<p style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Candidat retenu : créez son compte. Il recevra un email pour choisir son mot de passe. Ne le faites pas pour un poste administratif (Staff).</p>
+           <button class="btn btn-primary btn-sm" onclick="creerCompteDepuisCandidature('${_escAdmin(c.id)}')"><span class="iconify" data-icon="tabler:user-plus"></span> Créer le compte formateur</button>`
+        : `<p style="font-size:12px;color:var(--text-3);">Passez la candidature en « Retenu » pour pouvoir créer son compte formateur.</p>`)}` : ''}`;
 
   document.getElementById('cand-modal-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="fermerModal('modal-cand')">Fermer</button>
@@ -4392,6 +4401,26 @@ const FO_FILIERES = [
 ];
 let _formateurs = [];
 let _formateurEnModif = null;
+let _candidatureSource = null;   // candidature à l'origine du compte (ou null)
+
+// Depuis une candidature "Retenu" : fenêtre Nouveau formateur pré-remplie.
+function creerCompteDepuisCandidature(id) {
+  const c = (candidaturesCache || []).find(x => x.id === id);
+  if (!c) return;
+  fermerModal('modal-cand');
+  ouvrirFormateur('');
+  _candidatureSource = c.id;
+  document.getElementById('fo-titre').textContent = 'Compte formateur — candidature ' + c.id;
+  document.getElementById('fo-prenom').value = _clairCours(c.prenom);
+  document.getElementById('fo-nom').value = _clairCours(c.nom);
+  document.getElementById('fo-email').value = _clairCours(c.email || '');
+  document.getElementById('fo-tel').value = _clairCours(c.telephone || '');
+  if (!c.email) {
+    const err = document.getElementById('err-fo');
+    err.textContent = 'Cette candidature n\'a pas d\'email : saisissez celui du formateur (indispensable pour sa connexion).';
+    err.classList.add('show');
+  }
+}
 
 async function chargerFormateursAdmin() {
   const zone = document.getElementById('formateurs-container');
@@ -4420,6 +4449,7 @@ async function chargerFormateursAdmin() {
 function ouvrirFormateur(id) {
   const f = _formateurs.find(x => x.id === id) || null;
   _formateurEnModif = f;
+  _candidatureSource = null;
   document.getElementById('fo-titre').textContent = f ? 'Modifier : ' + _clairCours(f.prenom) + ' ' + _clairCours(f.nom) : 'Nouveau formateur';
   document.getElementById('fo-prenom').value = f ? _clairCours(f.prenom) : '';
   document.getElementById('fo-nom').value = f ? _clairCours(f.nom) : '';
@@ -4453,6 +4483,7 @@ async function enregistrerFormateur() {
   } else {
     charge.email = document.getElementById('fo-email').value.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(charge.email)) return erreur('Adresse email invalide.');
+    if (_candidatureSource) charge.candidatureId = _candidatureSource;
   }
   const btn = document.getElementById('btn-fo-enreg');
   btn.disabled = true;
@@ -4461,6 +4492,7 @@ async function enregistrerFormateur() {
     if (r.status !== 'success') throw new Error(r.message);
     toast(r.message || 'Formateur enregistré.', r.invitationEnvoyee === false ? 'error' : 'success');
     fermerModal('modal-formateur');
+    if (charge.candidatureId) { _candidatureSource = null; chargerCandidatures(); }
     chargerFormateursAdmin();
   } catch (e) {
     erreur(e.message);
