@@ -600,7 +600,10 @@
         <span class="nav-badge" id="badge-candidatures">0</span>
       </button>
       <button class="nav-item" onclick="naviguer('candidatures', 'formateur')">
-        <span class="iconify" data-icon="tabler:chalkboard"></span> Formateur / Staff
+        <span class="iconify" data-icon="tabler:chalkboard"></span> Formateurs
+      </button>
+      <button class="nav-item" onclick="naviguer('candidatures', 'staff')">
+        <span class="iconify" data-icon="tabler:briefcase"></span> Staff
       </button>
       <button class="nav-item" onclick="naviguer('candidatures', 'stage')">
         <span class="iconify" data-icon="tabler:school"></span> Stage
@@ -733,7 +736,8 @@
         </div>
         <select class="filter-select" id="filtre-cand-type" onchange="filtrerCandidatures()">
           <option value="">Tous les types</option>
-          <option value="formateur">Formateur / Staff</option>
+          <option value="formateur">Formateur</option>
+          <option value="staff">Staff (administratif)</option>
           <option value="stage">Stage</option>
         </select>
         <select class="filter-select" id="filtre-cand-statut" onchange="filtrerCandidatures()">
@@ -1463,7 +1467,7 @@
   <div class="confirm-box">
     <span class="iconify" data-icon="tabler:clock-alert" style="color:var(--orange, #E8901A);"></span>
     <h4>Session sur le point d'expirer</h4>
-    <p>Vous serez déconnecté(e) par inactivité dans <strong id="inactivite-compteur">15</strong> secondes.</p>
+    <p>Vous serez déconnecté(e) par inactivité dans <strong id="inactivite-compteur">60</strong> secondes.</p>
     <div class="confirm-box-btns">
       <button class="btn btn-primary" id="btn-rester-connecte">
         <span class="iconify" data-icon="tabler:refresh"></span> Rester connecté
@@ -1518,7 +1522,7 @@ async function apiCall(action, extra = {}) {
 /* ================================================================
    EXPIRATION DE SESSION — déconnexion propre + retour direct à /admin
    (côté serveur, via requireAuth) et inactivité côté client (voir
-   plus bas : compte à rebours de 15s après 3 min sans interaction).
+   plus bas : avertissement 60 s avant la déconnexion, après 120 min sans interaction).
 ================================================================ */
 function gererSessionExpiree() {
   arreterSurveillanceInactivite();
@@ -1528,14 +1532,21 @@ function gererSessionExpiree() {
 }
 
 /* ================================================================
-   INACTIVITÉ — avertissement 15s avant déconnexion automatique
-   après 3 minutes sans interaction (souris, clavier, tactile).
-   Le minuteur d'inactivité se réinitialise à chaque geste tant que
-   l'avertissement n'est pas déclenché ; une fois affiché, seul le
-   bouton "Rester connecté" (ou une nouvelle interaction) l'annule.
+   INACTIVITÉ — déconnexion automatique après 120 minutes sans
+   interaction (souris, clavier, tactile), avec un avertissement
+   60 s avant. Le minuteur se réinitialise à chaque geste tant que
+   l'avertissement n'est pas affiché ; ensuite, seul le bouton
+   "Rester connecté" l'annule.
+   Téléphone en veille / onglet en arrière-plan : les navigateurs
+   suspendent les minuteurs. Au retour sur l'onglet, on recalcule le
+   temps réellement écoulé depuis le dernier geste (voir plus bas).
+   Rappel : la session serveur expire de toute façon après 8 h
+   (ADMIN_CONFIG.TOKEN_EXPIRY_SEC, GAS/admin.gs).
 ================================================================ */
-const INACTIVITE_AVANT_ALERTE_MS = 3 * 60 * 1000 - 15 * 1000; // 2 min 45 s
-const INACTIVITE_COMPTE_A_REBOURS_S = 15;
+const INACTIVITE_TOTALE_MS = 120 * 60 * 1000;                                   // 120 minutes
+const INACTIVITE_COMPTE_A_REBOURS_S = 60;                                       // avertissement 60 s avant
+const INACTIVITE_AVANT_ALERTE_MS = INACTIVITE_TOTALE_MS - INACTIVITE_COMPTE_A_REBOURS_S * 1000;
+let _derniereActiviteAdmin = Date.now();
 
 let _minuteurInactivite   = null;
 let _intervalleCompteARebours = null;
@@ -1567,13 +1578,15 @@ function _surReactionUtilisateur() {
 }
 
 function _reprogrammerAlerteInactivite() {
+  _derniereActiviteAdmin = Date.now();
   clearTimeout(_minuteurInactivite);
   _minuteurInactivite = setTimeout(_afficherAlerteInactivite, INACTIVITE_AVANT_ALERTE_MS);
 }
 
-function _afficherAlerteInactivite() {
+function _afficherAlerteInactivite(secondesInitiales) {
   _alerteInactiviteVisible = true;
-  let secondesRestantes = INACTIVITE_COMPTE_A_REBOURS_S;
+  clearInterval(_intervalleCompteARebours);
+  let secondesRestantes = typeof secondesInitiales === 'number' ? secondesInitiales : INACTIVITE_COMPTE_A_REBOURS_S;
   document.getElementById('inactivite-compteur').textContent = secondesRestantes;
   document.getElementById('inactivite-overlay').classList.add('open');
 
@@ -1586,6 +1599,18 @@ function _afficherAlerteInactivite() {
     }
   }, 1000);
 }
+
+// Retour sur l'onglet (après veille, onglet en arrière-plan...) : on se
+// fie à l'heure réelle, pas au minuteur qui a pu être suspendu.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !state.token || (!_minuteurInactivite && !_alerteInactiviteVisible)) return;
+  const ecoule = Date.now() - _derniereActiviteAdmin;
+  if (ecoule >= INACTIVITE_TOTALE_MS) { arreterSurveillanceInactivite(); gererSessionExpiree(); return; }
+  if (ecoule >= INACTIVITE_AVANT_ALERTE_MS && !_alerteInactiviteVisible) {
+    clearTimeout(_minuteurInactivite);
+    _afficherAlerteInactivite(Math.ceil((INACTIVITE_TOTALE_MS - ecoule) / 1000));
+  }
+});
 
 document.getElementById('btn-rester-connecte').addEventListener('click', () => {
   _alerteInactiviteVisible = false;
@@ -2620,6 +2645,10 @@ function filtrerCandidatures() {
   renderTableauCandidatures(filtres);
 }
 
+function labelTypeCand(type) {
+  return { formateur: 'Formateur', staff: 'Staff (administratif)', stage: 'Stage' }[type] || '—';
+}
+
 function badgeCandStatut(statut) {
   const map = { 'Nouveau': 'badge-orange', 'Vu': 'badge-teal', 'Contacté': 'badge-yellow', 'Retenu': 'badge-green', 'Terminé': 'badge-green', 'Rejeté': 'badge-red' };
   return `<span class="badge ${map[statut] || 'badge-teal'}">${statut || '—'}</span>`;
@@ -2640,7 +2669,7 @@ function renderTableauCandidatures(candidatures) {
       <tbody>${candidatures.map(c => `<tr>
         <td><span class="mono">${c.id}</span><br/><span style="font-size:11px;color:var(--text-3);">${c.dateCandidature}</span></td>
         <td><strong>${c.prenom} ${c.nom}</strong><br/><span class="mono">${c.telephone}</span></td>
-        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}${c.ancienApprenantDossier ? `<br/><span style="color:#F5A623;font-weight:600;font-size:11px;">Ancien apprenant</span>` : ''}</td>
+        <td style="font-size:12px;color:var(--teal-l);font-weight:600;">${labelTypeCand(c.type)}${c.ancienApprenantDossier ? `<br/><span style="color:#F5A623;font-weight:600;font-size:11px;">Ancien apprenant</span>` : ''}</td>
         <td style="font-size:12px;color:var(--text-3);">${c.domaine || '—'}</td>
         <td>${badgeCandStatut(c.statut)}${c.compteFormateur ? '<br/><span style="font-size:11px;color:var(--teal-l);">Compte formateur créé</span>' : ''}</td>
         <td>
@@ -2671,7 +2700,7 @@ function renderModalCandidature(c) {
   document.getElementById('cand-modal-body').innerHTML = `
     <div class="modal-section-title">Identité</div>
     <div class="info-grid">
-      <div class="info-field"><label>Type</label><span style="color:var(--teal-l);font-weight:600;">${c.type === 'formateur' ? 'Formateur / Staff' : 'Stage'}</span></div>
+      <div class="info-field"><label>Type</label><span style="color:var(--teal-l);font-weight:600;">${labelTypeCand(c.type)}</span></div>
       <div class="info-field"><label>Candidat</label><span>${c.prenom} ${c.nom}</span></div>
       <div class="info-field"><label>Téléphone</label><span><a href="tel:${c.telephone}">${c.telephone}</a></span></div>
       <div class="info-field"><label>Email</label><span>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}</span></div>
@@ -2688,7 +2717,7 @@ function renderModalCandidature(c) {
     <div class="modal-section-title">Parcours</div>
     <div class="info-grid">
       <div class="info-field"><label>Domaine</label><span>${c.domaine || '—'}</span></div>
-      ${c.type === 'formateur'
+      ${(c.type === 'formateur' || c.type === 'staff')
         ? `<div class="info-field" style="grid-column:1/-1;"><label>Expérience</label><span>${c.experience || '—'}</span></div>`
         : (c.ancienApprenantDossier
             ? `<div class="info-field" style="grid-column:1/-1;"><label>Durée souhaitée</label><span>${c.dureeStage || '—'}</span></div>`
@@ -2749,7 +2778,7 @@ function renderModalCandidature(c) {
       ? `<p style="font-size:13px;color:var(--teal-l);margin-bottom:8px;"><span class="iconify" data-icon="tabler:circle-check"></span> Compte formateur créé (<span class="mono">${_escAdmin(c.compteFormateur)}</span>).</p>
          <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-cand'); naviguer('formateurs');"><span class="iconify" data-icon="tabler:school"></span> Voir les formateurs</button>`
       : (c.statut === 'Retenu'
-        ? `<p style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Candidat retenu : créez son compte. Il recevra un email pour choisir son mot de passe. Ne le faites pas pour un poste administratif (Staff).</p>
+        ? `<p style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Candidat retenu : créez son compte. Il recevra un email pour choisir son mot de passe.</p>
            <button class="btn btn-primary btn-sm" onclick="creerCompteDepuisCandidature('${_escAdmin(c.id)}')"><span class="iconify" data-icon="tabler:user-plus"></span> Créer le compte formateur</button>`
         : `<p style="font-size:12px;color:var(--text-3);">Passez la candidature en « Retenu » pour pouvoir créer son compte formateur.</p>`)}` : ''}`;
 
