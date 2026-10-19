@@ -282,6 +282,8 @@ function doPost(e) {
   if (action === 'cours_lister_apprenant') return coursListerApprenant(data);
   if (action === 'cours_ouvrir') return coursOuvrir(data);
   if (action === 'apprenant_suivi') return apprenantSuivi(data);
+  if (action === 'besoins_ma_fiche')    return besoinsMaFiche(data);
+  if (action === 'besoins_enregistrer') return besoinsEnregistrer(data);
   if (action.startsWith('formateur_')) return routerFormateur(data, action);
   if (action === 'forum_poster_question') return forumPosterQuestion(data);
   if (action === 'forum_lister') return forumLister(data);
@@ -311,7 +313,7 @@ function doPost(e) {
 // Marqueur de version : à changer à chaque mise à jour du code GAS.
 // Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
 // c'est la preuve que le déploiement EN LIGNE contient bien ce code.
-const VERSION_API = '2026-10-22 phases apprenants + accès anciens';
+const VERSION_API = '2026-10-23 fiche de besoins';
 
 // Liste des modules attendus : true = présent ET à jour dans le code exécuté.
 // ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
@@ -332,9 +334,10 @@ function _etatModules() {
     coursProteges:            presente('coursOuvrir') && presente('_sessionApprenant'),
     espaceFormateur:          presente('routerFormateur') && presente('apprenantSuivi'),
     accesAnciens:             presente('formateurDemandeAnciens') && presente('adminDemandeAccesTraiter') && presente('_coursAccessible'),
+    ficheBesoins:             presente('besoinsMaFiche') && presente('formateurBesoinsLister') && presente('adminBesoinsLister'),
     motDePasseFormateur:      (() => { try { return _autoTestFormateur(); } catch (e) { return false; } })(),
-    doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1,
-    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1 && source('routerAdmin').indexOf('admin_demande_acces_traiter') !== -1
+    doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1 && source('doPost').indexOf('besoins_ma_fiche') !== -1,
+    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1 && source('routerAdmin').indexOf('admin_demande_acces_traiter') !== -1 && source('routerAdmin').indexOf('admin_besoins_lister') !== -1
   };
 }
 

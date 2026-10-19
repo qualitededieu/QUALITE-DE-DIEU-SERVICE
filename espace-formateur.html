@@ -89,6 +89,7 @@
       <button type="button" data-onglet="accueil" class="actif"><span class="iconify" data-icon="tabler:layout-dashboard"></span> Accueil</button>
       <button type="button" data-onglet="apprenants"><span class="iconify" data-icon="tabler:users"></span> Apprenants</button>
       <button type="button" data-onglet="presences"><span class="iconify" data-icon="tabler:checklist"></span> Présences</button>
+      <button type="button" data-onglet="fiches"><span class="iconify" data-icon="tabler:clipboard-text"></span> Fiches <span class="pastille" id="pastille-fiches" hidden></span></button>
       <button type="button" data-onglet="notes"><span class="iconify" data-icon="tabler:report-analytics"></span> Notes</button>
       <button type="button" data-onglet="cours"><span class="iconify" data-icon="tabler:book-2"></span> Cours</button>
       <button type="button" data-onglet="questions"><span class="iconify" data-icon="tabler:message-question"></span> Questions <span class="pastille" id="pastille-questions" hidden></span></button>
@@ -237,6 +238,28 @@
         <div id="liste-cours"></div>
       </section>
 
+      <!-- Fiches de recueil des besoins -->
+      <section class="panneau" id="p-fiches">
+        <h2 class="titre-panneau">Fiches de recueil des besoins</h2>
+        <p class="discret">Envoyée automatiquement à chaque apprenant confirmé ; vous pouvez l'envoyer aux autres et relancer. Les réponses sur la santé, l'accessibilité, les finances ou les contraintes personnelles sont réservées à l'administration : vous voyez seulement « Besoin particulier ».</p>
+        <div class="stats" id="fiches-stats"></div>
+        <div class="barre-outils">
+          <select id="filtre-fiche" aria-label="Filtrer les fiches">
+            <option value="">Toutes les fiches</option>
+            <option value="Non envoyée">Non envoyées</option>
+            <option value="attente">En attente de l'apprenant</option>
+            <option value="Soumise">Reçues, suivi à faire</option>
+            <option value="Traitée">Suivi fait</option>
+          </select>
+          <div class="ligne-actions">
+            <button type="button" class="btn btn-plein btn-petit" id="btn-fiches-envoyer" hidden><span class="iconify" data-icon="tabler:send"></span> <span id="btn-fiches-envoyer-txt">Envoyer</span></button>
+            <button type="button" class="btn btn-contour btn-petit" id="btn-fiches-groupe"><span class="iconify" data-icon="tabler:chart-bar"></span> Vue de groupe</button>
+            <button type="button" class="btn btn-fantome btn-petit" id="btn-fiche-vierge"><span class="iconify" data-icon="tabler:printer"></span> Fiche vierge (PDF)</button>
+          </div>
+        </div>
+        <div id="liste-fiches"></div>
+      </section>
+
       <!-- Questions -->
       <section class="panneau" id="p-questions">
         <h2 class="titre-panneau">Questions de vos apprenants</h2>
@@ -256,6 +279,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="js/fiche-besoins.js"></script>
   <script src="js/espace-formateur.js"></script>
 </body>
 </html>

@@ -451,7 +451,10 @@ function formateurTableau(data) {
       seances: Object.keys(seances).length,
       tauxPresence: presences.length ? Math.round(presents / presences.length * 100) : null,
       evaluations: evals.length,
-      questionsEnAttente: forum.length
+      questionsEnAttente: forum.length,
+      // Fiches de besoins reçues dont le cadre VIII reste à remplir (besoins.gs).
+      fichesATraiter: typeof _lireFiches === 'function'
+        ? _lireFiches().filter(x => x.statut === 'Soumise' && apprenants.some(a => a.id === x.dossierId) && _ficheVisiblePourFormateur(f, x)).length : 0
     },
     nouveaux: apprenants.filter(a => a.nouveau)
       .sort((x, y) => String(y.dateEntree).localeCompare(String(x.dateEntree)))
@@ -1080,6 +1083,11 @@ function routerFormateur(data, action) {
       case 'formateur_cours_consultations': return formateurCoursConsultations(data);
       case 'formateur_forum_lister':     return formateurForumLister(data);
       case 'formateur_forum_repondre':   return formateurForumRepondre(data);
+      case 'formateur_besoins_lister':   return formateurBesoinsLister(data);
+      case 'formateur_besoins_envoyer':  return formateurBesoinsEnvoyer(data);
+      case 'formateur_besoins_relancer': return formateurBesoinsRelancer(data);
+      case 'formateur_besoins_get':      return formateurBesoinsGet(data);
+      case 'formateur_besoins_suivi':    return formateurBesoinsSuivi(data);
       default: return reponseJSON({ status: 'error', message: 'Action formateur inconnue.' });
     }
   } catch (err) {

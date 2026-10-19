@@ -301,6 +301,10 @@
           <button class="app-nav-item" data-tab="suivi" onclick="basculerOngletEspace('suivi')">
             <span class="iconify" data-icon="tabler:report-analytics"></span> Mon suivi
           </button>
+          <button class="app-nav-item" data-tab="fiche" onclick="basculerOngletEspace('fiche')">
+            <span class="iconify" data-icon="tabler:clipboard-text"></span> Ma fiche
+            <span class="badge-nav" id="badge-fiche-apprenant">1</span>
+          </button>
           <button class="app-nav-item" data-tab="forum" onclick="basculerOngletEspace('forum')">
             <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions
             <span class="badge-nav" id="badge-forum-apprenant"></span>
@@ -352,6 +356,10 @@
 
           <section id="espace-tab-suivi" class="app-panel">
             <div id="suivi-contenu"></div>
+          </section>
+
+          <section id="espace-tab-fiche" class="app-panel">
+            <div id="fiche-contenu" class="carte-bloc"></div>
           </section>
 
           <section id="espace-tab-forum" class="app-panel">
@@ -572,7 +580,9 @@
       document.getElementById('espace-nom').textContent     = `${apprenant.prenom} ${apprenant.nom}`;
       document.getElementById('espace-filiere').textContent = apprenant.filiere || '—';
       document.getElementById('espace-avatar').textContent  = (apprenant.prenom || '?').charAt(0).toUpperCase();
+      document.getElementById('badge-fiche-apprenant').style.display = 'none';
       basculerOngletEspace('documents');
+      _verifierFicheEnAttente();
     }
 
     function reinitialiserEspace() {
@@ -849,6 +859,7 @@
       documents: { titre: 'Mes documents', sousTitre: 'Carte, attestation, fiche apprenant et badge de certification.' },
       cours:     { titre: 'Mes cours',      sousTitre: 'Supports mis en ligne par le Formateur pour votre filière.' },
       suivi:     { titre: 'Mon suivi',      sousTitre: 'Vos notes publiées par le Formateur et votre assiduité.' },
+      fiche:     { titre: 'Ma fiche de besoins', sousTitre: 'Aidez votre formateur à adapter votre accompagnement. Vos réponses sont traitées avec discrétion.' },
       forum:     { titre: 'Questions au Formateur', sousTitre: 'Posez une question, suivez la réponse ici — pas besoin de rafraîchir la page.' },
     };
 
@@ -860,6 +871,7 @@
       document.getElementById('topbar-sous-titre').textContent = TITRES_ONGLET[nom].sousTitre;
       if (nom === 'cours') chargerCoursEspace();
       if (nom === 'suivi') chargerSuiviEspace();
+      if (nom === 'fiche') chargerFicheEspace();
       if (nom === 'forum') { chargerForumEspace(); _demarrerPollingForum(); document.getElementById('badge-forum-apprenant').style.display = 'none'; }
       else { _arreterPollingForum(); }
     }
@@ -1066,6 +1078,71 @@
       }
     }
 
+    /* ================================================================
+       FICHE DE RECUEIL DES BESOINS (GAS besoins.gs + js/fiche-besoins.js)
+       Rien n'est gardé dans le navigateur : le brouillon est sur le serveur.
+    ================================================================ */
+    async function _postEspace(corps) {
+      const resp = await fetch(GAS_WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(corps) });
+      return resp.json();
+    }
+
+    // Pastille "1" sur "Ma fiche" tant qu'une fiche attend des réponses.
+    async function _verifierFicheEnAttente() {
+      if (!_espaceApprenant) return;
+      try {
+        const r = await _postEspace({ action: 'besoins_ma_fiche', token: _espaceApprenant.token });
+        if (r.status === 'success') document.getElementById('badge-fiche-apprenant').style.display = r.fiche && r.fiche.modifiable ? 'inline-block' : 'none';
+      } catch (e) { /* silencieux : la pastille est un simple rappel */ }
+    }
+
+    async function chargerFicheEspace() {
+      if (!_espaceApprenant) return;
+      const zone = document.getElementById('fiche-contenu');
+      zone.innerHTML = '<div style="text-align:center;padding:16px;color:var(--gray-500);font-size:13px;">Chargement...</div>';
+      try {
+        const r = await _postEspace({ action: 'besoins_ma_fiche', token: _espaceApprenant.token });
+        if (_sessionTerminee(r)) return;
+        if (r.status !== 'success') { zone.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${_txt(r.message || 'Erreur.')}</div>`; return; }
+        if (typeof FicheBesoins === 'undefined') { zone.innerHTML = '<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">Module de la fiche indisponible. Actualisez la page.</div>'; return; }
+        const fiche = r.fiche;
+        document.getElementById('badge-fiche-apprenant').style.display = fiche && fiche.modifiable ? 'inline-block' : 'none';
+        if (!fiche) {
+          zone.innerHTML = '<div style="text-align:center;padding:10px;color:var(--gray-500);font-size:13.5px;">Aucune fiche à remplir pour le moment. Votre formateur vous l\'enverra en début de formation.</div>';
+          return;
+        }
+        if (fiche.modifiable) {
+          FicheBesoins.formulaire(zone, r.schema, fiche, {
+            enregistrer: async (d) => {
+              const res = await _postEspace(Object.assign({ action: 'besoins_enregistrer', token: _espaceApprenant.token, ficheId: fiche.id }, d));
+              if (_sessionTerminee(res)) return null;
+              if (res.status === 'success' && d.soumettre) {
+                showToast('Merci ! Votre fiche a bien été envoyée.');
+                setTimeout(chargerFicheEspace, 1200);
+              }
+              return res;
+            }
+          });
+          return;
+        }
+        const envoyee = fiche.soumiseLe ? new Date(fiche.soumiseLe).toLocaleDateString('fr-FR') : '';
+        zone.innerHTML = `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px;">
+            <span style="font-size:13.5px;color:#0F6E56;font-weight:700;"><span class="iconify" data-icon="tabler:circle-check"></span> Fiche envoyée${envoyee ? ' le ' + envoyee : ''}. Merci !</span>
+            <button class="btn-principal" id="btn-fiche-pdf" style="width:auto;padding:9px 16px;"><span class="iconify" data-icon="tabler:file-download"></span> Télécharger (PDF)</button>
+          </div>
+          <p style="font-size:12.5px;color:var(--gray-500);margin-bottom:12px;">Pour corriger une réponse, demandez à l'administration de rouvrir votre fiche.</p>`
+          + FicheBesoins.lecture(r.schema, fiche, 'apprenant');
+        document.getElementById('btn-fiche-pdf').addEventListener('click', async (e) => {
+          const b = e.currentTarget; b.disabled = true;
+          try { await FicheBesoins.pdf(r.schema, fiche, 'apprenant'); }
+          catch (err) { showToast(err.message || 'PDF impossible.', 'error'); }
+          finally { b.disabled = false; }
+        });
+      } catch (e) {
+        zone.innerHTML = '<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">Erreur réseau. Réessayez.</div>';
+      }
+    }
+
     async function poserQuestionForum() {
       if (!_espaceApprenant) return;
       const zone = document.getElementById('forum-question');
@@ -1197,6 +1274,7 @@
     document.getElementById('carte-id').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('carte-tel').focus(); });
   </script>
 
+  <script src="js/fiche-besoins.js"></script>
   <script src="js/attestation_generator.js"></script>
   <script src="js/fiche_apprenant_generator.js"></script>
   <script src="js/badge_certification_generator.js"></script>

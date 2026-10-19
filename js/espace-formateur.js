@@ -236,7 +236,7 @@
 
   const chargeurs = {
     accueil: chargerAccueil, apprenants: chargerApprenants, presences: chargerSeances,
-    notes: chargerEvals, cours: chargerCours, questions: chargerQuestions
+    notes: chargerEvals, cours: chargerCours, questions: chargerQuestions, fiches: chargerFiches
   };
 
   function afficherOnglet(nom) {
@@ -266,11 +266,14 @@
         [s.seances, 'séances enregistrées'],
         [s.tauxPresence === null ? '—' : s.tauxPresence + ' %', 'taux de présence'],
         [s.evaluations, 'évaluations'],
-        [s.questionsEnAttente, 'questions en attente', s.questionsEnAttente > 0]
+        [s.questionsEnAttente, 'questions en attente', s.questionsEnAttente > 0],
+        [s.fichesATraiter || 0, 'fiches de besoins à traiter', s.fichesATraiter > 0]
       ].map(x => `<div class="stat${x[2] ? ' alerte' : ''}"><strong>${esc(x[0])}</strong><span>${esc(x[1])}</span></div>`).join('');
       const pas = $('pastille-questions');
       pas.hidden = !s.questionsEnAttente;
       pas.textContent = s.questionsEnAttente;
+      $('pastille-fiches').hidden = !s.fichesATraiter;
+      $('pastille-fiches').textContent = s.fichesATraiter || '';
       const n = r.nouveaux || [];
       $('bloc-nouveaux').hidden = !n.length;
       $('liste-nouveaux').innerHTML = n.map(a => `<div class="ligne" style="box-shadow:none;border:1px solid var(--gris-100);margin-bottom:8px;">
@@ -675,9 +678,10 @@
       } catch (err) { $('fenetre').hidden = true; echec(err); }
     }
   });
-  $('fenetre-fermer').addEventListener('click', () => { $('fenetre').hidden = true; });
-  $('fenetre').addEventListener('click', e => { if (e.target === $('fenetre')) $('fenetre').hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('fenetre').hidden = true; });
+  function fermerFenetre() { $('fenetre').hidden = true; $('fenetre').querySelector('.fenetre-carte').classList.remove('large'); }
+  $('fenetre-fermer').addEventListener('click', fermerFenetre);
+  $('fenetre').addEventListener('click', e => { if (e.target === $('fenetre')) fermerFenetre(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerFenetre(); });
 
   function lireDataUrl(file) {
     return new Promise((ok, ko) => { const l = new FileReader(); l.onload = () => ok(l.result); l.onerror = () => ko(new Error('Fichier illisible.')); l.readAsDataURL(file); });
@@ -757,6 +761,145 @@
       } catch (err) { echec(err); }
     });
   });
+
+  /* ---------------------- Fiches de recueil des besoins ---------------------- */
+  // Le serveur ne renvoie JAMAIS les réponses confidentielles au formateur :
+  // seulement le signal "besoinParticulier" (voir GAS/besoins.gs).
+  let fiches = null;   // { apprenants, stats, schema }
+  const etatFiche = a => a.fiche ? a.fiche.statut : 'Non envoyée';
+  const COULEUR_FICHE = { 'Non envoyée': '', 'À remplir': 'orange', 'Brouillon': 'orange', 'Soumise': 'vert', 'Traitée': '' };
+  const LIBELLE_FICHE = { 'Non envoyée': 'Non envoyée', 'À remplir': 'À remplir', 'Brouillon': 'Commencée', 'Soumise': 'Reçue', 'Traitée': 'Suivi fait' };
+
+  async function chargerFiches() {
+    chargement($('liste-fiches'));
+    try {
+      const r = await api('formateur_besoins_lister');
+      if (r.status !== 'success') throw new Error(r.message);
+      fiches = r;
+      rendreFiches();
+    } catch (e) { $('liste-fiches').innerHTML = ''; echec(e); }
+  }
+
+  function detailFiche(a) {
+    const f = a.fiche;
+    if (!f) return a.phase === 'avenir' ? 'Arrive bientôt — pas encore de fiche' : 'Pas encore de fiche';
+    if (f.statut === 'À remplir') return 'Envoyée le ' + dateFr(f.envoyeeLe) + (f.relances ? ' — relancée ' + f.relances + ' fois' : '');
+    if (f.statut === 'Brouillon') return 'Commencée, pas encore envoyée';
+    if (f.statut === 'Soumise') return 'Reçue le ' + dateFr(f.soumiseLe) + ' — cadre de suivi à remplir';
+    return 'Suivi du ' + dateFr(f.suiviLe) + (f.dateSuivi ? ' — prochain point le ' + dateFr(f.dateSuivi) : '');
+  }
+
+  function rendreFiches() {
+    const l = fiches.apprenants;
+    const nb = s => l.filter(a => etatFiche(a) === s).length;
+    const recues = nb('Soumise') + nb('Traitée');
+    const sansFiche = l.filter(a => !a.fiche);
+    $('fiches-stats').innerHTML = [
+      [recues + ' / ' + l.length, 'fiches reçues'],
+      [nb('Soumise'), 'suivis à faire', nb('Soumise') > 0],
+      [nb('À remplir') + nb('Brouillon'), 'en attente de l\'apprenant'],
+      [sansFiche.length, 'non envoyées', sansFiche.length > 0],
+      [fiches.stats.besoinsParticuliers, 'besoins particuliers (voir administration)']
+    ].map(x => `<div class="stat${x[2] ? ' alerte' : ''}"><strong>${esc(x[0])}</strong><span>${esc(x[1])}</span></div>`).join('');
+    $('btn-fiches-envoyer').hidden = !sansFiche.length;
+    $('btn-fiches-envoyer-txt').textContent = 'Envoyer aux ' + sansFiche.length + ' apprenant(s) sans fiche';
+    const filtre = $('filtre-fiche').value;
+    const liste = l.filter(a => !filtre || etatFiche(a) === filtre || (filtre === 'attente' && (etatFiche(a) === 'À remplir' || etatFiche(a) === 'Brouillon')));
+    if (!l.length) { $('liste-fiches').innerHTML = '<p class="discret">Aucun apprenant en formation dans vos filières.</p>'; return; }
+    if (!liste.length) { $('liste-fiches').innerHTML = '<p class="discret">Aucune fiche dans cette catégorie.</p>'; return; }
+    $('liste-fiches').innerHTML = liste.map(a => {
+      const etat = etatFiche(a), f = a.fiche;
+      let action = '';
+      if (!f) action = `<button type="button" class="btn btn-contour btn-petit" data-envoyer="${esc(a.dossierId)}"><span class="iconify" data-icon="tabler:send"></span> Envoyer</button>`;
+      else if (etat === 'À remplir' || etat === 'Brouillon') action = a.email
+        ? `<button type="button" class="btn btn-fantome btn-petit" data-relancer="${esc(f.id)}"><span class="iconify" data-icon="tabler:bell-ringing"></span> Relancer</button>`
+        : '<span class="discret">Sans email : prévenez-le en classe</span>';
+      else action = `<button type="button" class="btn btn-plein btn-petit" data-ouvrir="${esc(f.id)}"><span class="iconify" data-icon="tabler:eye"></span> ${etat === 'Soumise' ? 'Lire et suivre' : 'Ouvrir'}</button>`;
+      return `<div class="ligne">
+        <div class="ligne-corps"><strong>${esc(a.nom)}</strong><span class="discret">${esc(a.filiere)} — ${esc(detailFiche(a))}</span></div>
+        <span class="badge ${COULEUR_FICHE[etat]}">${esc(LIBELLE_FICHE[etat])}</span>
+        ${f && f.besoinParticulier ? '<span class="badge rouge" title="Détail réservé à l\'administration"><span class="iconify" data-icon="tabler:lock"></span> Besoin particulier</span>' : ''}
+        <div class="ligne-actions">${action}</div>
+      </div>`;
+    }).join('');
+  }
+  $('filtre-fiche').addEventListener('change', () => { if (fiches) rendreFiches(); });
+
+  async function envoyerFiches(ids, btn) {
+    await avecBouton(btn, async () => {
+      try {
+        const r = await api('formateur_besoins_envoyer', { dossierIds: ids });
+        if (r.status !== 'success') throw new Error(r.message);
+        toast(r.message);
+        chargerFiches();
+      } catch (e) { echec(e); }
+    });
+  }
+  $('btn-fiches-envoyer').addEventListener('click', e => {
+    const ids = fiches.apprenants.filter(a => !a.fiche).map(a => a.dossierId);
+    if (!confirm('Envoyer la fiche de besoins à ' + ids.length + ' apprenant(s) ? Ils la recevront par email et dans leur espace.')) return;
+    envoyerFiches(ids, e.currentTarget);
+  });
+  $('btn-fiches-groupe').addEventListener('click', () => {
+    if (!fiches) return;
+    $('fenetre-titre').textContent = 'Vue de groupe — fiches de besoins';
+    $('fenetre-corps').innerHTML = FicheBesoins.statsHtml(fiches.stats, fiches.apprenants.length);
+    $('fenetre').querySelector('.fenetre-carte').classList.add('large');
+    $('fenetre').hidden = false;
+  });
+  $('btn-fiche-vierge').addEventListener('click', e => {
+    if (!fiches) return;
+    avecBouton(e.currentTarget, async () => {
+      try { await FicheBesoins.pdf(fiches.schema, null, 'formateur'); } catch (err) { echec(err); }
+    });
+  });
+
+  $('liste-fiches').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.envoyer) envoyerFiches([b.dataset.envoyer], b);
+    if (b.dataset.relancer) avecBouton(b, async () => {
+      try {
+        const r = await api('formateur_besoins_relancer', { ficheId: b.dataset.relancer });
+        if (r.status !== 'success') throw new Error(r.message);
+        toast(r.message);
+        chargerFiches();
+      } catch (err) { echec(err); }
+    });
+    if (b.dataset.ouvrir) ouvrirFiche(b.dataset.ouvrir);
+  });
+
+  async function ouvrirFiche(id) {
+    $('fenetre-titre').textContent = 'Fiche de besoins';
+    chargement($('fenetre-corps'));
+    $('fenetre').querySelector('.fenetre-carte').classList.add('large');
+    $('fenetre').hidden = false;
+    try {
+      const r = await api('formateur_besoins_get', { ficheId: id });
+      if (r.status !== 'success') throw new Error(r.message);
+      const f = r.fiche;
+      $('fenetre-titre').textContent = f.identification.nom || 'Fiche de besoins';
+      $('fenetre-corps').innerHTML = FicheBesoins.lecture(r.schema, f, 'formateur')
+        + FicheBesoins.suiviFormulaire(f.suivi, f)
+        + `<div class="pied-form">
+            <button type="button" class="btn btn-fantome" id="btn-fiche-pdf"><span class="iconify" data-icon="tabler:file-download"></span> PDF</button>
+            <button type="button" class="btn btn-plein" id="btn-suivi-enregistrer"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer le suivi</button>
+          </div>`;
+      FicheBesoins.activerSuivi($('fenetre-corps'));
+      $('btn-fiche-pdf').addEventListener('click', ev => avecBouton(ev.currentTarget, async () => {
+        try { await FicheBesoins.pdf(r.schema, Object.assign({}, f, { suivi: FicheBesoins.collecterSuivi($('fenetre-corps')) }), 'formateur'); } catch (err) { echec(err); }
+      }));
+      $('btn-suivi-enregistrer').addEventListener('click', ev => avecBouton(ev.currentTarget, async () => {
+        try {
+          const res = await api('formateur_besoins_suivi', { ficheId: id, suivi: FicheBesoins.collecterSuivi($('fenetre-corps')) });
+          if (res.status !== 'success') throw new Error(res.message);
+          toast(res.message);
+          fermerFenetre();
+          chargerFiches();
+        } catch (err) { echec(err); }
+      }));
+    } catch (e) { fermerFenetre(); echec(e); }
+  }
 
   /* ============================ Démarrage ============================ */
   (function demarrer() {

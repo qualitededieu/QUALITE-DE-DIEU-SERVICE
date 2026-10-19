@@ -584,6 +584,10 @@
       <button class="nav-item" onclick="naviguer('formateurs')">
         <span class="iconify" data-icon="tabler:school"></span> Formateurs
       </button>
+      <button class="nav-item" onclick="naviguer('besoins')">
+        <span class="iconify" data-icon="tabler:clipboard-text"></span> Fiches besoins
+        <span class="nav-badge" id="badge-besoins" style="display:none;">0</span>
+      </button>
       <button class="nav-item" onclick="naviguer('forum')">
         <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions apprenants
         <span class="nav-badge" id="badge-forum">0</span>
@@ -1001,6 +1005,33 @@
       </div>
     </div>
 
+    <div class="page" id="page-besoins">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:clipboard-text"></span> Fiches de recueil des besoins <span id="besoins-compteur" class="gal-compteur"></span></span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="besoinsVueGroupe()"><span class="iconify" data-icon="tabler:chart-bar"></span> Vue de groupe</button>
+            <button class="btn btn-ghost btn-sm" id="btn-besoins-vierge" onclick="besoinsFicheVierge()"><span class="iconify" data-icon="tabler:printer"></span> Fiche vierge (PDF)</button>
+            <button class="btn btn-primary btn-sm" id="btn-besoins-envoyer" onclick="besoinsEnvoyerSansFiche()" style="display:none;"><span class="iconify" data-icon="tabler:send"></span> <span id="btn-besoins-envoyer-txt">Envoyer</span></button>
+          </div>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">
+          Envoyée automatiquement à chaque dossier passé en « Confirmé ». Les réponses <strong>confidentielles</strong> (santé, accessibilité, finances, contraintes familiales, message libre, corrections de dossier) ne sont visibles qu'ici : le formateur voit seulement « Besoin particulier ».
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 20px 12px;">
+          <select class="filter-select" id="besoins-filiere" onchange="chargerBesoinsAdmin()"></select>
+          <select class="filter-select" id="besoins-statut" onchange="rendreBesoinsAdmin()">
+            <option value="">Tous les statuts</option>
+            <option value="attente">En attente de l'apprenant</option>
+            <option value="Soumise">Reçues, suivi à faire</option>
+            <option value="Traitée">Suivi fait</option>
+            <option value="particulier">Besoin particulier signalé</option>
+          </select>
+        </div>
+        <div id="besoins-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
     <div class="page" id="page-forum">
       <div class="table-card">
         <div class="table-card-header">
@@ -1266,6 +1297,16 @@
       <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-formateur')">Annuler</button>
       <button class="btn btn-primary btn-sm" id="btn-fo-enreg" onclick="enregistrerFormateur()"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-besoins">
+  <div class="modal" style="max-width:880px;">
+    <div class="modal-header">
+      <h3 id="besoins-titre">Fiche de besoins</h3>
+      <button class="modal-close" onclick="fermerModal('modal-besoins')"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body" id="besoins-corps"></div>
   </div>
 </div>
 
@@ -1845,7 +1886,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', galerie: 'Galerie photos', temoignages: 'Témoignages' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', besoins: 'Fiches de recueil des besoins', galerie: 'Galerie photos', temoignages: 'Témoignages' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -1858,6 +1899,7 @@ function naviguer(page, filtre = '') {
   if (page === 'cours')           chargerCoursAdmin();
   if (page === 'forum')           chargerForumAdmin();
   if (page === 'formateurs')      chargerFormateursAdmin();
+  if (page === 'besoins')         chargerBesoinsAdmin();
   if (page === 'galerie')         chargerGalerieAdmin();
   if (page === 'temoignages')     chargerTemoignagesAdmin();
   if (filtre && page === 'dossiers') {
@@ -4459,6 +4501,144 @@ function creerCompteDepuisCandidature(id) {
   }
 }
 
+/* ================================================================
+   FICHES DE RECUEIL DES BESOINS (GAS besoins.gs + js/fiche-besoins.js)
+   L'admin est le seul à voir les réponses confidentielles.
+================================================================ */
+let _besoins = null;   // { fiches, stats, schema, sansFiche }
+const BESOINS_LIBELLE = { 'À remplir': 'À remplir', 'Brouillon': 'Commencée', 'Soumise': 'Reçue', 'Traitée': 'Suivi fait' };
+const BESOINS_BADGE = { 'À remplir': 'badge-orange', 'Brouillon': 'badge-orange', 'Soumise': 'badge-green', 'Traitée': 'badge-teal' };
+
+function _dateCourte(iso) { return iso ? new Date(String(iso).length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('fr-FR') : '—'; }
+
+async function chargerBesoinsAdmin() {
+  const sel = document.getElementById('besoins-filiere');
+  if (!sel.options.length) sel.innerHTML = '<option value="">Toutes les filières</option>' + FO_FILIERES.map(f => `<option value="${_escAdmin(f[0])}">${_escAdmin(f[1])}</option>`).join('');
+  const zone = document.getElementById('besoins-container');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_besoins_lister', { filiere: sel.value });
+    if (r.status !== 'success') throw new Error(r.message);
+    _besoins = r;
+    const aTraiter = r.fiches.filter(f => f.statut === 'Soumise').length;
+    const badge = document.getElementById('badge-besoins');
+    badge.textContent = aTraiter; badge.style.display = aTraiter ? '' : 'none';
+    document.getElementById('besoins-compteur').textContent = r.fiches.length + ' fiche(s)';
+    const btn = document.getElementById('btn-besoins-envoyer');
+    btn.style.display = r.sansFiche ? '' : 'none';
+    document.getElementById('btn-besoins-envoyer-txt').textContent = 'Envoyer aux ' + r.sansFiche + ' apprenant(s) sans fiche';
+    rendreBesoinsAdmin();
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+function rendreBesoinsAdmin() {
+  if (!_besoins) return;
+  const zone = document.getElementById('besoins-container');
+  const filtre = document.getElementById('besoins-statut').value;
+  const liste = _besoins.fiches.filter(f => !filtre
+    || (filtre === 'attente' && (f.statut === 'À remplir' || f.statut === 'Brouillon'))
+    || (filtre === 'particulier' && f.besoinParticulier)
+    || f.statut === filtre);
+  if (!liste.length) { zone.innerHTML = '<div class="empty-state"><p>Aucune fiche.</p></div>'; return; }
+  zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
+    <thead><tr><th>Apprenant</th><th>Filière</th><th>Année</th><th>Statut</th><th>Envoyée</th><th>Reçue</th><th>Suivi</th><th></th></tr></thead>
+    <tbody>${liste.map(f => `<tr>
+      <td><strong>${_escAdmin(_clairCours(f.apprenant))}</strong><br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(f.dossierId)}</span>
+        ${f.besoinParticulier ? '<br><span class="badge badge-red" style="margin-top:4px;"><span class="iconify" data-icon="tabler:lock"></span> Confidentiel</span>' : ''}</td>
+      <td style="font-size:12px;">${_escAdmin(f.filieres)}</td>
+      <td style="font-size:12px;white-space:nowrap;">${_escAdmin(f.annee)}</td>
+      <td><span class="badge ${BESOINS_BADGE[f.statut] || 'badge-teal'}">${_escAdmin(BESOINS_LIBELLE[f.statut] || f.statut)}</span>${f.relances ? `<br><span style="font-size:11px;color:var(--text-3);">${f.relances} relance(s)</span>` : ''}</td>
+      <td style="font-size:12px;">${_dateCourte(f.envoyeeLe)}<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(f.envoyeePar)}</span></td>
+      <td style="font-size:12px;">${f.soumiseLe ? _dateCourte(f.soumiseLe) : '—'}</td>
+      <td style="font-size:12px;">${f.suiviLe ? _dateCourte(f.suiviLe) + (f.dateSuivi ? `<br><span style="font-size:11px;color:var(--text-3);">prochain : ${_dateCourte(f.dateSuivi)}</span>` : '') : '—'}</td>
+      <td style="white-space:nowrap;">${f.statut === 'Soumise' || f.statut === 'Traitée'
+        ? `<button class="btn btn-primary btn-sm" onclick="ouvrirBesoinsAdmin('${_escAdmin(f.id)}')">Ouvrir</button>`
+        : `<button class="btn btn-ghost btn-sm" onclick="relancerBesoinsAdmin('${_escAdmin(f.id)}', this)">Relancer</button>`}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+async function besoinsEnvoyerSansFiche() {
+  if (!_besoins || !_besoins.sansFiche) return;
+  if (!confirm('Envoyer la fiche de besoins aux ' + _besoins.sansFiche + ' apprenant(s) en formation qui n\'en ont pas ?')) return;
+  try {
+    const r = await apiCall('admin_besoins_envoyer', { filiere: document.getElementById('besoins-filiere').value });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+    chargerBesoinsAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
+async function relancerBesoinsAdmin(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await apiCall('admin_besoins_relancer', { ficheId: id });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+    chargerBesoinsAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); btn.disabled = false; }
+}
+
+function besoinsVueGroupe() {
+  if (!_besoins) return;
+  document.getElementById('besoins-titre').textContent = 'Vue de groupe — fiches de besoins';
+  document.getElementById('besoins-corps').innerHTML = FicheBesoins.statsHtml(_besoins.stats, _besoins.fiches.length + _besoins.sansFiche)
+    + '<p class="cours-aide">Les statistiques excluent les options confidentielles, comme pour les formateurs.</p>';
+  ouvrirModal('modal-besoins');
+}
+
+async function besoinsFicheVierge() {
+  if (!_besoins) return;
+  try { await FicheBesoins.pdf(_besoins.schema, null, 'admin'); } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
+async function ouvrirBesoinsAdmin(id) {
+  const corps = document.getElementById('besoins-corps');
+  document.getElementById('besoins-titre').textContent = 'Fiche de besoins';
+  corps.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  ouvrirModal('modal-besoins');
+  try {
+    const r = await apiCall('admin_besoins_get', { ficheId: id });
+    if (r.status !== 'success') throw new Error(r.message);
+    const f = r.fiche;
+    document.getElementById('besoins-titre').textContent = _clairCours(f.identification.nom || f.apprenant);
+    corps.innerHTML = FicheBesoins.lecture(r.schema, f, 'admin') + FicheBesoins.suiviFormulaire(f.suivi, f)
+      + `<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px;">
+          <button class="btn btn-ghost btn-sm" id="besoins-rouvrir"><span class="iconify" data-icon="tabler:lock-open"></span> Rouvrir pour correction</button>
+          <button class="btn btn-ghost btn-sm" id="besoins-pdf"><span class="iconify" data-icon="tabler:file-download"></span> PDF complet</button>
+          <button class="btn btn-primary btn-sm" id="besoins-enregistrer"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer le suivi</button>
+        </div>`;
+    FicheBesoins.activerSuivi(corps);
+    document.getElementById('besoins-pdf').onclick = async () => {
+      try { await FicheBesoins.pdf(r.schema, Object.assign({}, f, { suivi: FicheBesoins.collecterSuivi(corps) }), 'admin'); }
+      catch (e) { toast('Erreur : ' + e.message, 'error'); }
+    };
+    document.getElementById('besoins-enregistrer').onclick = async (ev) => {
+      ev.currentTarget.disabled = true;
+      try {
+        const res = await apiCall('admin_besoins_suivi', { ficheId: id, suivi: FicheBesoins.collecterSuivi(corps) });
+        if (res.status !== 'success') throw new Error(res.message);
+        toast(res.message, 'success');
+        fermerModal('modal-besoins');
+        chargerBesoinsAdmin();
+      } catch (e) { toast('Erreur : ' + e.message, 'error'); ev.currentTarget.disabled = false; }
+    };
+    document.getElementById('besoins-rouvrir').onclick = async () => {
+      if (!confirm('Rouvrir la fiche ? L\'apprenant pourra modifier ses réponses puis la renvoyer. Le cadre de suivi est conservé.')) return;
+      try {
+        const res = await apiCall('admin_besoins_rouvrir', { ficheId: id });
+        if (res.status !== 'success') throw new Error(res.message);
+        toast(res.message, 'success');
+        fermerModal('modal-besoins');
+        chargerBesoinsAdmin();
+      } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+    };
+  } catch (e) {
+    corps.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
 async function chargerDemandesAccesAdmin() {
   const zone = document.getElementById('acces-container');
   try {
@@ -4669,6 +4849,7 @@ async function supprimerForumAdmin(id) {
   });
 }
 </script>
+<script src="js/fiche-besoins.js"></script>
 <script src="js/attestation_generator.js"></script>
 </body>
 </html>

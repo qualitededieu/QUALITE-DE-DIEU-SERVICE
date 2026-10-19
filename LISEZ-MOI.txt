@@ -222,3 +222,36 @@ MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
     elle est vide, elle est estimée (date d inscription + durée de la
     filière) : un apprenant encore actif peut alors passer "Ancien".
     Onglet créé : "Accès anciens apprenants".
+
+  FICHE DE RECUEIL DES BESOINS — version 2026-10-23
+    GAS : AJOUTER le fichier "besoins" (nouveau) et remplacer code,
+    formateurs, admin -> Nouvelle version sur LES DEUX déploiements.
+    Vérification : l URL /exec doit afficher "2026-10-23 fiche de besoins"
+    et "ficheBesoins": true.
+    VERCEL : js/fiche-besoins.js (nouveau), espace-apprenant.html,
+    espace-formateur.html, js/espace-formateur.js,
+    css/espace-formateur.css, admin.html.
+    - Envoi : automatique quand un dossier passe en "Confirmé" ; le
+      formateur (onglet Fiches) ou l admin (Fiches besoins) l envoie aux
+      apprenants en formation qui n en ont pas, et peut relancer (1 fois
+      par 24 h). Une fiche par apprenant et par année de formation.
+    - Apprenant : Espace apprenant > "Ma fiche". Partie I pré-remplie
+      depuis le dossier (il signale seulement une correction). Brouillon
+      enregistré sur le serveur (rien dans le navigateur). Envoi avec
+      case de confirmation datée (remplace la signature). Ensuite :
+      lecture seule + PDF ; l admin peut "Rouvrir pour correction".
+    - Confidentiel (admin SEUL) : santé / accessibilité, difficultés
+      financières, responsabilités familiales, besoin d aménagement, les
+      "Autre" des questions 5 et 14, la précision de la question 14, la
+      partie VII et les corrections d identité. Le formateur voit
+      seulement "Besoin particulier signalé". Séparation faite par le
+      serveur : ces réponses ne partent jamais vers l espace formateur.
+    - Cadre VIII (synthèse, difficultés, mesures, date de suivi,
+      observations) : formateur ou admin ; nom et date enregistrés
+      automatiquement ; jamais visible par l apprenant.
+    - PDF : fiche remplie (version formateur sans le confidentiel,
+      version admin complète) et fiche vierge à imprimer.
+    - Année de formation : calculée sur la date d entrée, rentrée en
+      septembre (entrée en mars 2026 = 2025 / 2026).
+    Onglet créé dans le classeur : "Fiches besoins" (réponses en JSON :
+    consultez-les dans l admin, pas directement dans le classeur).

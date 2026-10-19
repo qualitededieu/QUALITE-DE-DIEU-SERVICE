@@ -87,6 +87,12 @@ function routerAdmin(data, action) {
       case 'admin_formateur_inviter':  return requireAuth(data, adminFormateurInviter);
       case 'admin_demandes_acces_lister': return requireAuth(data, adminDemandesAccesLister);
       case 'admin_demande_acces_traiter': return requireAuth(data, adminDemandeAccesTraiter);
+      case 'admin_besoins_lister':      return requireAuth(data, adminBesoinsLister);
+      case 'admin_besoins_get':         return requireAuth(data, adminBesoinsGet);
+      case 'admin_besoins_suivi':       return requireAuth(data, adminBesoinsSuivi);
+      case 'admin_besoins_rouvrir':     return requireAuth(data, adminBesoinsRouvrir);
+      case 'admin_besoins_relancer':    return requireAuth(data, adminBesoinsRelancer);
+      case 'admin_besoins_envoyer':     return requireAuth(data, adminBesoinsEnvoyer);
 
       case 'admin_forum_lister':    return requireAuth(data, adminForumLister);
       case 'admin_forum_repondre':  return requireAuth(data, adminForumRepondre);
@@ -446,6 +452,10 @@ function adminUpdateStatut(data, email) {
       // Nouvel apprenant confirmé : email aux formateurs de sa filière.
       if (statut === 'Confirmé' && ancienStatut !== 'Confirmé' && typeof notifierFormateursNouvelApprenant === 'function') {
         try { notifierFormateursNouvelApprenant(row); } catch (e) { console.error('[updateStatut notif formateurs]', e); }
+      }
+      // Fiche de recueil des besoins envoyée automatiquement (besoins.gs).
+      if (statut === 'Confirmé' && ancienStatut !== 'Confirmé' && typeof besoinsEnvoiAutomatique === 'function') {
+        besoinsEnvoiAutomatique(row);
       }
     }
   } catch(e) { console.error('[updateStatut propagation]', e); }

@@ -150,6 +150,7 @@ textarea{resize:vertical;min-height:90px}
 /* Fenêtre + toast */
 .fenetre{position:fixed;inset:0;z-index:50;background:rgba(3,20,17,.6);display:flex;align-items:center;justify-content:center;padding:16px}
 .fenetre-carte{background:var(--blanc);border-radius:var(--rayon);width:100%;max-width:560px;max-height:85vh;overflow:auto;padding:18px}
+.fenetre-carte.large{max-width:860px;max-height:92vh}
 .fenetre-entete{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .tableau{width:100%;border-collapse:collapse;font-size:14px}
 .tableau th,.tableau td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--gris-100)}
