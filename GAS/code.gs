@@ -281,6 +281,8 @@ function doPost(e) {
   if (action === 'annonces_list_publiees') return annoncesListPubliees(data);
   if (action === 'cours_lister_apprenant') return coursListerApprenant(data);
   if (action === 'cours_ouvrir') return coursOuvrir(data);
+  if (action === 'apprenant_suivi') return apprenantSuivi(data);
+  if (action.startsWith('formateur_')) return routerFormateur(data, action);
   if (action === 'forum_poster_question') return forumPosterQuestion(data);
   if (action === 'forum_lister') return forumLister(data);
   if (action === 'temoignages_lister')  return temoignagesLister(data);
@@ -309,7 +311,7 @@ function doPost(e) {
 // Marqueur de version : à changer à chaque mise à jour du code GAS.
 // Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
 // c'est la preuve que le déploiement EN LIGNE contient bien ce code.
-const VERSION_API = '2026-10-19 cours protégés + forum';
+const VERSION_API = '2026-10-20 espace formateur';
 
 // Liste des modules attendus : true = présent ET à jour dans le code exécuté.
 // ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
@@ -328,8 +330,9 @@ function _etatModules() {
     renseignementsReponse:    presente('adminRepondreRenseignement'),
     pieceJointeRenseignement: presente('_preparerPieceJointeRens'),
     coursProteges:            presente('coursOuvrir') && presente('_sessionApprenant'),
-    doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('cours_ouvrir') !== -1,
-    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_cours_modifier') !== -1
+    espaceFormateur:          presente('routerFormateur') && presente('apprenantSuivi'),
+    doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1,
+    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1
   };
 }
 

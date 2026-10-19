@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Espace formateur — LQD Service</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Espace réservé aux formateurs du centre LES QUALITÉS DE DIEU SERVICE : apprenants, présences, notes, cours et questions." />
+  <link rel="icon" href="icons/logo-lqd-v2.jpg" type="image/jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/espace-formateur.css" />
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+</head>
+<body>
+
+  <!-- ====================== CONNEXION ====================== -->
+  <main class="auth" id="ecran-auth">
+    <div class="auth-carte">
+      <img src="icons/logo-lqd-v2.jpg" alt="LQD Service" class="auth-logo" />
+      <h1>Espace formateur</h1>
+      <p class="auth-sous">Les Qualités de Dieu Service</p>
+
+      <!-- Étape 1 : email + mot de passe -->
+      <form id="form-login" class="auth-etape" novalidate>
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" autocomplete="username" required />
+        <label for="login-mdp">Mot de passe</label>
+        <div class="champ-mdp">
+          <input type="password" id="login-mdp" autocomplete="current-password" required />
+          <button type="button" class="voir-mdp" data-cible="login-mdp" aria-label="Afficher le mot de passe"><span class="iconify" data-icon="tabler:eye"></span></button>
+        </div>
+        <button type="submit" class="btn btn-plein btn-large" id="btn-login"><span class="iconify" data-icon="tabler:login-2"></span> Recevoir mon code</button>
+        <button type="button" class="lien" id="lien-oubli">Mot de passe oublié ?</button>
+      </form>
+
+      <!-- Étape 2 : code reçu par email -->
+      <form id="form-otp" class="auth-etape" hidden novalidate>
+        <p class="auth-info" id="otp-info"></p>
+        <label for="otp-code">Code à 6 chiffres</label>
+        <input type="text" id="otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" class="champ-otp" required />
+        <button type="submit" class="btn btn-plein btn-large" id="btn-otp"><span class="iconify" data-icon="tabler:shield-check"></span> Me connecter</button>
+        <button type="button" class="lien" id="lien-retour-login">Changer d'email</button>
+      </form>
+
+      <!-- Mot de passe oublié -->
+      <form id="form-oubli" class="auth-etape" hidden novalidate>
+        <p class="auth-info">Indiquez votre email : vous recevrez un lien pour choisir un nouveau mot de passe.</p>
+        <label for="oubli-email">Email</label>
+        <input type="email" id="oubli-email" autocomplete="username" required />
+        <button type="submit" class="btn btn-plein btn-large" id="btn-oubli"><span class="iconify" data-icon="tabler:mail"></span> Envoyer le lien</button>
+        <button type="button" class="lien" id="lien-retour-login2">Retour à la connexion</button>
+      </form>
+
+      <!-- Activation / nouveau mot de passe (lien reçu par email) -->
+      <form id="form-mdp" class="auth-etape" hidden novalidate>
+        <p class="auth-info">Choisissez votre mot de passe : 8 caractères minimum, avec au moins une lettre et un chiffre.</p>
+        <label for="mdp-1">Nouveau mot de passe</label>
+        <div class="champ-mdp">
+          <input type="password" id="mdp-1" autocomplete="new-password" required />
+          <button type="button" class="voir-mdp" data-cible="mdp-1" aria-label="Afficher le mot de passe"><span class="iconify" data-icon="tabler:eye"></span></button>
+        </div>
+        <label for="mdp-2">Confirmez le mot de passe</label>
+        <input type="password" id="mdp-2" autocomplete="new-password" required />
+        <button type="submit" class="btn btn-plein btn-large" id="btn-mdp"><span class="iconify" data-icon="tabler:lock-check"></span> Enregistrer</button>
+      </form>
+
+      <div class="message" id="auth-msg" role="alert" hidden></div>
+    </div>
+  </main>
+
+  <!-- ====================== APPLICATION ====================== -->
+  <div class="app" id="ecran-app" hidden>
+    <header class="entete">
+      <div class="entete-id">
+        <span class="avatar" id="f-avatar">?</span>
+        <div>
+          <strong id="f-nom"></strong>
+          <span id="f-filieres"></span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-fantome" id="btn-deconnexion" aria-label="Déconnexion" title="Déconnexion"><span class="iconify" data-icon="tabler:logout"></span><span class="masque-mobile"> Déconnexion</span></button>
+    </header>
+
+    <nav class="onglets" aria-label="Rubriques">
+      <button type="button" data-onglet="accueil" class="actif"><span class="iconify" data-icon="tabler:layout-dashboard"></span> Accueil</button>
+      <button type="button" data-onglet="apprenants"><span class="iconify" data-icon="tabler:users"></span> Apprenants</button>
+      <button type="button" data-onglet="presences"><span class="iconify" data-icon="tabler:checklist"></span> Présences</button>
+      <button type="button" data-onglet="notes"><span class="iconify" data-icon="tabler:report-analytics"></span> Notes</button>
+      <button type="button" data-onglet="cours"><span class="iconify" data-icon="tabler:book-2"></span> Cours</button>
+      <button type="button" data-onglet="questions"><span class="iconify" data-icon="tabler:message-question"></span> Questions <span class="pastille" id="pastille-questions" hidden></span></button>
+    </nav>
+
+    <main class="contenu">
+
+      <!-- Accueil -->
+      <section class="panneau actif" id="p-accueil">
+        <h2 class="titre-panneau">Bonjour <span id="f-prenom"></span></h2>
+        <div class="stats" id="stats"></div>
+        <div class="actions-rapides">
+          <button type="button" class="btn btn-plein" data-aller="presences" data-action="appel"><span class="iconify" data-icon="tabler:checklist"></span> Faire l'appel</button>
+          <button type="button" class="btn btn-contour" data-aller="notes" data-action="eval"><span class="iconify" data-icon="tabler:pencil-plus"></span> Saisir des notes</button>
+          <button type="button" class="btn btn-contour" data-aller="cours"><span class="iconify" data-icon="tabler:upload"></span> Ajouter un support</button>
+        </div>
+      </section>
+
+      <!-- Apprenants -->
+      <section class="panneau" id="p-apprenants">
+        <div class="barre-outils">
+          <input type="search" id="rech-apprenant" placeholder="Rechercher un apprenant..." aria-label="Rechercher un apprenant" />
+          <select id="filtre-filiere-app" aria-label="Filtrer par filière"></select>
+        </div>
+        <div id="liste-apprenants" class="grille-cartes"></div>
+      </section>
+
+      <!-- Présences -->
+      <section class="panneau" id="p-presences">
+        <div id="vue-seances">
+          <div class="barre-outils">
+            <h2 class="titre-panneau">Séances</h2>
+            <button type="button" class="btn btn-plein" id="btn-nouvel-appel"><span class="iconify" data-icon="tabler:plus"></span> Faire l'appel</button>
+          </div>
+          <div id="liste-seances"></div>
+        </div>
+        <div id="vue-appel" hidden>
+          <button type="button" class="lien retour" id="retour-seances"><span class="iconify" data-icon="tabler:arrow-left"></span> Toutes les séances</button>
+          <div class="carte">
+            <div class="grille-form">
+              <div><label for="appel-filiere">Filière</label><select id="appel-filiere"></select></div>
+              <div><label for="appel-date">Date de la séance</label><input type="date" id="appel-date" /></div>
+              <div class="pleine"><label for="appel-intitule">Intitulé (facultatif)</label><input type="text" id="appel-intitule" maxlength="120" placeholder="Ex. Photoshop — les calques" /></div>
+            </div>
+            <div class="barre-outils compacte">
+              <span id="appel-compteur" class="discret"></span>
+              <button type="button" class="btn btn-fantome btn-petit" id="btn-tous-presents"><span class="iconify" data-icon="tabler:checks"></span> Tous présents</button>
+            </div>
+            <div id="liste-appel"></div>
+            <div class="pied-form">
+              <button type="button" class="btn btn-danger btn-petit" id="btn-suppr-seance" hidden><span class="iconify" data-icon="tabler:trash"></span> Supprimer la séance</button>
+              <button type="button" class="btn btn-plein" id="btn-enreg-appel"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer l'appel</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Notes -->
+      <section class="panneau" id="p-notes">
+        <div id="vue-evals">
+          <div class="barre-outils">
+            <h2 class="titre-panneau">Évaluations</h2>
+            <button type="button" class="btn btn-plein" id="btn-nouvelle-eval"><span class="iconify" data-icon="tabler:plus"></span> Nouvelle évaluation</button>
+          </div>
+          <div id="liste-evals"></div>
+        </div>
+        <div id="vue-eval" hidden>
+          <button type="button" class="lien retour" id="retour-evals"><span class="iconify" data-icon="tabler:arrow-left"></span> Toutes les évaluations</button>
+          <div class="carte">
+            <div class="grille-form">
+              <div><label for="eval-filiere">Filière</label><select id="eval-filiere"></select></div>
+              <div><label for="eval-date">Date</label><input type="date" id="eval-date" /></div>
+              <div class="pleine"><label for="eval-intitule">Intitulé</label><input type="text" id="eval-intitule" maxlength="120" placeholder="Ex. Devoir 1 — Photoshop" /></div>
+              <div><label for="eval-bareme">Noté sur</label><select id="eval-bareme"><option value="20">20</option><option value="10">10</option><option value="100">100</option></select></div>
+              <div><label for="eval-coef">Coefficient</label><input type="number" id="eval-coef" min="0.5" max="10" step="0.5" value="1" /></div>
+              <div class="pleine">
+                <label class="case"><input type="checkbox" id="eval-publiee" /> Publier les notes dans l'espace des apprenants</label>
+              </div>
+            </div>
+            <p class="discret">Laissez la note vide pour un apprenant absent : elle ne compte pas dans sa moyenne.</p>
+            <div id="liste-notes"></div>
+            <div class="pied-form">
+              <button type="button" class="btn btn-danger btn-petit" id="btn-suppr-eval" hidden><span class="iconify" data-icon="tabler:trash"></span> Supprimer</button>
+              <button type="button" class="btn btn-plein" id="btn-enreg-eval"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer les notes</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cours -->
+      <section class="panneau" id="p-cours">
+        <div class="carte">
+          <h2 class="titre-carte" id="cours-titre-form"><span class="iconify" data-icon="tabler:circle-plus"></span> Ajouter un support</h2>
+          <div class="grille-form">
+            <div><label for="c-filiere">Filière</label><select id="c-filiere"></select></div>
+            <div><label for="c-module">Module (facultatif)</label><input type="text" id="c-module" list="c-modules" maxlength="80" placeholder="Ex. Module 1 — Word" /><datalist id="c-modules"></datalist></div>
+            <div class="pleine"><label for="c-titre">Titre</label><input type="text" id="c-titre" maxlength="150" /></div>
+            <div class="pleine"><label for="c-description">Description (facultatif)</label><input type="text" id="c-description" maxlength="300" /></div>
+            <div class="pleine" id="c-source-bloc">
+              <span class="label">Support</span>
+              <div class="choix">
+                <label class="case"><input type="radio" name="c-source" value="fichier" checked /> Fichier (PDF ou vidéo, 25 Mo max)</label>
+                <label class="case"><input type="radio" name="c-source" value="lien" /> Lien (YouTube, Drive, site)</label>
+              </div>
+            </div>
+            <div class="pleine" id="c-zone-fichier">
+              <label class="btn btn-contour btn-petit" for="c-fichier"><span class="iconify" data-icon="tabler:upload"></span> Choisir le fichier</label>
+              <input type="file" id="c-fichier" accept=".pdf,.mp4,.webm,.mov,application/pdf,video/mp4,video/webm,video/quicktime" hidden />
+              <span id="c-fichier-nom" class="discret">Aucun fichier choisi</span>
+            </div>
+            <div class="pleine" id="c-zone-lien" hidden>
+              <label for="c-url">Lien (https://...)</label><input type="url" id="c-url" placeholder="https://..." />
+              <label for="c-type">Type</label><select id="c-type"><option>PDF</option><option>Vidéo</option><option>Lien</option></select>
+            </div>
+            <div><label for="c-ordre">Ordre dans le module</label><input type="number" id="c-ordre" value="0" min="-999" max="999" /></div>
+            <div id="c-notifier-bloc"><label class="case"><input type="checkbox" id="c-notifier" /> Prévenir les apprenants par email</label></div>
+          </div>
+          <div class="pied-form">
+            <button type="button" class="btn btn-fantome btn-petit" id="btn-c-annuler" hidden>Annuler</button>
+            <span class="discret" id="c-progression"></span>
+            <button type="button" class="btn btn-plein" id="btn-c-enreg"><span class="iconify" data-icon="tabler:plus"></span> <span id="btn-c-libelle">Ajouter</span></button>
+          </div>
+        </div>
+        <div id="liste-cours"></div>
+      </section>
+
+      <!-- Questions -->
+      <section class="panneau" id="p-questions">
+        <h2 class="titre-panneau">Questions de vos apprenants</h2>
+        <p class="discret">Une question répondue devient visible par les autres apprenants de la même filière. L'apprenant reçoit votre réponse par email.</p>
+        <div id="liste-questions"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Fenêtre : détail des consultations d'un support -->
+  <div class="fenetre" id="fenetre" role="dialog" aria-modal="true" hidden>
+    <div class="fenetre-carte">
+      <div class="fenetre-entete"><h3 id="fenetre-titre"></h3><button type="button" class="btn btn-fantome btn-petit" id="fenetre-fermer" aria-label="Fermer"><span class="iconify" data-icon="tabler:x"></span></button></div>
+      <div id="fenetre-corps"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/espace-formateur.js"></script>
+</body>
+</html>

@@ -209,6 +209,12 @@
     .cours-item .cours-ouvrir:disabled{opacity:.6;cursor:wait;}
     .cours-desc,.forum-question,.forum-reponse{white-space:pre-line;}
     .forum-compteur{font-size:11.5px;color:var(--gray-500);text-align:right;margin-top:4px;}
+    .suivi-chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:6px;}
+    .suivi-chiffres strong{display:block;font-family:'Sora',sans-serif;font-size:22px;color:var(--teal-900);}
+    .suivi-chiffres span{font-size:12.5px;color:var(--gray-500);}
+    .suivi-titre{font-family:'Sora',sans-serif;font-size:14px;color:var(--teal-900);margin:18px 0 8px;}
+    .suivi-seance{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:13.5px;}
+    .suivi-seance:last-child{border-bottom:none;}
     .lecteur{position:fixed;inset:0;z-index:10000;background:#031411;display:flex;flex-direction:column;}
     .lecteur[hidden]{display:none;}
     .lecteur-barre{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;}
@@ -292,6 +298,9 @@
           <button class="app-nav-item" data-tab="cours" onclick="basculerOngletEspace('cours')">
             <span class="iconify" data-icon="tabler:book-2"></span> Mes cours
           </button>
+          <button class="app-nav-item" data-tab="suivi" onclick="basculerOngletEspace('suivi')">
+            <span class="iconify" data-icon="tabler:report-analytics"></span> Mon suivi
+          </button>
           <button class="app-nav-item" data-tab="forum" onclick="basculerOngletEspace('forum')">
             <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions
             <span class="badge-nav" id="badge-forum-apprenant"></span>
@@ -339,6 +348,10 @@
             <div id="cours-vide" class="carte-bloc" style="display:none;text-align:center;color:var(--gray-500);font-size:13.5px;">
               Aucun support disponible pour votre filière pour le moment.
             </div>
+          </section>
+
+          <section id="espace-tab-suivi" class="app-panel">
+            <div id="suivi-contenu"></div>
           </section>
 
           <section id="espace-tab-forum" class="app-panel">
@@ -835,6 +848,7 @@
     const TITRES_ONGLET = {
       documents: { titre: 'Mes documents', sousTitre: 'Carte, attestation, fiche apprenant et badge de certification.' },
       cours:     { titre: 'Mes cours',      sousTitre: 'Supports mis en ligne par le Formateur pour votre filière.' },
+      suivi:     { titre: 'Mon suivi',      sousTitre: 'Vos notes publiées par le Formateur et votre assiduité.' },
       forum:     { titre: 'Questions au Formateur', sousTitre: 'Posez une question, suivez la réponse ici — pas besoin de rafraîchir la page.' },
     };
 
@@ -845,6 +859,7 @@
       document.getElementById('topbar-titre').textContent = TITRES_ONGLET[nom].titre;
       document.getElementById('topbar-sous-titre').textContent = TITRES_ONGLET[nom].sousTitre;
       if (nom === 'cours') chargerCoursEspace();
+      if (nom === 'suivi') chargerSuiviEspace();
       if (nom === 'forum') { chargerForumEspace(); _demarrerPollingForum(); document.getElementById('badge-forum-apprenant').style.display = 'none'; }
       else { _arreterPollingForum(); }
     }
@@ -1007,6 +1022,45 @@
     }
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerLecteur(); });
+
+    // Notes publiées + assiduité (GAS formateurs.gs : apprenantSuivi).
+    async function chargerSuiviEspace() {
+      if (!_espaceApprenant) return;
+      const zone = document.getElementById('suivi-contenu');
+      zone.innerHTML = '<div style="text-align:center;padding:16px;color:var(--gray-500);font-size:13px;">Chargement...</div>';
+      try {
+        const resp = await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'apprenant_suivi', token: _espaceApprenant.token })
+        });
+        const r = await resp.json();
+        if (_sessionTerminee(r)) return;
+        if (r.status !== 'success') { zone.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${_txt(r.message || 'Erreur.')}</div>`; return; }
+        const p = r.presences;
+        const virgule = n => String(n).replace('.', ',');
+        const date = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
+        const couleur = { 'Présent': '#1D9E75', 'Retard': '#B7791F', 'Absent': '#C0392B', 'Excusé': '#6B7280' };
+        zone.innerHTML = `
+          <div class="suivi-chiffres">
+            <div class="carte-bloc"><strong>${r.moyenne === null ? '—' : virgule(r.moyenne) + ' / 20'}</strong><span>Moyenne générale</span></div>
+            <div class="carte-bloc"><strong>${p.taux === null ? '—' : p.taux + ' %'}</strong><span>Assiduité (${p.seances} séance${p.seances > 1 ? 's' : ''})</span></div>
+            <div class="carte-bloc"><strong>${p.absents}</strong><span>Absence${p.absents > 1 ? 's' : ''}${p.retards ? ' — ' + p.retards + ' retard' + (p.retards > 1 ? 's' : '') : ''}</span></div>
+          </div>
+          <h3 class="suivi-titre">Mes notes</h3>
+          ${r.notes.length ? r.notes.map(n => `
+            <div class="cours-item">
+              <div class="cours-titre">${_txt(n.intitule)} <span style="float:right;">${n.note === null ? '<span style="color:var(--gray-500);font-weight:500;">Non noté</span>' : virgule(n.note) + ' / ' + n.bareme}</span></div>
+              <div class="cours-desc">${_txt(date(n.date))} — coefficient ${virgule(n.coefficient)}${n.appreciation ? ' — « ' + _txt(n.appreciation) + ' »' : ''}</div>
+            </div>`).join('') : '<div class="carte-bloc" style="text-align:center;color:var(--gray-500);font-size:13.5px;">Aucune note publiée pour le moment.</div>'}
+          <h3 class="suivi-titre">Dernières séances</h3>
+          ${p.dernieres.length ? `<div class="carte-bloc">${p.dernieres.map(s => `
+            <div class="suivi-seance"><span>${_txt(date(s.date))} — ${_txt(s.intitule || 'Séance')}</span><strong style="color:${couleur[s.statut] || '#374151'};">${_txt(s.statut)}</strong></div>`).join('')}</div>`
+            : '<div class="carte-bloc" style="text-align:center;color:var(--gray-500);font-size:13.5px;">Aucune séance enregistrée pour le moment.</div>'}`;
+      } catch (e) {
+        zone.innerHTML = '<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">Erreur réseau. Réessayez.</div>';
+      }
+    }
 
     async function poserQuestionForum() {
       if (!_espaceApprenant) return;

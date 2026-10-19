@@ -581,6 +581,9 @@
       <button class="nav-item" onclick="naviguer('cours')">
         <span class="iconify" data-icon="tabler:book-2"></span> Cours (Espace apprenant)
       </button>
+      <button class="nav-item" onclick="naviguer('formateurs')">
+        <span class="iconify" data-icon="tabler:school"></span> Formateurs
+      </button>
       <button class="nav-item" onclick="naviguer('forum')">
         <span class="iconify" data-icon="tabler:message-circle-question"></span> Questions apprenants
         <span class="nav-badge" id="badge-forum">0</span>
@@ -969,6 +972,23 @@
       </div>
     </div>
 
+    <div class="page" id="page-formateurs">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:school"></span> Comptes formateurs</span>
+          <div style="display:flex;gap:8px;">
+            <a class="btn btn-ghost btn-sm" href="/espace-formateur" target="_blank" rel="noopener"><span class="iconify" data-icon="tabler:external-link"></span> Espace formateur</a>
+            <button class="btn btn-primary btn-sm" onclick="ouvrirFormateur('')"><span class="iconify" data-icon="tabler:user-plus"></span> Nouveau formateur</button>
+          </div>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">
+          Chaque formateur reçoit un email pour choisir son mot de passe, puis se connecte sur /espace-formateur (mot de passe + code par email).
+          Il ne voit que ses filières : apprenants (sans paiements ni pièces), présences, notes, cours et questions.
+        </p>
+        <div id="formateurs-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
     <div class="page" id="page-forum">
       <div class="table-card">
         <div class="table-card-header">
@@ -1204,6 +1224,36 @@
     </div>
     <div class="modal-body" id="msg-modal-body"></div>
     <div class="modal-footer" id="msg-modal-footer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-formateur">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="fo-titre">Nouveau formateur</h3>
+      <button class="modal-close" onclick="fermerModal('modal-formateur')"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body">
+      <div class="cours-form-grille" style="padding:0;">
+        <div><label class="auth-label" for="fo-prenom">Prénom</label><input type="text" id="fo-prenom" class="auth-input" maxlength="60" /></div>
+        <div><label class="auth-label" for="fo-nom">Nom</label><input type="text" id="fo-nom" class="auth-input" maxlength="60" /></div>
+        <div><label class="auth-label" for="fo-email">Email (connexion)</label><input type="email" id="fo-email" class="auth-input" /></div>
+        <div><label class="auth-label" for="fo-tel">Téléphone</label><input type="tel" id="fo-tel" class="auth-input" maxlength="20" /></div>
+        <div style="grid-column:1/-1;">
+          <span class="auth-label">Filières attribuées</span>
+          <div id="fo-filieres" class="cours-source-choix" style="flex-direction:column;gap:6px;"></div>
+        </div>
+        <div style="grid-column:1/-1;" id="fo-statut-bloc">
+          <label class="auth-label" for="fo-statut">Statut du compte</label>
+          <select id="fo-statut" class="auth-input"><option value="Actif">Actif</option><option value="Désactivé">Désactivé (plus aucun accès)</option></select>
+        </div>
+      </div>
+      <div class="auth-error" id="err-fo"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-formateur')">Annuler</button>
+      <button class="btn btn-primary btn-sm" id="btn-fo-enreg" onclick="enregistrerFormateur()"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -1762,7 +1812,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', galerie: 'Galerie photos', temoignages: 'Témoignages' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', galerie: 'Galerie photos', temoignages: 'Témoignages' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -1774,6 +1824,7 @@ function naviguer(page, filtre = '') {
   if (page === 'suivi')           chargerSuiviTelechargements();
   if (page === 'cours')           chargerCoursAdmin();
   if (page === 'forum')           chargerForumAdmin();
+  if (page === 'formateurs')      chargerFormateursAdmin();
   if (page === 'galerie')         chargerGalerieAdmin();
   if (page === 'temoignages')     chargerTemoignagesAdmin();
   if (filtre && page === 'dossiers') {
@@ -4328,6 +4379,102 @@ function _demarrerPollingBadgeForum() {
   _pollingBadgeForumId = setInterval(() => {
     if (!document.hidden && state.token) actualiserBadgeForum();
   }, 20000);
+}
+
+/* ================================================================
+   FORMATEURS — comptes de l'espace formateur (GAS/formateurs.gs)
+================================================================ */
+const FO_FILIERES = [
+  ['Informatique & Bureautique', 'Secrétariat bureautique'], ['Secrétariat comptable', 'Secrétariat comptable'],
+  ['Graphisme & PAO', 'Graphisme'], ['Montage audio-visuel', 'Montage audio-visuel'], ['Sérigraphie', 'Sérigraphie'],
+  ['Création de sites web', 'Développeur Web / Mobile / Windows'], ['Pack 3 Filières', 'Pack 3 Filières (apprenants du Pack uniquement)'],
+  ['Initiation rapide (1 mois)', 'Initiation rapide — anciens dossiers']
+];
+let _formateurs = [];
+let _formateurEnModif = null;
+
+async function chargerFormateursAdmin() {
+  const zone = document.getElementById('formateurs-container');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_formateurs_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    _formateurs = r.formateurs;
+    if (!_formateurs.length) { zone.innerHTML = '<div class="empty-state"><p>Aucun formateur. Cliquez sur « Nouveau formateur ».</p></div>'; return; }
+    zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Formateur</th><th>Filières</th><th>Statut</th><th>Dernière connexion</th><th></th></tr></thead>
+      <tbody>${_formateurs.map(f => `<tr>
+        <td><strong>${_escAdmin(_clairCours(f.prenom))} ${_escAdmin(_clairCours(f.nom))}</strong><br><span style="font-size:12px;color:var(--text-3);">${_escAdmin(f.email)}${f.telephone ? ' — ' + _escAdmin(f.telephone) : ''}</span></td>
+        <td style="font-size:12px;">${f.filieres.map(x => _escAdmin(x.nom)).join('<br>')}</td>
+        <td>${f.statut === 'Actif' ? '<span class="badge badge-green">Actif</span>' : '<span class="badge badge-red">Désactivé</span>'}${f.motDePasseDefini ? '' : '<br><span style="font-size:11px;color:var(--orange);">Invitation non activée</span>'}</td>
+        <td style="font-size:12px;">${f.derniereConnexion ? new Date(f.derniereConnexion).toLocaleString('fr-FR') : 'Jamais'}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-ghost btn-sm" title="Modifier" onclick="ouvrirFormateur('${_escAdmin(f.id)}')"><span class="iconify" data-icon="tabler:pencil"></span></button>
+          ${f.statut === 'Actif' ? `<button class="btn btn-ghost btn-sm" title="Renvoyer l'invitation (choix du mot de passe)" onclick="inviterFormateur('${_escAdmin(f.id)}')"><span class="iconify" data-icon="tabler:mail-forward"></span></button>` : ''}
+        </td></tr>`).join('')}</tbody></table></div>`;
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+function ouvrirFormateur(id) {
+  const f = _formateurs.find(x => x.id === id) || null;
+  _formateurEnModif = f;
+  document.getElementById('fo-titre').textContent = f ? 'Modifier : ' + _clairCours(f.prenom) + ' ' + _clairCours(f.nom) : 'Nouveau formateur';
+  document.getElementById('fo-prenom').value = f ? _clairCours(f.prenom) : '';
+  document.getElementById('fo-nom').value = f ? _clairCours(f.nom) : '';
+  document.getElementById('fo-email').value = f ? f.email : '';
+  document.getElementById('fo-email').disabled = !!f;          // l'email est l'identifiant de connexion
+  document.getElementById('fo-tel').value = f ? f.telephone : '';
+  document.getElementById('fo-statut').value = f ? f.statut : 'Actif';
+  document.getElementById('fo-statut-bloc').hidden = !f;
+  const cles = f ? f.filieresCles : [];
+  document.getElementById('fo-filieres').innerHTML = FO_FILIERES.map(([cle, nom]) =>
+    `<label><input type="checkbox" value="${_escAdmin(cle)}"${cles.includes(cle) ? ' checked' : ''} /> ${_escAdmin(nom)}</label>`).join('');
+  document.getElementById('err-fo').classList.remove('show');
+  ouvrirModal('modal-formateur');
+}
+
+async function enregistrerFormateur() {
+  const err = document.getElementById('err-fo');
+  const erreur = m => { err.textContent = m; err.classList.add('show'); };
+  err.classList.remove('show');
+  const charge = {
+    prenom: document.getElementById('fo-prenom').value.trim(),
+    nom: document.getElementById('fo-nom').value.trim(),
+    telephone: document.getElementById('fo-tel').value.trim(),
+    filieres: [...document.querySelectorAll('#fo-filieres input:checked')].map(i => i.value)
+  };
+  if (!charge.prenom || !charge.nom) return erreur('Prénom et nom obligatoires.');
+  if (!charge.filieres.length) return erreur('Cochez au moins une filière.');
+  if (_formateurEnModif) {
+    charge.id = _formateurEnModif.id;
+    charge.statut = document.getElementById('fo-statut').value;
+  } else {
+    charge.email = document.getElementById('fo-email').value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(charge.email)) return erreur('Adresse email invalide.');
+  }
+  const btn = document.getElementById('btn-fo-enreg');
+  btn.disabled = true;
+  try {
+    const r = await apiCall(_formateurEnModif ? 'admin_formateur_modifier' : 'admin_formateur_creer', charge);
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message || 'Formateur enregistré.', r.invitationEnvoyee === false ? 'error' : 'success');
+    fermerModal('modal-formateur');
+    chargerFormateursAdmin();
+  } catch (e) {
+    erreur(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function inviterFormateur(id) {
+  try {
+    const r = await apiCall('admin_formateur_inviter', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
 }
 
 // Lien WhatsApp prêt à envoyer à l'apprenant après une réponse.
