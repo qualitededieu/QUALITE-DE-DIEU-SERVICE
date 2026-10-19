@@ -226,6 +226,16 @@
     .table-card-actions { display: flex; gap: 8px; align-items: center; }
 
     .data-table { width: 100%; border-collapse: collapse; }
+    .cours-form-grille { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 700px) { .cours-form-grille { grid-template-columns: 1fr; } }
+    .cours-source-choix { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--text-2); }
+    .cours-source-choix label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .cours-fichier-choisi { font-size: 13px; color: var(--text-2); margin-left: 8px; word-break: break-all; }
+    .cours-aide { font-size: 12px; color: var(--text-3); line-height: 1.6; margin-top: 8px; }
+    .cours-module-titre { padding: 14px 20px 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--teal-l); }
+    .cours-vues-btn { background: none; border: none; color: var(--teal-l); cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; padding: 0; }
+    .forum-compteur { font-size: 11px; color: var(--text-3); text-align: right; margin-top: 4px; }
+    .forum-texte { white-space: pre-line; }
     .rr-pj-zone { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
     .rr-pj-ligne { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); background: var(--dark-900); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; max-width: 100%; margin-bottom: 8px; }
     .rr-pj-ligne[hidden] { display: none; }
@@ -864,11 +874,11 @@
     <div class="page" id="page-cours">
       <div class="table-card" style="margin-bottom:20px;">
         <div class="table-card-header">
-          <span class="table-card-title">
+          <span class="table-card-title" id="cours-form-titre">
             <span class="iconify" data-icon="tabler:circle-plus"></span> Ajouter un support de cours
           </span>
         </div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="cours-form-grille">
           <div>
             <label class="auth-label" for="cours-filiere">Filière</label>
             <select id="cours-filiere" class="auth-input">
@@ -880,42 +890,76 @@
               <option value="Sérigraphie">Sérigraphie</option>
               <option value="Création de sites web">Développeur Web / Mobile / Windows</option>
               <option value="Initiation rapide (1 mois)">Initiation rapide (1 mois) — anciens dossiers</option>
+              <option value="Pack 3 Filières">Pack 3 Filières</option>
               <option value="Tous">Tous (support commun)</option>
             </select>
           </div>
           <div>
-            <label class="auth-label" for="cours-type">Type</label>
-            <select id="cours-type" class="auth-input">
-              <option value="PDF">PDF</option>
-              <option value="Vidéo">Vidéo</option>
-              <option value="Lien">Lien</option>
-            </select>
+            <label class="auth-label" for="cours-module">Module / chapitre (facultatif)</label>
+            <input type="text" id="cours-module" class="auth-input" list="cours-modules-liste" maxlength="80" placeholder="Ex. Module 1 — Word" />
+            <datalist id="cours-modules-liste"></datalist>
           </div>
           <div style="grid-column:1/-1;">
             <label class="auth-label" for="cours-titre">Titre</label>
-            <input type="text" id="cours-titre" class="auth-input" placeholder="Ex. Module 1 — Prise en main de Word" maxlength="150" />
+            <input type="text" id="cours-titre" class="auth-input" placeholder="Ex. Leçon 1 — Prise en main de Word" maxlength="150" />
           </div>
           <div style="grid-column:1/-1;">
-            <label class="auth-label" for="cours-url">Lien (Google Drive, YouTube...)</label>
-            <input type="text" id="cours-url" class="auth-input" placeholder="https://..." />
-          </div>
-          <div style="grid-column:1/-1;">
-            <label class="auth-label" for="cours-description">Description (optionnel)</label>
+            <label class="auth-label" for="cours-description">Description (facultatif)</label>
             <input type="text" id="cours-description" class="auth-input" maxlength="300" />
           </div>
+
+          <div style="grid-column:1/-1;" id="cours-source-bloc">
+            <span class="auth-label">Support</span>
+            <div class="cours-source-choix" role="radiogroup">
+              <label><input type="radio" name="cours-source" value="fichier" checked /> Envoyer un fichier (PDF ou vidéo, 25 Mo max)</label>
+              <label><input type="radio" name="cours-source" value="lien" /> Coller un lien (YouTube, Google Drive, site web)</label>
+            </div>
+          </div>
+          <div style="grid-column:1/-1;" id="cours-zone-fichier">
+            <label class="btn btn-ghost btn-sm" for="cours-fichier" style="cursor:pointer;">
+              <span class="iconify" data-icon="tabler:upload"></span> Choisir le fichier
+            </label>
+            <input type="file" id="cours-fichier" accept=".pdf,.mp4,.webm,.mov,application/pdf,video/mp4,video/webm,video/quicktime" hidden />
+            <span id="cours-fichier-choisi" class="cours-fichier-choisi">Aucun fichier choisi</span>
+            <p class="cours-aide">Le fichier est rangé et partagé automatiquement sur Drive. Vidéo plus lourde : mettez-la sur YouTube en « non répertoriée » et collez le lien.</p>
+          </div>
+          <div style="grid-column:1/-1;" id="cours-zone-lien" hidden>
+            <label class="auth-label" for="cours-url">Lien (https://...)</label>
+            <input type="text" id="cours-url" class="auth-input" placeholder="https://..." />
+            <div style="margin-top:8px;">
+              <label class="auth-label" for="cours-type">Type</label>
+              <select id="cours-type" class="auth-input" style="max-width:200px;">
+                <option value="PDF">PDF</option>
+                <option value="Vidéo">Vidéo</option>
+                <option value="Lien">Lien</option>
+              </select>
+            </div>
+            <p class="cours-aide">YouTube et Google Drive s'ouvrent DANS l'espace apprenant (lien non affiché). Un autre site s'ouvre dans un nouvel onglet.</p>
+          </div>
+          <div>
+            <label class="auth-label" for="cours-ordre">Ordre dans le module</label>
+            <input type="number" id="cours-ordre" class="auth-input" value="0" min="-999" max="999" style="max-width:120px;" />
+          </div>
+          <div style="display:flex;align-items:flex-end;" id="cours-notifier-bloc">
+            <label class="auth-label" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="checkbox" id="cours-notifier" style="width:18px;height:18px;" /> Prévenir les apprenants de la filière par email
+            </label>
+          </div>
         </div>
-        <div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px;">
-          <button class="btn btn-primary btn-sm" onclick="ajouterCoursAdmin()" id="btn-cours-ajouter">
-            <span class="iconify" data-icon="tabler:plus"></span> Ajouter
+        <div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="enregistrerCoursAdmin()" id="btn-cours-ajouter">
+            <span class="iconify" data-icon="tabler:plus"></span> <span id="btn-cours-libelle">Ajouter</span>
           </button>
+          <button class="btn btn-ghost btn-sm" onclick="annulerModifCours()" id="btn-cours-annuler" hidden>Annuler la modification</button>
+          <span id="cours-progression" class="cours-aide" style="margin:0;"></span>
           <div class="auth-error" id="err-cours"></div>
         </div>
       </div>
 
       <div class="table-card">
         <div class="table-card-header">
-          <span class="table-card-title">Supports déjà en ligne</span>
-          <button class="btn btn-ghost btn-sm" onclick="chargerCoursAdmin()">
+          <span class="table-card-title">Supports en ligne</span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerCoursAdmin()" title="Actualiser">
             <span class="iconify" data-icon="tabler:refresh"></span>
           </button>
         </div>
@@ -1160,6 +1204,18 @@
     </div>
     <div class="modal-body" id="msg-modal-body"></div>
     <div class="modal-footer" id="msg-modal-footer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cours-vues">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3>Consultations — <span id="cv-titre"></span></h3>
+      <button class="modal-close" onclick="fermerModal('modal-cours-vues')">
+        <span class="iconify" data-icon="tabler:x"></span>
+      </button>
+    </div>
+    <div class="modal-body" id="cv-corps"></div>
   </div>
 </div>
 
@@ -4024,75 +4080,223 @@ async function supprimerTemoignageAdmin(id) {
   } catch (e) { toast('Erreur : ' + e.message, 'error'); }
 }
 
+/* ================================================================
+   COURS — supports de l'Espace apprenant (GAS/cours.gs)
+   Ajout par fichier ou par lien, modules + ordre, modification,
+   notification email, suivi des consultations.
+================================================================ */
+const COURS_FICHIER_MAX = 25 * 1024 * 1024;
+const COURS_TYPES = { pdf: 'application/pdf', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
+let _coursListe = [];
+let _coursEnModif = null;     // support en cours de modification (ou null = ajout)
+let _coursFichier = null;     // { file, mimeType }
+
+function _sourceCours() {
+  const r = document.querySelector('input[name="cours-source"]:checked');
+  return r ? r.value : 'lien';
+}
+
+function _majZonesCours() {
+  const fichier = _sourceCours() === 'fichier';
+  document.getElementById('cours-zone-fichier').hidden = !fichier;
+  document.getElementById('cours-zone-lien').hidden = fichier;
+}
+
+document.querySelectorAll('input[name="cours-source"]').forEach(r => r.addEventListener('change', _majZonesCours));
+document.getElementById('cours-fichier').addEventListener('change', function () {
+  const err = document.getElementById('err-cours');
+  err.classList.remove('show');
+  const f = this.files && this.files[0];
+  _coursFichier = null;
+  document.getElementById('cours-fichier-choisi').textContent = 'Aucun fichier choisi';
+  if (!f) return;
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  const mime = Object.values(COURS_TYPES).includes(f.type) ? f.type : (COURS_TYPES[ext] || '');
+  if (!mime) { this.value = ''; err.textContent = 'Format non accepté : PDF, MP4, WEBM ou MOV.'; err.classList.add('show'); return; }
+  if (f.size > COURS_FICHIER_MAX) { this.value = ''; err.textContent = 'Fichier trop lourd (25 Mo maximum). Pour une vidéo plus longue, utilisez YouTube « non répertoriée ».'; err.classList.add('show'); return; }
+  _coursFichier = { file: f, mimeType: mime };
+  document.getElementById('cours-fichier-choisi').textContent = f.name + ' — ' + _taille(f.size);
+  if (!document.getElementById('cours-titre').value.trim()) {
+    document.getElementById('cours-titre').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 150);
+  }
+});
+
+// Les textes reviennent du serveur avec < et > neutralisés : on les remet
+// en clair pour les champs de saisie, et on échappe tout à l'affichage.
+function _clairCours(t) { return String(t || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
+
 async function chargerCoursAdmin() {
   const container = document.getElementById('cours-table-container');
   container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   try {
     const result = await apiCall('admin_cours_lister');
     if (result.status !== 'success') throw new Error(result.message);
-    if (!result.cours.length) {
+    _coursListe = result.cours || [];
+    document.getElementById('cours-modules-liste').innerHTML = (result.modules || [])
+      .map(m => `<option value="${_escAdmin(_clairCours(m))}"></option>`).join('');
+    if (!_coursListe.length) {
       container.innerHTML = '<div class="empty-state"><p>Aucun support ajouté pour le moment.</p></div>';
       return;
     }
-    container.innerHTML = `
+    // Regroupement par module, dans l'ordre renvoyé par le serveur.
+    const groupes = [];
+    _coursListe.forEach(c => {
+      const nom = c.module || 'Autres supports';
+      let g = groupes.find(x => x.nom === nom);
+      if (!g) { g = { nom, cours: [] }; groupes.push(g); }
+      g.cours.push(c);
+    });
+    const libFiliere = v => { const o = [...document.querySelectorAll('#cours-filiere option')].find(x => x.value === v); return o ? o.textContent : v; };
+    container.innerHTML = groupes.map(g => `
+      <div class="cours-module-titre">${_escAdmin(_clairCours(g.nom))}</div>
+      <div style="overflow-x:auto;">
       <table class="data-table">
-        <thead><tr><th>Filière</th><th>Titre</th><th>Type</th><th>Ajouté le</th><th></th></tr></thead>
-        <tbody>${result.cours.map(c => `
+        <thead><tr><th>Ordre</th><th>Titre</th><th>Filière</th><th>Type</th><th>Consultations</th><th>Ajouté le</th><th></th></tr></thead>
+        <tbody>${g.cours.map(c => `
           <tr>
-            <td>${c.filiere}</td>
-            <td><a href="${c.url}" target="_blank" rel="noopener">${c.titre}</a></td>
-            <td>${c.type}</td>
-            <td>${new Date(c.dateAjout).toLocaleDateString('fr-FR')}</td>
-            <td><button class="btn btn-ghost btn-sm" onclick="supprimerCoursAdmin('${c.id}')">
-              <span class="iconify" data-icon="tabler:trash"></span>
-            </button></td>
+            <td>${Number(c.ordre) || 0}</td>
+            <td><strong>${_escAdmin(_clairCours(c.titre))}</strong>${c.description ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(c.description))}</span>` : ''}${c.fileId ? '<br><span style="font-size:11px;color:var(--text-3);">Fichier envoyé depuis l\'admin</span>' : ''}</td>
+            <td>${_escAdmin(libFiliere(c.filiere))}</td>
+            <td>${_escAdmin(c.type)}</td>
+            <td>${c.vues ? `<button type="button" class="cours-vues-btn" onclick="voirConsultationsCours('${_escAdmin(c.id)}')">${c.vues} ouverture${c.vues > 1 ? 's' : ''} — ${c.apprenantsDistincts} apprenant${c.apprenantsDistincts > 1 ? 's' : ''}</button>` : '<span style="color:var(--text-3);font-size:12px;">Pas encore ouvert</span>'}</td>
+            <td>${c.dateAjout ? new Date(c.dateAjout).toLocaleDateString('fr-FR') : '—'}</td>
+            <td style="white-space:nowrap;">
+              ${/^https:\/\//.test(c.url) ? `<a class="btn btn-ghost btn-sm" href="${_escAdmin(c.url)}" target="_blank" rel="noopener" title="Ouvrir"><span class="iconify" data-icon="tabler:external-link"></span></a>` : ''}
+              <button class="btn btn-ghost btn-sm" title="Modifier" onclick="modifierCoursAdmin('${_escAdmin(c.id)}')"><span class="iconify" data-icon="tabler:pencil"></span></button>
+              <button class="btn btn-ghost btn-sm" title="Supprimer" onclick="supprimerCoursAdmin('${_escAdmin(c.id)}')"><span class="iconify" data-icon="tabler:trash"></span></button>
+            </td>
           </tr>`).join('')}</tbody>
-      </table>`;
+      </table></div>`).join('');
   } catch (e) {
-    container.innerHTML = '<div class="empty-state"><p>Erreur de chargement.</p></div>';
+    container.innerHTML = '<div class="empty-state"><p>Erreur de chargement : ' + _escAdmin(e.message) + '</p></div>';
   }
 }
 
-async function ajouterCoursAdmin() {
-  const filiere     = document.getElementById('cours-filiere').value;
-  const type        = document.getElementById('cours-type').value;
-  const titre       = document.getElementById('cours-titre').value.trim();
-  const url         = document.getElementById('cours-url').value.trim();
-  const description = document.getElementById('cours-description').value.trim();
-  const errEl       = document.getElementById('err-cours');
-  const btn         = document.getElementById('btn-cours-ajouter');
+function _viderFormCours() {
+  ['cours-titre', 'cours-description', 'cours-url', 'cours-module'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('cours-ordre').value = '0';
+  document.getElementById('cours-fichier').value = '';
+  document.getElementById('cours-fichier-choisi').textContent = 'Aucun fichier choisi';
+  document.getElementById('cours-notifier').checked = false;
+  document.getElementById('cours-progression').textContent = '';
+  _coursFichier = null;
+}
 
+function modifierCoursAdmin(id) {
+  const c = _coursListe.find(x => x.id === id);
+  if (!c) return;
+  _coursEnModif = c;
+  document.getElementById('cours-filiere').value = c.filiere;
+  document.getElementById('cours-module').value = _clairCours(c.module);
+  document.getElementById('cours-titre').value = _clairCours(c.titre);
+  document.getElementById('cours-description').value = _clairCours(c.description);
+  document.getElementById('cours-ordre').value = Number(c.ordre) || 0;
+  document.getElementById('cours-url').value = c.fileId ? '' : c.url;
+  document.getElementById('cours-type').value = ['PDF', 'Vidéo', 'Lien'].includes(c.type) ? c.type : 'Lien';
+  // Fichier déjà envoyé : on ne change que les textes. Lien : modifiable.
+  document.getElementById('cours-source-bloc').hidden = true;
+  document.getElementById('cours-zone-fichier').hidden = true;
+  document.getElementById('cours-zone-lien').hidden = !!c.fileId;
+  document.getElementById('cours-notifier-bloc').style.display = 'none';   // style inline : hidden ne suffit pas
+  document.getElementById('cours-form-titre').innerHTML = '<span class="iconify" data-icon="tabler:pencil"></span> Modifier : ' + _escAdmin(_clairCours(c.titre));
+  document.getElementById('btn-cours-libelle').textContent = 'Enregistrer les modifications';
+  document.getElementById('btn-cours-annuler').hidden = false;
+  document.getElementById('page-cours').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function annulerModifCours() {
+  _coursEnModif = null;
+  _viderFormCours();
+  document.getElementById('cours-source-bloc').hidden = false;
+  document.getElementById('cours-notifier-bloc').style.display = 'flex';
+  _majZonesCours();
+  document.getElementById('cours-form-titre').innerHTML = '<span class="iconify" data-icon="tabler:circle-plus"></span> Ajouter un support de cours';
+  document.getElementById('btn-cours-libelle').textContent = 'Ajouter';
+  document.getElementById('btn-cours-annuler').hidden = true;
+  document.getElementById('err-cours').classList.remove('show');
+}
+
+async function enregistrerCoursAdmin() {
+  const errEl = document.getElementById('err-cours');
+  const btn   = document.getElementById('btn-cours-ajouter');
+  const prog  = document.getElementById('cours-progression');
+  const erreur = m => { errEl.textContent = m; errEl.classList.add('show'); };
   errEl.classList.remove('show'); errEl.textContent = '';
-  if (!titre || !url) {
-    errEl.textContent = 'Titre et lien sont obligatoires.';
-    errEl.classList.add('show');
-    return;
+
+  const charge = {
+    filiere:     document.getElementById('cours-filiere').value,
+    module:      document.getElementById('cours-module').value.trim(),
+    titre:       document.getElementById('cours-titre').value.trim(),
+    description: document.getElementById('cours-description').value.trim(),
+    ordre:       Number(document.getElementById('cours-ordre').value) || 0,
+    type:        document.getElementById('cours-type').value
+  };
+  if (!charge.titre) return erreur('Le titre est obligatoire.');
+
+  const enModif = !!_coursEnModif;
+  const parFichier = !enModif && _sourceCours() === 'fichier';
+  if (enModif) {
+    charge.id = _coursEnModif.id;
+    if (!_coursEnModif.fileId) charge.url = document.getElementById('cours-url').value.trim();
+  } else if (parFichier) {
+    if (!_coursFichier) return erreur('Choisissez le fichier à envoyer.');
+  } else {
+    charge.url = document.getElementById('cours-url').value.trim();
   }
+  if (charge.url !== undefined && !/^https:\/\/\S{4,}$/i.test(charge.url)) return erreur('Le lien doit commencer par https://');
+  if (!enModif) charge.notifier = document.getElementById('cours-notifier').checked;
 
   btn.disabled = true;
   try {
-    const result = await apiCall('admin_cours_ajouter', { filiere, type, titre, url, description });
-    if (result.status === 'success') {
-      toast('Support ajouté.', 'success');
-      document.getElementById('cours-titre').value = '';
-      document.getElementById('cours-url').value = '';
-      document.getElementById('cours-description').value = '';
-      chargerCoursAdmin();
+    if (parFichier) {
+      prog.textContent = 'Préparation du fichier…';
+      const dataUrl = await _lireEnDataUrl(_coursFichier.file);
+      charge.fichier = { base64: String(dataUrl).split(',')[1] || '', mimeType: _coursFichier.mimeType, nom: _coursFichier.file.name };
+      prog.textContent = 'Envoi en cours (' + _taille(_coursFichier.file.size) + ')… ne fermez pas la page.';
     } else {
-      errEl.textContent = result.message || 'Erreur.';
-      errEl.classList.add('show');
+      prog.textContent = 'Enregistrement…';
     }
+    const result = await apiCall(enModif ? 'admin_cours_modifier' : 'admin_cours_ajouter', charge);
+    if (result.status !== 'success') throw new Error(result.message || 'Erreur.');
+    let msg = enModif ? 'Support modifié.' : 'Support ajouté.';
+    if (result.notification) {
+      if (result.notification.envoyes) msg += ' Email envoyé à ' + result.notification.envoyes + ' apprenant(s).';
+      if (result.notification.avertissement) toast(result.notification.avertissement, 'error');
+    }
+    toast(msg, 'success');
+    annulerModifCours();
+    chargerCoursAdmin();
   } catch (e) {
-    toast('Erreur réseau.', 'error');
+    erreur(/fetch|network/i.test(e.message) ? 'Connexion interrompue pendant l\'envoi. Réessayez (un fichier lourd demande une bonne connexion).' : e.message);
+  } finally {
+    btn.disabled = false;
+    prog.textContent = '';
   }
-  btn.disabled = false;
+}
+
+async function voirConsultationsCours(id) {
+  const c = _coursListe.find(x => x.id === id);
+  document.getElementById('cv-titre').textContent = c ? _clairCours(c.titre) : '';
+  const corps = document.getElementById('cv-corps');
+  corps.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  ouvrirModal('modal-cours-vues');
+  try {
+    const r = await apiCall('admin_cours_consultations', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    if (!r.consultations.length) { corps.innerHTML = '<p>Aucune consultation.</p>'; return; }
+    corps.innerHTML = `<table class="data-table"><thead><tr><th>Date</th><th>Apprenant</th><th>Dossier</th></tr></thead><tbody>${
+      r.consultations.map(v => `<tr><td>${v.date ? new Date(v.date).toLocaleString('fr-FR') : '—'}</td><td>${_escAdmin(v.nom)}</td><td class="mono">${_escAdmin(v.dossierId)}</td></tr>`).join('')
+    }</tbody></table>`;
+  } catch (e) {
+    corps.innerHTML = '<p>Erreur : ' + _escAdmin(e.message) + '</p>';
+  }
 }
 
 async function supprimerCoursAdmin(id) {
-  confirmer('Supprimer ce support', 'Les apprenants n\'y auront plus accès. Confirmer ?', async () => {
+  confirmer('Supprimer ce support', 'Les apprenants n\'y auront plus accès. Un fichier envoyé depuis l\'admin part dans la corbeille Drive (récupérable 30 jours). Confirmer ?', async () => {
     try {
       const result = await apiCall('admin_cours_supprimer', { id });
-      if (result.status === 'success') { toast('Support supprimé.', 'success'); chargerCoursAdmin(); }
+      if (result.status === 'success') { toast('Support supprimé.', 'success'); if (_coursEnModif && _coursEnModif.id === id) annulerModifCours(); chargerCoursAdmin(); }
       else toast(result.message || 'Erreur.', 'error');
     } catch (e) {
       toast('Erreur réseau.', 'error');
@@ -4126,6 +4330,13 @@ function _demarrerPollingBadgeForum() {
   }, 20000);
 }
 
+// Lien WhatsApp prêt à envoyer à l'apprenant après une réponse.
+function _waForum(q) {
+  if (!q.telephone) return '';
+  const texte = `Bonjour ${_clairCours(q.nom).split(' ')[0]}, le Formateur a répondu à votre question. Connectez-vous à votre espace apprenant pour la lire : https://www.qualitededieuservice.com/espace-apprenant`;
+  return 'https://wa.me/' + _waNumero(q.telephone) + '?text=' + encodeURIComponent(texte);
+}
+
 async function chargerForumAdmin() {
   const container = document.getElementById('forum-table-container');
   container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
@@ -4140,24 +4351,30 @@ async function chargerForumAdmin() {
       container.innerHTML = '<div class="empty-state"><p>Aucune question pour le moment.</p></div>';
       return;
     }
+    // Textes stockés avec < et > neutralisés : on échappe le reste à l'affichage.
+    const txt = t => _escAdmin(_clairCours(t));
     container.innerHTML = result.questions.map(q => `
       <div class="table-card" style="margin-bottom:12px;${q.statut === 'en_attente' ? 'border:1px solid var(--orange-500,#F97316);' : ''}">
         <div style="padding:14px 18px;">
           <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">
-            ${q.nom} — ${q.filiere} — ${new Date(q.dateQuestion).toLocaleString('fr-FR')}
+            ${txt(q.nom)} — ${txt(q.filiere)} — ${new Date(q.dateQuestion).toLocaleString('fr-FR')}
           </div>
-          <div style="font-size:14px;font-weight:600;margin-bottom:10px;">${q.question}</div>
+          <div class="forum-texte" style="font-size:14px;font-weight:600;margin-bottom:10px;">${txt(q.question)}</div>
           ${q.statut === 'repondu'
-            ? `<div style="background:var(--teal-dim,#E1F5EE);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:10px;">
-                 <strong>Réponse (${q.reponduPar}) :</strong> ${q.reponse}
-               </div>`
+            ? `<div class="forum-texte" style="background:var(--teal-dim,#E1F5EE);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:10px;">
+                 <strong>Réponse (${txt(q.reponduPar)}) :</strong> ${txt(q.reponse)}
+               </div>
+               ${_waForum(q) ? `<a class="btn btn-ghost btn-sm" href="${_escAdmin(_waForum(q))}" target="_blank" rel="noopener"><span class="iconify" data-icon="tabler:brand-whatsapp"></span> Prévenir par WhatsApp</a>` : ''}`
             : `<div style="display:flex;gap:8px;align-items:flex-start;">
-                 <textarea id="reponse-${q.id}" rows="2" placeholder="Votre réponse..." class="auth-input" style="flex:1;"></textarea>
-                 <button class="btn btn-primary btn-sm" onclick="repondreForumAdmin('${q.id}')">
+                 <div style="flex:1;">
+                   <textarea id="reponse-${_escAdmin(q.id)}" rows="4" maxlength="3000" placeholder="Votre réponse..." class="auth-input" style="width:100%;resize:vertical;" oninput="this.nextElementSibling.textContent = this.value.length + ' / 3000'"></textarea>
+                   <div class="forum-compteur">0 / 3000</div>
+                 </div>
+                 <button class="btn btn-primary btn-sm" onclick="repondreForumAdmin('${_escAdmin(q.id)}')" title="Envoyer la réponse">
                    <span class="iconify" data-icon="tabler:send"></span>
                  </button>
                </div>`}
-          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="supprimerForumAdmin('${q.id}')">
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="supprimerForumAdmin('${_escAdmin(q.id)}')">
             <span class="iconify" data-icon="tabler:trash"></span> Supprimer
           </button>
         </div>
@@ -4172,9 +4389,13 @@ async function repondreForumAdmin(id) {
   const zone    = document.getElementById('reponse-' + id);
   const reponse = zone.value.trim();
   if (!reponse) { toast('Écrivez une réponse avant d\'envoyer.', 'error'); return; }
+  if (reponse.length > 3000) { toast('Réponse trop longue (3 000 caractères maximum).', 'error'); return; }
   try {
     const result = await apiCall('admin_forum_repondre', { id, reponse });
-    if (result.status === 'success') { toast('Réponse envoyée.', 'success'); chargerForumAdmin(); }
+    if (result.status === 'success') {
+      toast(result.emailEnvoye ? 'Réponse publiée et envoyée par email à l\'apprenant.' : 'Réponse publiée. Pas d\'email enregistré : utilisez le bouton WhatsApp.', 'success');
+      chargerForumAdmin();
+    }
     else toast(result.message || 'Erreur.', 'error');
   } catch (e) {
     toast('Erreur réseau.', 'error');

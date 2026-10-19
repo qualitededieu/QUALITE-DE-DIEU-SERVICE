@@ -280,12 +280,16 @@ function doPost(e) {
   if (action === 'newsletter_inscrire') return inscrireAbonneNewsletter(data);
   if (action === 'annonces_list_publiees') return annoncesListPubliees(data);
   if (action === 'cours_lister_apprenant') return coursListerApprenant(data);
+  if (action === 'cours_ouvrir') return coursOuvrir(data);
   if (action === 'forum_poster_question') return forumPosterQuestion(data);
   if (action === 'forum_lister') return forumLister(data);
   if (action === 'temoignages_lister')  return temoignagesLister(data);
   if (action === 'temoignage_deposer')  return temoignageDeposer(data);
   if (action === 'galerie_lister')      return galerieLister(data);
   if (action === 'renseignement_suivre') return renseignementSuivre(data);
+  // Formulaire regularisation.html : actif seulement dans le projet qui
+  // contient regularisation.gs (sans effet ailleurs).
+  if (action === 'regularisation' && typeof traiterRegularisation === 'function') return traiterRegularisation(data);
     // Seule l'action "inscription" mène au traitement d'inscription. Avant,
     // toute action inconnue y tombait par défaut : un témoignage envoyé à
     // un GAS pas encore mis à jour renvoyait "prénom, nom, sexe..." au
@@ -302,10 +306,84 @@ function doPost(e) {
   }
 }
 
+// Marqueur de version : à changer à chaque mise à jour du code GAS.
+// Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
+// c'est la preuve que le déploiement EN LIGNE contient bien ce code.
+const VERSION_API = '2026-10-19 cours protégés + forum';
+
+// Liste des modules attendus : true = présent ET à jour dans le code exécuté.
+// ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
+// un vieux fichier "Code" et le fichier "code"), le DERNIER fichier de la
+// liste gagne, sans aucun message d'erreur. On vérifie donc aussi que la
+// version de doPost / routerAdmin réellement utilisée est la nouvelle.
+function _etatModules() {
+  const presente = nom => {
+    try { return typeof globalThis[nom] === 'function' || typeof (0, eval)(nom) === 'function'; }
+    catch (e) { return false; }   // ReferenceError : fonction absente du projet
+  };
+  const source = nom => { try { return String((0, eval)(nom)); } catch (e) { return ''; } };
+  return {
+    galerie:                  presente('galerieLister') && presente('adminGalerieAjouter'),
+    temoignages:              presente('temoignageDeposer') && presente('_normaliserIdDossier'),
+    renseignementsReponse:    presente('adminRepondreRenseignement'),
+    pieceJointeRenseignement: presente('_preparerPieceJointeRens'),
+    coursProteges:            presente('coursOuvrir') && presente('_sessionApprenant'),
+    doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('cours_ouvrir') !== -1,
+    routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_cours_modifier') !== -1
+  };
+}
+
 function doGet(e) {
   const params = (e && e.parameter) || {};
   if (params.action === 'desinscription') return traiterDesinscriptionNewsletter(params);
-  return reponseJSON({ status: 'ok', message: 'LQD Service API v3.1 opérationnelle.' });
+  return reponseJSON({ status: 'ok', message: 'LQD Service API opérationnelle.', version: VERSION_API, modules: _etatModules() });
+}
+
+// DIAGNOSTIC — à lancer depuis l'éditeur (menu déroulant -> verifierDeploiement
+// -> Exécuter), puis lire le journal d'exécution. Dit précisément ce qui
+// bloque : fichier manquant, ANCIENNE fonction en double dans un autre
+// fichier, ou déploiement non mis à jour.
+function verifierDeploiement() {
+  const urlSite = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+  const m = _etatModules();
+  console.log('Version du code dans l\'éditeur : ' + VERSION_API);
+  Object.keys(m).forEach(k => console.log((m[k] ? 'OK       ' : 'PROBLÈME ') + k));
+
+  const doublons = [];
+  if (!m.doPostAJour)      doublons.push('function doPost (doit exister UNIQUEMENT dans le fichier "code")');
+  if (!m.routerAdminAJour) doublons.push('function routerAdmin (doit exister UNIQUEMENT dans le fichier "admin")');
+  if (doublons.length) {
+    console.log('==> CAUSE TROUVÉE : un ANCIEN fichier du projet écrase le nouveau code.');
+    doublons.forEach(d => console.log('    Cherchez (Ctrl+F dans CHAQUE fichier de la liste de gauche) : ' + d));
+    console.log('    Supprimez l\'ancienne version (souvent un fichier "Code" avec majuscule, "Code.gs", "code (1)", "admin copie"...).');
+    console.log('    Puis relancez verifierDeploiement : toutes les lignes doivent être OK.');
+    return;
+  }
+  if (Object.keys(m).some(k => !m[k])) {
+    console.log('==> CAUSE TROUVÉE : un fichier manque ou n\'est pas enregistré (voir lignes PROBLÈME). Collez-le puis Ctrl+S.');
+    return;
+  }
+  // Identité du projet : permet de comparer deux projets Apps Script
+  // (données, compte Google, réglages) avant de changer l'URL du site.
+  try { console.log('Compte Google d\'exécution : ' + Session.getEffectiveUser().getEmail()); } catch (err) {}
+  try {
+    const ss = trouverSpreadsheet(CONFIG.SPREADSHEET_NAME);
+    const f = ss && ss.getSheetByName('Toutes les inscriptions');
+    console.log('Classeur des inscriptions : ' + (ss ? ss.getUrl() : 'INTROUVABLE dans ce compte'));
+    console.log('Dossiers d\'inscription  : ' + (f ? Math.max(0, f.getLastRow() - 1) : 0));
+  } catch (err) { console.log('Classeur : lecture impossible (' + err.message + ')'); }
+  const props = PropertiesService.getScriptProperties();
+  ['ADMIN_MOT_DE_PASSE', 'SECRET_PARTAGE', 'FEDAPAY_MODE', 'BANDEAU_CONFIG'].forEach(k =>
+    console.log('Propriété ' + k + ' : ' + (props.getProperty(k) ? 'définie' : 'ABSENTE')));
+  console.log('Régularisation (regularisation.gs) : ' + (typeof traiterRegularisation === 'function' ? 'présente' : 'absente'));
+
+  let urlProjet = '';
+  try { urlProjet = ScriptApp.getService().getUrl() || ''; } catch (err) { urlProjet = '(non disponible)'; }
+  console.log('Le code de l\'éditeur est CORRECT. Il ne reste que le déploiement.');
+  console.log('URL appelée par le site : ' + urlSite);
+  console.log('URL web de ce projet    : ' + urlProjet);
+  console.log('Déployer > Gérer les déploiements > déploiement AKfycbwbEkz8... > crayon > Version : "Nouvelle version" > Déployer.');
+  console.log('Si ce déploiement n\'apparaît PAS dans la liste : vous n\'êtes pas dans le projet utilisé par le site.');
 }
 
 // Jeu de test complet, synchronisé avec TOUS les champs actuellement

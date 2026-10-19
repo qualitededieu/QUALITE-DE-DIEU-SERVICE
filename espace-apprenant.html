@@ -201,9 +201,38 @@
       /* Déconnexion accessible dans la barre du haut sur mobile, la sidebar étant masquée */
       .btn-deconnexion-mobile{display:flex;}
     }
+    /* Cours par modules + visionneuse intégrée (octobre 2026) */
+    .cours-module{margin:18px 0 8px;font-family:'Sora',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal-700,#0F6E56);}
+    .cours-module:first-child{margin-top:0;}
+    .cours-item .cours-ouvrir{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--teal-600);background:none;border:1.5px solid var(--teal-600);border-radius:50px;padding:7px 14px;cursor:pointer;font-family:inherit;}
+    .cours-item .cours-ouvrir:hover{background:var(--teal-600);color:#fff;}
+    .cours-item .cours-ouvrir:disabled{opacity:.6;cursor:wait;}
+    .cours-desc,.forum-question,.forum-reponse{white-space:pre-line;}
+    .forum-compteur{font-size:11.5px;color:var(--gray-500);text-align:right;margin-top:4px;}
+    .lecteur{position:fixed;inset:0;z-index:10000;background:#031411;display:flex;flex-direction:column;}
+    .lecteur[hidden]{display:none;}
+    .lecteur-barre{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;}
+    .lecteur-titre{flex:1;min-width:0;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lecteur-barre button{width:42px;height:42px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:21px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+    .lecteur-barre button:hover{background:rgba(255,255,255,.28);}
+    .lecteur-barre .lecteur-fermer{background:#F5A623;color:#04342C;}
+    .lecteur-scene{flex:1;padding:0 10px 10px;display:flex;justify-content:center;}
+    .lecteur-scene iframe{width:min(1100px,100%);height:100%;border:none;border-radius:8px;background:#fff;}
+    .lecteur-scene.video iframe{background:#000;}
   </style>
 </head>
 <body>
+  <!-- Lecteur intégré : le support s'affiche DANS l'espace apprenant,
+       sans lien Drive ou YouTube visible (GAS cours_ouvrir). -->
+  <div class="lecteur" id="lecteur" role="dialog" aria-modal="true" aria-label="Support de cours" hidden>
+    <div class="lecteur-barre">
+      <span class="lecteur-titre" id="lecteur-titre"></span>
+      <button type="button" onclick="pleinEcranLecteur()" aria-label="Plein écran" title="Plein écran"><span class="iconify" data-icon="tabler:maximize"></span></button>
+      <button type="button" class="lecteur-fermer" onclick="fermerLecteur()" aria-label="Fermer" title="Fermer (Échap)"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="lecteur-scene" id="lecteur-scene"><iframe id="lecteur-cadre" title="Support de cours" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  </div>
+
 
   <!-- ================= ÉCRAN DE CONNEXION ================= -->
   <div id="ecran-connexion">
@@ -314,7 +343,8 @@
 
           <section id="espace-tab-forum" class="app-panel">
             <div class="forum-form">
-              <textarea id="forum-question" rows="3" placeholder="Posez votre question au Formateur..."></textarea>
+              <textarea id="forum-question" rows="3" maxlength="1000" placeholder="Posez votre question au Formateur..." oninput="document.getElementById('forum-compteur').textContent = this.value.length + ' / 1000'"></textarea>
+              <div class="forum-compteur" id="forum-compteur">0 / 1000</div>
               <div id="forum-msg"></div>
               <button id="forum-btn" class="btn-principal" style="margin-top:10px;" onclick="poserQuestionForum()">
                 Envoyer ma question
@@ -322,6 +352,8 @@
             </div>
             <div id="forum-liste"></div>
           </section>
+
+
 
         </div>
       </main>
@@ -850,6 +882,28 @@
       return 'tabler:link';
     }
 
+    // Échappement de tout texte venant du serveur (titres, descriptions,
+    // questions) : les textes sont stockés avec < et > neutralisés.
+    function _txt(t) {
+      const d = document.createElement('div');
+      d.textContent = String(t == null ? '' : t).replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      return d.innerHTML;
+    }
+
+    // Session expirée (8 h), dossier suspendu ou espace fermé : retour à
+    // l'écran de connexion avec le message du serveur.
+    function _sessionTerminee(result) {
+      if (!result || !result.sessionExpiree) return false;
+      fermerLecteur();
+      reinitialiserEspace();
+      const msg = document.getElementById('carte-msg');
+      msg.style.display = 'block';
+      msg.style.background = 'rgba(224,92,42,0.1)';
+      msg.style.color = '#E05C2A';
+      msg.textContent = result.message || 'Votre session a expiré. Reconnectez-vous.';
+      return true;
+    }
+
     async function chargerCoursEspace() {
       if (!_espaceApprenant) return;
       const liste = document.getElementById('cours-liste');
@@ -864,8 +918,9 @@
           body:    JSON.stringify({ action: 'cours_lister_apprenant', token: _espaceApprenant.token })
         });
         const result = await resp.json();
+        if (_sessionTerminee(result)) return;
         if (result.status !== 'success') {
-          liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${result.message || 'Erreur.'}</div>`;
+          liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${_txt(result.message || 'Erreur.')}</div>`;
           return;
         }
         if (!result.cours.length) {
@@ -873,19 +928,85 @@
           vide.style.display = 'block';
           return;
         }
-        liste.innerHTML = result.cours.map(c => `
+        // Regroupement par module (ordre fourni par le serveur).
+        let moduleCourant = null;
+        liste.innerHTML = result.cours.map(c => {
+          const nomModule = c.module || 'Autres supports';
+          const entete = nomModule !== moduleCourant ? `<div class="cours-module">${_txt(nomModule)}</div>` : '';
+          moduleCourant = nomModule;
+          return `${entete}
           <div class="cours-item">
-            <div class="cours-titre">${c.titre}</div>
-            ${c.description ? `<div class="cours-desc">${c.description}</div>` : ''}
-            <a href="${c.url}" target="_blank" rel="noopener">
-              <span class="iconify" data-icon="${_iconeTypeCours(c.type)}"></span> Ouvrir (${c.type})
-            </a>
-          </div>
-        `).join('');
+            <div class="cours-titre">${_txt(c.titre)}</div>
+            ${c.description ? `<div class="cours-desc">${_txt(c.description)}</div>` : ''}
+            <button type="button" class="cours-ouvrir" data-id="${_txt(c.id)}" data-mode="${c.mode === 'lien' ? 'lien' : 'integre'}" data-type="${_txt(c.type)}">
+              <span class="iconify" data-icon="${_iconeTypeCours(c.type)}"></span> ${c.mode === 'lien' ? 'Ouvrir le lien' : (String(c.type).toLowerCase().startsWith('vid') ? 'Regarder' : 'Lire')} (${_txt(c.type)})
+            </button>
+          </div>`;
+        }).join('');
       } catch (e) {
         liste.innerHTML = '<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">Erreur réseau. Réessayez.</div>';
       }
     }
+
+    // Ouverture : l'adresse du support n'est demandée qu'au clic (et la
+    // consultation est enregistrée côté serveur).
+    document.getElementById('cours-liste').addEventListener('click', async e => {
+      const b = e.target.closest('.cours-ouvrir');
+      if (!b || !_espaceApprenant) return;
+      // Lien externe : onglet ouvert tout de suite (sinon bloqué par le navigateur).
+      const onglet = b.dataset.mode === 'lien' ? window.open('about:blank', '_blank') : null;
+      if (onglet) onglet.opener = null;
+      b.disabled = true;
+      try {
+        const resp = await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'cours_ouvrir', token: _espaceApprenant.token, id: b.dataset.id })
+        });
+        const r = await resp.json();
+        if (_sessionTerminee(r)) { if (onglet) onglet.close(); return; }
+        if (r.status !== 'success') { if (onglet) onglet.close(); alert(r.message || 'Support indisponible.'); return; }
+        if (r.mode === 'lien') {
+          if (!/^https:\/\//.test(r.src)) { if (onglet) onglet.close(); return; }
+          if (onglet) onglet.location.href = r.src; else window.open(r.src, '_blank', 'noopener');
+        } else {
+          ouvrirLecteur(r.titre, r.src, r.type);
+        }
+      } catch (err) {
+        if (onglet) onglet.close();
+        alert('Erreur réseau. Réessayez.');
+      } finally {
+        b.disabled = false;
+      }
+    });
+
+    // Seuls les lecteurs Google Drive et YouTube (sans cookie) sont acceptés.
+    function ouvrirLecteur(titre, src, type) {
+      if (!/^https:\/\/(drive\.google\.com\/file\/d\/[\w-]+\/preview|www\.youtube-nocookie\.com\/embed\/[\w-]{11})/.test(String(src))) return;
+      document.getElementById('lecteur-titre').textContent = String(titre || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      document.getElementById('lecteur-scene').classList.toggle('video', /youtube|^vid/i.test(src + ' ' + type));
+      document.getElementById('lecteur-cadre').src = src;
+      document.getElementById('lecteur').hidden = false;
+      document.body.style.overflow = 'hidden';
+      document.querySelector('#lecteur .lecteur-fermer').focus();
+    }
+
+    function fermerLecteur() {
+      const l = document.getElementById('lecteur');
+      if (!l || l.hidden) return;
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      l.hidden = true;
+      document.getElementById('lecteur-cadre').removeAttribute('src');   // coupe le son d'une vidéo
+      document.body.style.overflow = '';
+    }
+
+    function pleinEcranLecteur() {
+      const l = document.getElementById('lecteur');
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else if (l.requestFullscreen) l.requestFullscreen().catch(() => {});
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerLecteur(); });
 
     async function poserQuestionForum() {
       if (!_espaceApprenant) return;
@@ -902,6 +1023,13 @@
         msg.textContent = 'Précisez un peu plus votre question (10 caractères minimum).';
         return;
       }
+      if (question.length > 1000) {
+        msg.style.display = 'block';
+        msg.style.background = '#FDEDEC';
+        msg.style.color = '#C0392B';
+        msg.textContent = 'Question trop longue (1 000 caractères maximum).';
+        return;
+      }
 
       btn.disabled = true;
       btn.textContent = 'Envoi...';
@@ -912,12 +1040,14 @@
           body:    JSON.stringify({ action: 'forum_poster_question', token: _espaceApprenant.token, question })
         });
         const result = await resp.json();
+        if (_sessionTerminee(result)) return;
         msg.style.display = 'block';
         if (result.status === 'success') {
           msg.style.background = '#E1F5EE';
           msg.style.color = '#0D7A8A';
-          msg.textContent = 'Votre question a été envoyée au Formateur. Vous serez informé dès la réponse.';
+          msg.textContent = 'Votre question a été envoyée au Formateur. Vous serez prévenu par email dès la réponse (si votre email est enregistré).';
           zone.value = '';
+          document.getElementById('forum-compteur').textContent = '0 / 1000';
           chargerForumEspace();
         } else {
           msg.style.background = '#FDEDEC';
@@ -949,8 +1079,9 @@
           body:    JSON.stringify({ action: 'forum_lister', token: _espaceApprenant.token })
         });
         const result = await resp.json();
+        if (_sessionTerminee(result)) return;
         if (result.status !== 'success') {
-          if (!silencieux) liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${result.message || 'Erreur.'}</div>`;
+          if (!silencieux) liste.innerHTML = `<div style="text-align:center;padding:16px;color:#c0392b;font-size:13px;">${_txt(result.message || 'Erreur.')}</div>`;
           return;
         }
 
@@ -967,9 +1098,9 @@
         }
         liste.innerHTML = result.questions.map(q => `
           <div class="forum-item">
-            <div class="forum-question">${q.question}</div>
+            <div class="forum-question">${_txt(q.question)}</div>
             ${q.statut === 'repondu'
-              ? `<div class="forum-reponse"><strong>Réponse du Formateur :</strong> ${q.reponse}</div>`
+              ? `<div class="forum-reponse"><strong>Réponse du Formateur :</strong> ${_txt(q.reponse)}</div>`
               : `<div class="forum-statut">En attente de réponse</div>`}
           </div>
         `).join('');

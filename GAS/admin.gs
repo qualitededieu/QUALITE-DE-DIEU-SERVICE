@@ -78,6 +78,8 @@ function routerAdmin(data, action) {
       case 'admin_cours_lister':    return requireAuth(data, adminCoursLister);
       case 'admin_cours_ajouter':   return requireAuth(data, adminCoursAjouter);
       case 'admin_cours_supprimer': return requireAuth(data, adminCoursSupprimer);
+      case 'admin_cours_modifier':  return requireAuth(data, adminCoursModifier);
+      case 'admin_cours_consultations': return requireAuth(data, adminCoursConsultations);
 
       case 'admin_forum_lister':    return requireAuth(data, adminForumLister);
       case 'admin_forum_repondre':  return requireAuth(data, adminForumRepondre);
