@@ -240,8 +240,13 @@
 
       <!-- Fiches de recueil des besoins -->
       <section class="panneau" id="p-fiches">
-        <h2 class="titre-panneau">Fiches de recueil des besoins</h2>
-        <p class="discret">Envoyée automatiquement à chaque apprenant confirmé ; vous pouvez l'envoyer aux autres et relancer. Les réponses sur la santé, l'accessibilité, les finances ou les contraintes personnelles sont réservées à l'administration : vous voyez seulement « Besoin particulier ».</p>
+        <h2 class="titre-panneau">Fiches et questionnaires</h2>
+        <div class="bascule" role="tablist" aria-label="Type de fiche">
+          <button type="button" data-vue="entree" class="actif" role="tab"><span class="iconify" data-icon="tabler:clipboard-text"></span> Fiche d'entrée</button>
+          <button type="button" data-vue="questionnaires" role="tab"><span class="iconify" data-icon="tabler:forms"></span> Mes questionnaires</button>
+        </div>
+        <div id="vue-entree">
+        <p class="discret">Fiche officielle de la Direction. Envoyée automatiquement à chaque apprenant confirmé ; vous pouvez l'envoyer aux autres et relancer. Les réponses sur la santé, l'accessibilité, les finances ou les contraintes personnelles sont réservées à l'administration : vous voyez seulement « Besoin particulier ».</p>
         <div class="stats" id="fiches-stats"></div>
         <div class="barre-outils">
           <select id="filtre-fiche" aria-label="Filtrer les fiches">
@@ -258,6 +263,38 @@
           </div>
         </div>
         <div id="liste-fiches"></div>
+        </div>
+
+        <!-- Questionnaires créés par le formateur -->
+        <div id="vue-questionnaires" hidden>
+          <div id="q-liste-vue">
+            <div class="barre-outils">
+              <p class="discret" style="margin:0;flex:1;min-width:220px;">Vos propres questionnaires : mi-parcours, fin de module, satisfaction... Un questionnaire envoyé n'est plus modifiable : dupliquez-le pour le réutiliser.</p>
+              <button type="button" class="btn btn-plein btn-petit" id="btn-q-nouveau"><span class="iconify" data-icon="tabler:plus"></span> Nouveau questionnaire</button>
+            </div>
+            <div id="liste-questionnaires"></div>
+          </div>
+          <div id="q-editeur-vue" hidden>
+            <div class="carte">
+              <h2 class="titre-carte" id="q-ed-titre"><span class="iconify" data-icon="tabler:forms"></span> Nouveau questionnaire</h2>
+              <label for="q-titre">Titre</label>
+              <input type="text" id="q-titre" maxlength="120" placeholder="Ex. : Bilan de mi-parcours — Graphisme">
+              <div class="grille-form">
+                <div><label for="q-moment">Moment</label><select id="q-moment"></select></div>
+                <div><label for="q-filiere">Filière</label><select id="q-filiere"></select></div>
+              </div>
+              <label class="case" style="margin-top:12px;"><input type="checkbox" id="q-anonyme"> Réponses anonymes (conseillé pour la satisfaction : vous verrez les résultats, pas les noms)</label>
+              <p class="discret" style="margin:4px 0 14px;">Ne posez pas de questions sur la santé, l'argent ou la famille : ces sujets passent par la fiche d'entrée, lue uniquement par l'administration.</p>
+              <div id="q-editeur"></div>
+              <div class="message erreur" id="q-erreur" hidden></div>
+              <div class="pied-form">
+                <button type="button" class="btn btn-fantome" id="btn-q-annuler">Annuler</button>
+                <button type="button" class="btn btn-contour" id="btn-q-apercu"><span class="iconify" data-icon="tabler:eye"></span> Aperçu</button>
+                <button type="button" class="btn btn-plein" id="btn-q-enregistrer"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Questions -->

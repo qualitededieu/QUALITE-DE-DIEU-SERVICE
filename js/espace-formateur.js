@@ -236,7 +236,8 @@
 
   const chargeurs = {
     accueil: chargerAccueil, apprenants: chargerApprenants, presences: chargerSeances,
-    notes: chargerEvals, cours: chargerCours, questions: chargerQuestions, fiches: chargerFiches
+    notes: chargerEvals, cours: chargerCours, questions: chargerQuestions,
+    fiches: () => { chargerFiches(); if (!$('vue-questionnaires').hidden && $('q-editeur-vue').hidden) chargerQuestionnaires(); }
   };
 
   function afficherOnglet(nom) {
@@ -900,6 +901,214 @@
       }));
     } catch (e) { fermerFenetre(); echec(e); }
   }
+
+  /* ---------------------- Questionnaires du formateur ---------------------- */
+  // Le formateur crée ses propres questionnaires (GAS/questionnaires.gs).
+  // Anonyme : le serveur ne renvoie jamais qui a répondu quoi.
+  let questionnaires = null;   // { questionnaires, modeles, moments }
+  let qEdition = null;         // { id, editeur }
+  const STATUT_Q = { 'Brouillon': ['', 'Brouillon'], 'Envoyé': ['vert', 'En cours'], 'Clos': ['', 'Clôturé'], 'Suspendu': ['rouge', 'Suspendu par l\'administration'] };
+  const metaQ = q => ({ titre: clair(q.titre), moment: q.moment, formateur: session.profil.prenom + ' ' + session.profil.nom, anonyme: q.anonyme });
+
+  function basculerFiches(vue) {
+    document.querySelectorAll('.bascule button').forEach(x => x.classList.toggle('actif', x.dataset.vue === vue));
+    $('vue-entree').hidden = vue !== 'entree';
+    $('vue-questionnaires').hidden = vue !== 'questionnaires';
+    if (vue === 'questionnaires') { fermerEditeurQ(); chargerQuestionnaires(); }
+  }
+  document.querySelectorAll('.bascule button').forEach(b => b.addEventListener('click', () => basculerFiches(b.dataset.vue)));
+
+  async function chargerQuestionnaires() {
+    chargement($('liste-questionnaires'));
+    try {
+      const r = await api('formateur_q_lister');
+      if (r.status !== 'success') throw new Error(r.message);
+      questionnaires = r;
+      rendreQuestionnaires();
+    } catch (e) { $('liste-questionnaires').innerHTML = ''; echec(e); }
+  }
+
+  function boutonsModeles() {
+    return questionnaires.modeles.map(m => `<button type="button" class="btn btn-contour btn-petit" data-modele="${esc(m.id)}"><span class="iconify" data-icon="tabler:template"></span> ${esc(m.titre)}${m.anonyme ? ' (anonyme)' : ''}</button>`).join(' ');
+  }
+
+  function rendreQuestionnaires() {
+    const l = questionnaires.questionnaires;
+    if (!l.length) {
+      $('liste-questionnaires').innerHTML = `<div class="carte" style="text-align:center;">
+        <p class="discret">Aucun questionnaire pour le moment. Partez d'un modèle prêt à l'emploi :</p>
+        <div class="ligne-actions" style="justify-content:center;margin-top:10px;">${boutonsModeles()}</div></div>`;
+      return;
+    }
+    $('liste-questionnaires').innerHTML = l.map(q => {
+      const st = STATUT_Q[q.statut] || ['', q.statut];
+      const b = (attr, icone, texte, cls) => `<button type="button" class="btn ${cls || 'btn-fantome'} btn-petit" ${attr}="${esc(q.id)}"><span class="iconify" data-icon="tabler:${icone}"></span> ${texte}</button>`;
+      let actions = '';
+      if (q.statut === 'Brouillon') actions = b('data-q-modifier', 'pencil', 'Modifier', 'btn-contour') + b('data-q-envoyer', 'send', 'Envoyer', 'btn-plein') + b('data-q-suppr', 'trash', 'Supprimer');
+      else {
+        actions = b('data-q-resultats', 'chart-bar', 'Résultats', 'btn-plein');
+        if (q.statut === 'Envoyé') actions += b('data-q-relancer', 'bell-ringing', 'Relancer') + b('data-q-clore', 'lock', 'Clôturer');
+        actions += b('data-q-dupliquer', 'copy', 'Dupliquer');
+      }
+      actions += b('data-q-pdf', 'printer', 'PDF vierge');
+      return `<div class="ligne">
+        <div class="ligne-corps"><strong>${esc(q.titre)}</strong>
+          <span class="discret">${esc(q.moment)} — ${esc(q.filiereNom)} — ${q.nbQuestions} question(s)${q.anonyme ? ' — anonyme' : ''}</span>
+          <span class="discret">${q.statut === 'Brouillon' ? 'Créé le ' + dateFr(q.creeLe) : 'Envoyé le ' + dateFr(q.envoyeLe) + ' — ' + q.nbReponses + ' / ' + q.nbDestinataires + ' réponse(s)'}</span></div>
+        <span class="badge ${st[0]}">${esc(st[1])}</span>
+        ${q.alerte ? `<span class="badge orange" title="Mots sensibles : ${esc(q.alerte)}">Sujet sensible</span>` : ''}
+        <div class="ligne-actions">${actions}</div>
+      </div>`;
+    }).join('');
+  }
+
+  $('btn-q-nouveau').addEventListener('click', () => {
+    if (!questionnaires) return;
+    $('fenetre-titre').textContent = 'Nouveau questionnaire';
+    $('fenetre-corps').innerHTML = `<p class="discret">Partez d'un modèle (vous pourrez tout modifier) ou d'une page blanche.</p>
+      <div style="display:grid;gap:8px;margin-top:12px;">${questionnaires.modeles.map(m => `<button type="button" class="ligne" style="cursor:pointer;text-align:left;border:1px solid var(--gris-100);font:inherit;" data-modele="${esc(m.id)}">
+          <div class="ligne-corps"><strong>${esc(m.titre)}</strong><span class="discret">${esc(m.moment)} — ${m.schema.reduce((n, s) => n + s.questions.length, 0)} questions${m.anonyme ? ' — anonyme' : ''}</span></div></button>`).join('')}
+        <button type="button" class="ligne" style="cursor:pointer;text-align:left;border:1px dashed var(--gris-300);font:inherit;" data-modele="">
+          <div class="ligne-corps"><strong>Page blanche</strong><span class="discret">Je crée mes questions moi-même</span></div></button></div>`;
+    $('fenetre').hidden = false;
+  });
+  // Choix d'un modèle (fenêtre "Nouveau" ou liste vide)
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-modele]');
+    if (!b || !questionnaires) return;
+    const m = questionnaires.modeles.filter(x => x.id === b.dataset.modele)[0];
+    fermerFenetre();
+    ouvrirEditeurQ(null, m || { titre: '', schema: [] });
+  });
+
+  function erreurQ(msg) { $('q-erreur').textContent = msg; $('q-erreur').hidden = !msg; if (msg) $('q-erreur').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+
+  function ouvrirEditeurQ(q, modele) {
+    const src = q || modele || {};
+    $('q-ed-titre').innerHTML = '<span class="iconify" data-icon="tabler:forms"></span> ' + (q ? 'Modifier le questionnaire' : 'Nouveau questionnaire');
+    $('q-titre').value = clair(src.titre || '');
+    $('q-moment').innerHTML = questionnaires.moments.map(m => `<option>${esc(m)}</option>`).join('');
+    $('q-moment').value = src.moment || questionnaires.moments[1];
+    $('q-filiere').innerHTML = session.profil.filieres.map(f => `<option value="${esc(f.cle)}">${esc(f.nom)}</option>`).join('');
+    if (src.filiere) $('q-filiere').value = src.filiere;
+    $('q-anonyme').checked = !!src.anonyme;
+    erreurQ('');
+    qEdition = { id: q ? q.id : null, editeur: FicheBesoins.editeur($('q-editeur'), src.schema || [], { confidentiel: false }) };
+    $('q-liste-vue').hidden = true;
+    $('q-editeur-vue').hidden = false;
+    window.scrollTo({ top: 0 });
+  }
+  function fermerEditeurQ() { qEdition = null; $('q-editeur-vue').hidden = true; $('q-liste-vue').hidden = false; }
+  $('btn-q-annuler').addEventListener('click', () => { if (confirm('Quitter l\'éditeur sans enregistrer ?')) fermerEditeurQ(); });
+
+  $('btn-q-apercu').addEventListener('click', () => {
+    if (!qEdition) return;
+    $('fenetre-titre').textContent = 'Aperçu — ce que verra l\'apprenant';
+    $('fenetre').querySelector('.fenetre-carte').classList.add('large');
+    $('fenetre').hidden = false;
+    FicheBesoins.formulaire($('fenetre-corps'), FicheBesoins.apercuSchema(qEdition.editeur.valeur()), {}, {
+      questionnaire: { titre: $('q-titre').value.trim() || '(sans titre)', moment: $('q-moment').value, formateur: session.profil.prenom + ' ' + session.profil.nom, anonyme: $('q-anonyme').checked },
+      identification: false, brouillon: false, confirmation: false, boutonEnvoyer: 'Envoyer mes réponses',
+      enregistrer: async () => ({ status: 'success', message: 'Aperçu : rien n\'a été envoyé.' })
+    });
+  });
+
+  $('btn-q-enregistrer').addEventListener('click', e => {
+    if (!qEdition) return;
+    const titre = $('q-titre').value.trim();
+    if (titre.length < 3) return erreurQ('Donnez un titre au questionnaire.');
+    avecBouton(e.currentTarget, async () => {
+      try {
+        const r = await api('formateur_q_enregistrer', { id: qEdition.id || '', titre: titre, moment: $('q-moment').value, filiere: $('q-filiere').value,
+          anonyme: $('q-anonyme').checked, schema: qEdition.editeur.valeur() });
+        if (r.status !== 'success') return erreurQ(r.message);
+        toast(r.alerte ? 'Enregistré. Attention : sujet sensible détecté (' + r.alerte + '), l\'administration sera alertée à l\'envoi.' : r.message, !!r.alerte);
+        fermerEditeurQ();
+        chargerQuestionnaires();
+      } catch (err) { echec(err); }
+    });
+  });
+
+  async function qComplet(id) {
+    const r = await api('formateur_q_get', { id: id });
+    if (r.status !== 'success') throw new Error(r.message);
+    return r.questionnaire;
+  }
+
+  async function ouvrirEnvoiQ(id) {
+    const q = questionnaires.questionnaires.filter(x => x.id === id)[0];
+    $('fenetre-titre').textContent = 'Envoyer « ' + clair(q.titre) + ' »';
+    chargement($('fenetre-corps'));
+    $('fenetre').hidden = false;
+    try {
+      const r = await api('formateur_apprenants');
+      if (r.status !== 'success') throw new Error(r.message);
+      const liste = r.apprenants.filter(a => a.phase !== 'termine' && a.filieresCles.indexOf(q.filiere) !== -1);
+      if (!liste.length) { $('fenetre-corps').innerHTML = '<p class="discret">Aucun apprenant en formation dans cette filière.</p>'; return; }
+      $('fenetre-corps').innerHTML = `<p class="discret">${esc(q.filiereNom)} — ${liste.length} apprenant(s) en formation. Ils le reçoivent par email et dans leur espace (onglet « Mes fiches »).${q.anonyme ? ' Anonyme : au moins 3 destinataires.' : ''}</p>
+        <label class="case"><input type="checkbox" id="env-tous" checked> Tous les apprenants de la filière</label>
+        <div id="env-liste" hidden style="max-height:280px;overflow:auto;border:1px solid var(--gris-100);border-radius:10px;padding:6px 10px;margin-top:6px;">
+          ${liste.map(a => `<label class="case"><input type="checkbox" class="env-app" value="${esc(a.id)}" checked> ${esc(a.prenom)} ${esc(a.nom)}${a.phase === 'avenir' ? ' (à venir)' : ''}</label>`).join('')}</div>
+        <div class="pied-form"><button type="button" class="btn btn-plein" id="btn-env-ok"><span class="iconify" data-icon="tabler:send"></span> Envoyer maintenant</button></div>
+        <p class="discret" style="margin-top:8px;">Après l'envoi, les questions ne sont plus modifiables. L'administration est informée.</p>`;
+      $('env-tous').addEventListener('change', () => { $('env-liste').hidden = $('env-tous').checked; });
+      $('btn-env-ok').addEventListener('click', ev => avecBouton(ev.currentTarget, async () => {
+        const ids = $('env-tous').checked ? [] : Array.from(document.querySelectorAll('.env-app:checked')).map(i => i.value);
+        if (!$('env-tous').checked && !ids.length) return toast('Cochez au moins un apprenant.', true);
+        try {
+          const res = await api('formateur_q_envoyer', { id: id, dossierIds: ids });
+          if (res.status !== 'success') throw new Error(res.message);
+          toast(res.message);
+          fermerFenetre();
+          chargerQuestionnaires();
+        } catch (err) { echec(err); }
+      }));
+    } catch (e) { fermerFenetre(); echec(e); }
+  }
+
+  async function ouvrirResultatsQ(id) {
+    $('fenetre-titre').textContent = 'Résultats';
+    chargement($('fenetre-corps'));
+    $('fenetre').querySelector('.fenetre-carte').classList.add('large');
+    $('fenetre').hidden = false;
+    try {
+      const r = await api('formateur_q_resultats', { id: id });
+      if (r.status !== 'success') throw new Error(r.message);
+      const q = r.questionnaire, res = r.resultats;
+      $('fenetre-titre').textContent = 'Résultats — ' + clair(q.titre);
+      $('fenetre-corps').innerHTML = FicheBesoins.resultatsHtml(res)
+        + (res.individuelles && res.individuelles.length ? `<h3 style="font-size:15px;margin:16px 0 8px;">Réponses par apprenant</h3>`
+          + res.individuelles.map(x => `<details class="carte" style="padding:10px 14px;margin-bottom:8px;"><summary style="cursor:pointer;font-weight:700;">${esc(x.apprenant)} <span class="discret">— ${dateFr(x.date)}</span></summary>
+              ${FicheBesoins.lecture(q.schema, { reponses: x.reponses }, 'formateur', Object.assign(metaQ(q), { titre: clair(q.titre) + ' — ' + clair(x.apprenant) }))}</details>`).join('') : '');
+    } catch (e) { fermerFenetre(); echec(e); }
+  }
+
+  $('liste-questionnaires').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || !questionnaires) return;
+    const d = b.dataset;
+    if (d.qModifier) avecBouton(b, async () => { try { ouvrirEditeurQ(await qComplet(d.qModifier)); } catch (err) { echec(err); } });
+    if (d.qEnvoyer) ouvrirEnvoiQ(d.qEnvoyer);
+    if (d.qResultats) ouvrirResultatsQ(d.qResultats);
+    if (d.qPdf) avecBouton(b, async () => {
+      try { const q = await qComplet(d.qPdf); await FicheBesoins.pdf(q.schema, null, 'formateur', metaQ(q)); } catch (err) { echec(err); }
+    });
+    const simple = (action, id, question) => {
+      if (question && !confirm(question)) return;
+      avecBouton(b, async () => {
+        try {
+          const r = await api(action, { id: id });
+          if (r.status !== 'success') throw new Error(r.message);
+          toast(r.message);
+          chargerQuestionnaires();
+        } catch (err) { echec(err); }
+      });
+    };
+    if (d.qSuppr) simple('formateur_q_supprimer', d.qSuppr, 'Supprimer ce questionnaire ?');
+    if (d.qRelancer) simple('formateur_q_relancer', d.qRelancer, 'Relancer par email les apprenants qui n\'ont pas encore répondu ?');
+    if (d.qClore) simple('formateur_q_clore', d.qClore, 'Clôturer ce questionnaire ? Plus aucune réponse ne sera acceptée.');
+    if (d.qDupliquer) simple('formateur_q_dupliquer', d.qDupliquer);
+  });
 
   /* ============================ Démarrage ============================ */
   (function demarrer() {

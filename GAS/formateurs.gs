@@ -1088,6 +1088,15 @@ function routerFormateur(data, action) {
       case 'formateur_besoins_relancer': return formateurBesoinsRelancer(data);
       case 'formateur_besoins_get':      return formateurBesoinsGet(data);
       case 'formateur_besoins_suivi':    return formateurBesoinsSuivi(data);
+      case 'formateur_q_lister':         return formateurQLister(data);
+      case 'formateur_q_get':            return formateurQGet(data);
+      case 'formateur_q_enregistrer':    return formateurQEnregistrer(data);
+      case 'formateur_q_dupliquer':      return formateurQDupliquer(data);
+      case 'formateur_q_supprimer':      return formateurQSupprimer(data);
+      case 'formateur_q_envoyer':        return formateurQEnvoyer(data);
+      case 'formateur_q_relancer':       return formateurQRelancer(data);
+      case 'formateur_q_clore':          return formateurQClore(data);
+      case 'formateur_q_resultats':      return formateurQResultats(data);
       default: return reponseJSON({ status: 'error', message: 'Action formateur inconnue.' });
     }
   } catch (err) {

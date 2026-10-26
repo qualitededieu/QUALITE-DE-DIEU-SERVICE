@@ -165,3 +165,12 @@ textarea{resize:vertical;min-height:90px}
   .segments button{padding:8px 9px;min-width:36px}
   .pied-form .btn-plein{width:100%}
 }
+
+/* ---------- Fiches : bascule fiche d'entrée / questionnaires ---------- */
+.bascule{display:inline-flex;background:var(--gris-100);border-radius:50px;padding:4px;margin:6px 0 14px;flex-wrap:wrap}
+.bascule button{border:none;background:none;border-radius:50px;padding:8px 14px;font-weight:700;color:var(--gris-500);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.bascule button.actif{background:var(--blanc);color:var(--teal-700);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.fb label{letter-spacing:0}
+.fb .fb-opt,.fb .fb-ed-case,.fb .fb-confirm{font-weight:500;color:inherit}
+.fb .fb-ed-ligne{font-weight:500;color:inherit;margin-bottom:0}
+.message.erreur{margin-top:12px}

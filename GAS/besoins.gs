@@ -36,11 +36,18 @@ const BESOINS = {
 // 5 Statut | 6 Envoyée le | 7 Envoyée par | 8 Relances | 9 Dernière relance |
 // 10 Soumise le | 11 Réponses pédagogie | 12 Réponses confidentielles |
 // 13 Besoin particulier | 14 Corrections identité | 15 Confirmation |
-// 16 Suivi (cadre VIII) | 17 Suivi par | 18 Suivi le | 19 Mis à jour le
+// 16 Suivi (cadre VIII) | 17 Suivi par | 18 Suivi le | 19 Mis à jour le |
+// 20 Version du modèle de questions (1 = modèle d'origine ci-dessous)
 const ENTETES_BESOINS = ['ID', 'Dossier ID', 'Apprenant', 'Filière', 'Année de formation', 'Statut',
   'Envoyée le', 'Envoyée par', 'Relances', 'Dernière relance', 'Soumise le',
   'Réponses (pédagogie)', 'Réponses (confidentiel)', 'Besoin particulier', 'Corrections identité',
-  'Confirmation apprenant', 'Suivi (cadre VIII)', 'Suivi par', 'Suivi le', 'Mis à jour le'];
+  'Confirmation apprenant', 'Suivi (cadre VIII)', 'Suivi par', 'Suivi le', 'Mis à jour le', 'Version modèle'];
+
+// Modèle de questions modifiable par l'admin (octobre 2026) : chaque
+// enregistrement crée une NOUVELLE version ; une fiche garde la version
+// avec laquelle elle a été remplie (ses réponses restent lisibles).
+const FEUILLE_MODELE_BESOINS = 'Modèle fiche besoins';
+const ENTETES_MODELE_BESOINS = ['Version', 'Date', 'Auteur', 'Schéma (JSON)', 'Motif'];
 
 const BESOINS_SCHEMA = [
   { id: 'II', titre: 'Parcours scolaire ou de formation', questions: [
@@ -109,14 +116,46 @@ const BESOINS_SCHEMA = [
 
 /* ============================ OUTILS ============================ */
 
-function _questionsBesoins() {
+function _questionsDe(schema) {
   const toutes = [];
-  BESOINS_SCHEMA.forEach(s => s.questions.forEach(q => toutes.push(q)));
+  (schema || BESOINS_SCHEMA).forEach(s => s.questions.forEach(q => toutes.push(q)));
   return toutes;
 }
+function _questionsBesoins() { return _questionsDe(BESOINS_SCHEMA); }
 
 function _feuilleBesoins() {
-  return _feuilleFormation(BESOINS.FEUILLE, ENTETES_BESOINS);
+  const f = _feuilleFormation(BESOINS.FEUILLE, ENTETES_BESOINS);
+  // Feuille créée avant l'ajout de la colonne "Version modèle".
+  if (f && f.getLastColumn() < ENTETES_BESOINS.length) {
+    f.getRange(1, 1, 1, ENTETES_BESOINS.length).setValues([ENTETES_BESOINS]);
+  }
+  return f;
+}
+
+/* ------------------- Modèle de questions (versions) ------------------- */
+
+function _lireModeles() {
+  const f = _feuilleFormation(FEUILLE_MODELE_BESOINS, ENTETES_MODELE_BESOINS);
+  if (!f) return [];
+  return f.getDataRange().getValues().slice(1).filter(r => Number(r[0]) > 1).map(r => ({
+    version: Number(r[0]), date: _isoDate(r[1]), auteur: String(r[2] || ''), schema: _jsonTableau(r[3]), motif: String(r[4] || '')
+  })).filter(m => m.schema.length);
+}
+
+function _jsonTableau(v) {
+  try { const o = JSON.parse(String(v || '')); return Array.isArray(o) ? o : []; } catch (e) { return []; }
+}
+
+// Version active : la dernière enregistrée, sinon le modèle d'origine (version 1).
+function _modeleActif() {
+  const m = _lireModeles().sort((a, b) => a.version - b.version).pop();
+  return m ? { version: m.version, schema: m.schema } : { version: 1, schema: BESOINS_SCHEMA };
+}
+
+function _schemaVersion(version) {
+  if (!version || version === 1) return BESOINS_SCHEMA;
+  const m = _lireModeles().filter(x => x.version === version)[0];
+  return m ? m.schema : BESOINS_SCHEMA;
 }
 
 function _jsonSur(v) {
@@ -139,7 +178,8 @@ function _ligneVersFiche(r, i) {
     relances: Number(r[8]) || 0, derniereRelance: _isoDate(r[9]), soumiseLe: _isoDate(r[10]),
     pedago: _jsonSur(r[11]), sensible: _jsonSur(r[12]), besoinParticulier: String(r[13] || '') === 'Oui',
     corrections: String(r[14] || ''), confirmation: String(r[15] || ''),
-    suivi: _jsonSur(r[16]), suiviPar: String(r[17] || ''), suiviLe: _isoDate(r[18]), majLe: _isoDate(r[19])
+    suivi: _jsonSur(r[16]), suiviPar: String(r[17] || ''), suiviLe: _isoDate(r[18]), majLe: _isoDate(r[19]),
+    version: Number(r[20]) || 1
   };
 }
 
@@ -206,10 +246,10 @@ function _identificationFormateur(row) {
 // Nettoie les réponses envoyées par la page : seules les options prévues
 // sont gardées, les questions masquées (condition "si") sont vidées.
 // Renvoie aussi la liste des questions obligatoires sans réponse.
-function _normaliserReponses(brut) {
+function _normaliserReponses(brut, schema) {
   const src = brut && typeof brut === 'object' ? brut : {};
   const rep = {}, manquants = [];
-  _questionsBesoins().forEach(q => {
+  _questionsDe(schema).forEach(q => {
     if (q.si) {
       const parent = rep[q.si.q];
       if (!parent || parent.choix !== q.si.vaut) return;
@@ -225,7 +265,7 @@ function _normaliserReponses(brut) {
     const permis = q.options.slice();
     if (q.autre) permis.push('Autre');
     const autre = q.autre ? _txtF(v.autre, BESOINS.AUTRE_MAX) : '';
-    if (q.type === 'unique') {
+    if (q.type === 'unique' || q.type === 'note') {
       const c = String(v.choix || '');
       if (permis.indexOf(c) === -1) { if (q.requis) manquants.push(intitule); return; }
       if (c === 'Autre' && !autre) { manquants.push(intitule + ' (précisez « Autre »)'); }
@@ -244,9 +284,9 @@ function _normaliserReponses(brut) {
 }
 
 // Sépare les réponses pédagogiques (formateur) des réponses confidentielles (admin).
-function _separerReponses(rep) {
+function _separerReponses(rep, schema) {
   const pedago = {}, sensible = {};
-  _questionsBesoins().forEach(q => {
+  _questionsDe(schema).forEach(q => {
     const v = rep[q.id];
     if (!v) return;
     if (q.sensible) { sensible[q.id] = v; return; }
@@ -261,9 +301,9 @@ function _separerReponses(rep) {
 }
 
 // Réponses complètes (apprenant lui-même et admin).
-function _fusionnerReponses(pedago, sensible) {
+function _fusionnerReponses(pedago, sensible, schema) {
   const tout = {};
-  _questionsBesoins().forEach(q => {
+  _questionsDe(schema).forEach(q => {
     const p = pedago[q.id], s = sensible[q.id];
     if (!p && !s) return;
     if (q.type !== 'multiple' || !p || !s) { tout[q.id] = p || s; return; }
@@ -339,6 +379,7 @@ function _creerFiches(rows, par) {
   const existantes = {};
   _lireFiches().forEach(f => { existantes[f.dossierId + '|' + f.annee] = true; });
   const maintenant = new Date(), lignes = [], emails = [];
+  const version = _modeleActif().version;
   let sansEmail = 0;
   rows.forEach(r => {
     const a = _mapperApprenantInscription(r);
@@ -348,7 +389,7 @@ function _creerFiches(rows, par) {
     existantes[cle] = true;
     lignes.push(['FB-' + Utilities.formatDate(maintenant, 'Africa/Porto-Novo', 'yyMMdd') + '-' + Utilities.getUuid().slice(0, 6).toUpperCase(),
       a.id, (a.prenom + ' ' + a.nom).trim(), clesFilieres(String(r[22] || '')).join(' | '), annee, 'À remplir',
-      maintenant, par, 0, '', '', '', '', '', '', '', '', '', '', maintenant]);
+      maintenant, par, 0, '', '', '', '', '', '', '', '', '', '', maintenant, version]);
     const mail = String(r[10] || '').trim().toLowerCase();
     if (_emailValide(mail)) emails.push(mail); else sansEmail++;
   });
@@ -389,11 +430,18 @@ function besoinsMaFiche(data) {
   const session = _sessionApprenant(data.token);
   if (session.erreur) return _reponseSession(session);
   const fiche = _ficheDuDossier(session.apprenant.id);
-  if (!fiche) return reponseJSON({ status: 'success', fiche: null, schema: BESOINS_SCHEMA });
+  if (!fiche) return reponseJSON({ status: 'success', fiche: null, schema: _modeleActif().schema });
+  // Fiche jamais commencée : elle passe à la dernière version du modèle.
+  const actif = _modeleActif();
+  if (fiche.statut === 'À remplir' && fiche.version !== actif.version) {
+    _ecrireFiche(fiche, { 20: actif.version });
+    fiche.version = actif.version;
+  }
+  const schema = _schemaVersion(fiche.version);
   const row = _ligneDossier(session.apprenant.id);
-  return reponseJSON({ status: 'success', schema: BESOINS_SCHEMA,
+  return reponseJSON({ status: 'success', schema: schema,
     fiche: { id: fiche.id, annee: fiche.annee, statut: fiche.statut, soumiseLe: fiche.soumiseLe,
-      reponses: _fusionnerReponses(fiche.pedago, fiche.sensible), corrections: fiche.corrections,
+      reponses: _fusionnerReponses(fiche.pedago, fiche.sensible, schema), corrections: fiche.corrections,
       modifiable: fiche.statut === 'À remplir' || fiche.statut === 'Brouillon',
       identification: row ? _identificationDossier(row) : {} } });
 }
@@ -406,7 +454,8 @@ function besoinsEnregistrer(data) {
   if (fiche.statut !== 'À remplir' && fiche.statut !== 'Brouillon') {
     return reponseJSON({ status: 'error', message: 'Cette fiche a déjà été envoyée. Pour la corriger, contactez votre formateur ou l\'administration.' });
   }
-  const n = _normaliserReponses(data.reponses);
+  const schemaFiche = _schemaVersion(fiche.version);
+  const n = _normaliserReponses(data.reponses, schemaFiche);
   const soumettre = data.soumettre === true;
   if (soumettre && n.manquants.length) {
     return reponseJSON({ status: 'error', message: 'Il manque des réponses : ' + n.manquants.join(', ') + '.', manquants: n.manquants });
@@ -414,7 +463,7 @@ function besoinsEnregistrer(data) {
   if (soumettre && data.confirmation !== true) {
     return reponseJSON({ status: 'error', message: 'Cochez la case de confirmation avant d\'envoyer votre fiche.' });
   }
-  const sep = _separerReponses(n.reponses);
+  const sep = _separerReponses(n.reponses, schemaFiche);
   const corrections = _txtF(data.corrections, 800);
   const maintenant = new Date();
   const valeurs = { 5: soumettre ? 'Soumise' : 'Brouillon', 11: JSON.stringify(sep.pedago), 12: JSON.stringify(sep.sensible),
@@ -456,10 +505,10 @@ function _ficheVisiblePourFormateur(f, fiche) {
 }
 
 // Statistiques de groupe (réponses pédagogiques des fiches envoyées).
-function _statsGroupe(fiches) {
+function _statsGroupe(fiches, schema) {
   const recues = fiches.filter(x => x.statut === 'Soumise' || x.statut === 'Traitée');
   const stats = { fichesRecues: recues.length, besoinsParticuliers: recues.filter(x => x.besoinParticulier).length, questions: [] };
-  _questionsBesoins().filter(q => q.type !== 'texte' && !q.sensible).forEach(q => {
+  _questionsDe(schema).filter(q => q.type !== 'texte' && !q.sensible).forEach(q => {
     const comptes = {};
     recues.forEach(x => {
       const v = x.pedago[q.id];
@@ -484,8 +533,9 @@ function formateurBesoinsLister(data) {
     email: !!a.email, fiche: parDossier[a.id] ? _resumeFiche(parDossier[a.id]) : null
   }));
   const ids = apprenants.map(a => a.dossierId);
-  return reponseJSON({ status: 'success', apprenants: apprenants, schema: BESOINS_SCHEMA,
-    stats: _statsGroupe(fiches.filter(x => ids.indexOf(x.dossierId) !== -1)) });
+  const schema = _modeleActif().schema;
+  return reponseJSON({ status: 'success', apprenants: apprenants, schema: schema,
+    stats: _statsGroupe(fiches.filter(x => ids.indexOf(x.dossierId) !== -1), schema) });
 }
 
 function formateurBesoinsEnvoyer(data) {
@@ -534,7 +584,7 @@ function formateurBesoinsGet(data) {
   if (!_ficheVisiblePourFormateur(s.formateur, fiche)) return reponseJSON({ status: 'error', message: 'Fiche introuvable.' });
   const row = _ligneDossier(fiche.dossierId);
   // Réponses PÉDAGOGIQUES uniquement : jamais fiche.sensible ni fiche.corrections.
-  return reponseJSON({ status: 'success', schema: BESOINS_SCHEMA,
+  return reponseJSON({ status: 'success', schema: _schemaVersion(fiche.version),
     fiche: Object.assign(_resumeFiche(fiche), { reponses: fiche.pedago, suivi: fiche.suivi, confirmation: fiche.confirmation,
       identification: row ? _identificationFormateur(row) : { code: fiche.dossierId, nom: fiche.apprenant }, vueFormateur: true }) });
 }
@@ -576,16 +626,18 @@ function adminBesoinsLister(data, email) {
     const a = _mapperApprenantInscription(r);
     if (_phaseApprenant(statut, _dateIso(a.dateEntree), _dateIso(a.dateFin)) !== 'termine') sansFiche++;
   });
+  const actif = _modeleActif();
   return reponseJSON({ status: 'success', fiches: fiches.map(_resumeFiche).sort((a, b) => String(b.envoyeeLe).localeCompare(String(a.envoyeeLe))),
-    sansFiche: sansFiche, stats: _statsGroupe(fiches), schema: BESOINS_SCHEMA });
+    sansFiche: sansFiche, stats: _statsGroupe(fiches, actif.schema), schema: actif.schema, version: actif.version });
 }
 
 function adminBesoinsGet(data, email) {
   const fiche = _lireFiches().filter(x => x.id === String(data.ficheId || ''))[0];
   if (!fiche) return reponseJSON({ status: 'error', message: 'Fiche introuvable.' });
   const row = _ligneDossier(fiche.dossierId);
-  return reponseJSON({ status: 'success', schema: BESOINS_SCHEMA,
-    fiche: Object.assign(_resumeFiche(fiche), { reponses: _fusionnerReponses(fiche.pedago, fiche.sensible),
+  const schema = _schemaVersion(fiche.version);
+  return reponseJSON({ status: 'success', schema: schema,
+    fiche: Object.assign(_resumeFiche(fiche), { reponses: _fusionnerReponses(fiche.pedago, fiche.sensible, schema),
       sensibles: Object.keys(fiche.sensible), corrections: fiche.corrections, suivi: fiche.suivi, confirmation: fiche.confirmation,
       identification: row ? _identificationDossier(row) : { code: fiche.dossierId, nom: fiche.apprenant } }) });
 }
@@ -628,4 +680,123 @@ function adminBesoinsEnvoyer(data, email) {
   const r = _creerFiches(rows, 'Administration : ' + email);
   return reponseJSON({ status: 'success', crees: r.crees,
     message: r.crees ? r.crees + ' fiche(s) envoyée(s)' + (r.sansEmail ? ' — ' + r.sansEmail + ' apprenant(s) sans email.' : '.') : 'Tous les apprenants en formation ont déjà leur fiche.' });
+}
+
+/* ================= CONTRÔLE D'UN QUESTIONNAIRE ÉDITÉ ================= */
+// Partagé par le modèle de la fiche (admin) et les questionnaires des
+// formateurs (questionnaires.gs). Tout ce qui vient de l'éditeur est
+// re-vérifié ici : types, longueurs, options, conditions, identifiants.
+// opts.confidentiel : autorise les marques "admin seul" (admin uniquement).
+const SCHEMA_LIMITES = { SECTIONS: 12, QUESTIONS: 60, OPTIONS: 20, LABEL: 300, OPTION: 150, TITRE: 120 };
+const NOTE_OPTIONS = ['1', '2', '3', '4', '5'];
+
+function _texteSchema(v, max) {
+  // Sans < ni > : les valeurs servent aussi d'identifiants d'options côté page.
+  return String(v == null ? '' : v).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function _validerSchema(brut, opts) {
+  const o = opts || {};
+  const maxQuestions = o.maxQuestions || SCHEMA_LIMITES.QUESTIONS;
+  if (!Array.isArray(brut) || !brut.length) return { erreur: 'Ajoutez au moins une section.' };
+  if (brut.length > SCHEMA_LIMITES.SECTIONS) return { erreur: 'Pas plus de ' + SCHEMA_LIMITES.SECTIONS + ' sections.' };
+  const ids = {}, vues = [], schema = [];
+  let total = 0, numero = 0;
+  const nouvelId = () => { let id; do { id = 'q' + Utilities.getUuid().replace(/-/g, '').slice(0, 6).toLowerCase(); } while (ids[id]); return id; };
+  const romains = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII'];
+  const decalage = o.premiereSection || 1;   // la fiche d'entrée commence à II (I = identification)
+  for (let si = 0; si < brut.length; si++) {
+    const sec = brut[si] || {};
+    const ou = 'Section ' + (si + 1);
+    const titre = _texteSchema(sec.titre, SCHEMA_LIMITES.TITRE);
+    if (titre.length < 2) return { erreur: ou + ' : donnez un titre.' };
+    const qs = Array.isArray(sec.questions) ? sec.questions : [];
+    if (!qs.length) return { erreur: ou + ' : ajoutez au moins une question.' };
+    const questions = [];
+    for (let qi = 0; qi < qs.length; qi++) {
+      const q = qs[qi] || {};
+      const ouQ = ou + ', question ' + (qi + 1);
+      if (++total > maxQuestions) return { erreur: 'Pas plus de ' + maxQuestions + ' questions au total.' };
+      const type = ['unique', 'multiple', 'texte', 'note'].indexOf(q.type) !== -1 ? q.type : '';
+      if (!type) return { erreur: ouQ + ' : type inconnu.' };
+      const label = _texteSchema(q.label, SCHEMA_LIMITES.LABEL);
+      if (label.length < 3) return { erreur: ouQ + ' : écrivez la question.' };
+      const id = /^q[a-z0-9_]{1,24}$/.test(String(q.id || '')) && !ids[q.id] ? String(q.id) : nouvelId();
+      ids[id] = true;
+      const r = { id: id, type: type, label: label };
+      if (q.requis === true) r.requis = true;
+      if (type === 'unique' || type === 'multiple') {
+        const options = (Array.isArray(q.options) ? q.options : []).map(x => _texteSchema(x, SCHEMA_LIMITES.OPTION)).filter(Boolean);
+        if (options.some(x => x.toLowerCase() === 'autre')) return { erreur: ouQ + ' : utilisez la case « Ajouter Autre (précisez) » au lieu d\'une option « Autre ».' };
+        if (options.some((x, i) => options.indexOf(x) !== i)) return { erreur: ouQ + ' : deux options identiques.' };
+        if (options.length < 2) return { erreur: ouQ + ' : il faut au moins 2 options.' };
+        if (options.length > SCHEMA_LIMITES.OPTIONS) return { erreur: ouQ + ' : pas plus de ' + SCHEMA_LIMITES.OPTIONS + ' options.' };
+        r.options = options;
+        if (q.autre === true) r.autre = true;
+        if (type === 'multiple' && q.exclusif && options.indexOf(_texteSchema(q.exclusif, SCHEMA_LIMITES.OPTION)) !== -1) r.exclusif = _texteSchema(q.exclusif, SCHEMA_LIMITES.OPTION);
+        if (o.confidentiel) {
+          const sens = (Array.isArray(q.sensibles) ? q.sensibles : []).map(x => _texteSchema(x, SCHEMA_LIMITES.OPTION)).filter(x => options.indexOf(x) !== -1);
+          if (sens.length && type === 'multiple') r.sensibles = sens;
+          if (q.autreSensible === true && r.autre && type === 'multiple') r.autreSensible = true;
+        }
+      }
+      if (type === 'note') r.options = NOTE_OPTIONS.slice();
+      if (type === 'texte') r.max = [300, 800, 1500, 3000].indexOf(Number(q.max)) !== -1 ? Number(q.max) : 1500;
+      if (o.confidentiel && q.sensible === true) r.sensible = true;
+      // Condition : seulement sur une question à choix unique placée AVANT.
+      if (q.si && q.si.q) {
+        const parent = vues.filter(x => x.id === String(q.si.q))[0];
+        const vaut = _texteSchema(q.si.vaut, SCHEMA_LIMITES.OPTION);
+        if (parent && (parent.type === 'unique' || parent.type === 'note') && parent.options.indexOf(vaut) !== -1) r.si = { q: parent.id, vaut: vaut };
+      }
+      if (!r.si) r.num = ++numero;
+      vues.push(r);
+      questions.push(r);
+    }
+    schema.push({ id: romains[si + decalage] || String(si + decalage + 1), titre: titre, questions: questions });
+  }
+  return { schema: schema };
+}
+
+// Questions sur la santé, l'argent, la famille... : interdites aux
+// formateurs (elles passent par la fiche officielle, partie confidentielle).
+const MOTS_SENSIBLES = /sant[ée]|malad|handicap|m[ée]dic|traitement|enceinte|grossesse|argent|financ|pay(er|ement)|dette|salaire|revenu|religi|famil|violence|vih|sida|politique/i;
+function _motsSensibles(schema) {
+  const trouves = {};
+  _questionsDe(schema).forEach(q => [q.label].concat(q.options || []).forEach(t => {
+    const m = String(t).match(MOTS_SENSIBLES);
+    if (m) trouves[m[0].toLowerCase()] = true;
+  }));
+  return Object.keys(trouves);
+}
+
+/* =================== ADMIN : MODÈLE DE LA FICHE =================== */
+
+function adminBesoinsModeleGet(data, email) {
+  const actif = _modeleActif();
+  const historique = [{ version: 1, date: '', auteur: 'Modèle d\'origine', motif: 'Fiche PHANOS KOSMOS / LQD Service' }]
+    .concat(_lireModeles().map(m => ({ version: m.version, date: m.date, auteur: m.auteur, motif: m.motif })));
+  return reponseJSON({ status: 'success', version: actif.version, schema: actif.schema, historique: historique.reverse() });
+}
+
+function _enregistrerModele(schema, email, motif) {
+  const f = _feuilleFormation(FEUILLE_MODELE_BESOINS, ENTETES_MODELE_BESOINS);
+  const version = Math.max(1, _modeleActif().version) + 1;
+  _ajouterLignes(f, [[version, new Date(), email, JSON.stringify(schema), motif]]);
+  return version;
+}
+
+function adminBesoinsModeleEnregistrer(data, email) {
+  const v = _validerSchema(data.schema, { confidentiel: true, premiereSection: 1 });
+  if (v.erreur) return reponseJSON({ status: 'error', message: v.erreur });
+  const motif = _texteSchema(data.motif, 200);
+  if (motif.length < 5) return reponseJSON({ status: 'error', message: 'Indiquez en quelques mots le motif de la modification (historique).' });
+  const version = _enregistrerModele(v.schema, email, motif);
+  return reponseJSON({ status: 'success', version: version,
+    message: 'Version ' + version + ' enregistrée. Les fiches déjà commencées gardent leurs questions ; les nouvelles utilisent cette version.' });
+}
+
+function adminBesoinsModeleReinitialiser(data, email) {
+  const version = _enregistrerModele(BESOINS_SCHEMA, email, 'Retour au modèle d\'origine');
+  return reponseJSON({ status: 'success', version: version, message: 'Modèle d\'origine rétabli (version ' + version + ').' });
 }

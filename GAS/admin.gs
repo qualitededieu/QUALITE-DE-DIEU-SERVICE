@@ -93,6 +93,12 @@ function routerAdmin(data, action) {
       case 'admin_besoins_rouvrir':     return requireAuth(data, adminBesoinsRouvrir);
       case 'admin_besoins_relancer':    return requireAuth(data, adminBesoinsRelancer);
       case 'admin_besoins_envoyer':     return requireAuth(data, adminBesoinsEnvoyer);
+      case 'admin_besoins_modele_get':  return requireAuth(data, adminBesoinsModeleGet);
+      case 'admin_besoins_modele_enregistrer':  return requireAuth(data, adminBesoinsModeleEnregistrer);
+      case 'admin_besoins_modele_reinitialiser': return requireAuth(data, adminBesoinsModeleReinitialiser);
+      case 'admin_q_lister':            return requireAuth(data, adminQLister);
+      case 'admin_q_resultats':         return requireAuth(data, adminQResultats);
+      case 'admin_q_suspendre':         return requireAuth(data, adminQSuspendre);
 
       case 'admin_forum_lister':    return requireAuth(data, adminForumLister);
       case 'admin_forum_repondre':  return requireAuth(data, adminForumRepondre);

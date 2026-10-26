@@ -1030,6 +1030,22 @@
         </div>
         <div id="besoins-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
       </div>
+
+      <div class="table-card" style="margin-top:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:adjustments"></span> Questions de la fiche d'entrée <span id="modele-version" class="gal-compteur"></span></span>
+          <button class="btn btn-primary btn-sm" onclick="ouvrirModeleBesoins()"><span class="iconify" data-icon="tabler:pencil"></span> Modifier les questions</button>
+        </div>
+        <p class="cours-aide" style="padding:0 20px 16px;">Seule l'administration modifie la fiche officielle. Chaque enregistrement crée une nouvelle version : les fiches déjà commencées gardent leurs questions, les nouvelles utilisent la dernière version.</p>
+      </div>
+
+      <div class="table-card" style="margin-top:20px;">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:forms"></span> Questionnaires des formateurs <span id="q-admin-compteur" class="gal-compteur"></span></span>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">Les formateurs envoient leurs questionnaires directement ; vous recevez une copie par email et pouvez en suspendre un. Les questionnaires anonymes restent anonymes ici aussi.</p>
+        <div id="q-admin-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
     </div>
 
     <div class="page" id="page-forum">
@@ -4511,15 +4527,144 @@ const BESOINS_BADGE = { 'À remplir': 'badge-orange', 'Brouillon': 'badge-orange
 
 function _dateCourte(iso) { return iso ? new Date(String(iso).length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('fr-FR') : '—'; }
 
+/* ---------- Modèle de la fiche d'entrée (versions) ---------- */
+let _modeleEditeur = null;
+async function ouvrirModeleBesoins() {
+  const corps = document.getElementById('besoins-corps');
+  document.getElementById('besoins-titre').textContent = 'Questions de la fiche d\'entrée';
+  corps.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  ouvrirModal('modal-besoins');
+  try {
+    const r = await apiCall('admin_besoins_modele_get');
+    if (r.status !== 'success') throw new Error(r.message);
+    corps.innerHTML = `<p class="cours-aide">Version en cours : <strong>${r.version}</strong>${r.version === 1 ? ' (modèle d\'origine)' : ''}. La partie I (identification, depuis le dossier) et le cadre de suivi ne se modifient pas ici.
+        Cochez « Admin seul » pour les réponses que le formateur ne doit jamais voir.</p>
+      <div id="modele-editeur"></div>
+      <div id="modele-apercu-zone" hidden style="border:1px dashed var(--border-l);border-radius:12px;padding:14px;"></div>
+      <label class="auth-label" style="margin-top:14px;">Motif de la modification (historique)</label>
+      <input type="text" class="auth-input" id="modele-motif" maxlength="200" placeholder="Ex. : ajout d'une question sur l'aisance numérique">
+      <div class="auth-error" id="modele-erreur"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;">
+        <button class="btn btn-ghost btn-sm" id="modele-reset"><span class="iconify" data-icon="tabler:restore"></span> Rétablir le modèle d'origine</button>
+        <button class="btn btn-ghost btn-sm" id="modele-apercu"><span class="iconify" data-icon="tabler:eye"></span> Aperçu</button>
+        <button class="btn btn-primary btn-sm" id="modele-enregistrer"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer une nouvelle version</button>
+      </div>
+      <details style="margin-top:16px;"><summary style="cursor:pointer;font-weight:700;">Historique des versions (${r.historique.length})</summary>
+        <table class="data-table" style="margin-top:8px;"><tbody>${r.historique.map(h => `<tr><td>v${h.version}</td><td style="font-size:12px;">${h.date ? new Date(h.date).toLocaleDateString('fr-FR') : '—'}</td><td style="font-size:12px;">${_escAdmin(h.auteur)}</td><td style="font-size:12px;">${_escAdmin(h.motif)}</td></tr>`).join('')}</tbody></table></details>`;
+    _modeleEditeur = FicheBesoins.editeur(document.getElementById('modele-editeur'), r.schema, { confidentiel: true });
+    const erreur = m => { const e = document.getElementById('modele-erreur'); e.textContent = m; e.classList.toggle('show', !!m); };
+    // Aperçu dans la même fenêtre : l'éditeur reste en place (rien n'est perdu).
+    document.getElementById('modele-apercu').onclick = (ev) => {
+      const ed = document.getElementById('modele-editeur'), ap = document.getElementById('modele-apercu-zone');
+      const enApercu = !ap.hidden;
+      ed.hidden = !enApercu; ap.hidden = enApercu;
+      ev.currentTarget.innerHTML = enApercu ? '<span class="iconify" data-icon="tabler:eye"></span> Aperçu' : '<span class="iconify" data-icon="tabler:pencil"></span> Revenir à l\'édition';
+      if (!enApercu) FicheBesoins.formulaire(ap, FicheBesoins.apercuSchema(_modeleEditeur.valeur(), 1),
+        { identification: { nom: 'Apprenant exemple', formation: '—' }, annee: '20__ / 20__' },
+        { enregistrer: async () => ({ status: 'success', message: 'Aperçu : rien n\'est enregistré.' }) });
+    };
+    document.getElementById('modele-enregistrer').onclick = async (ev) => {
+      const motif = document.getElementById('modele-motif').value.trim();
+      if (motif.length < 5) return erreur('Indiquez le motif de la modification (5 caractères minimum).');
+      if (!confirm('Enregistrer une nouvelle version de la fiche ? Elle s\'appliquera aux fiches non commencées et aux prochaines.')) return;
+      ev.currentTarget.disabled = true;
+      try {
+        const res = await apiCall('admin_besoins_modele_enregistrer', { schema: _modeleEditeur.valeur(), motif });
+        if (res.status !== 'success') { erreur(res.message); return; }
+        toast(res.message, 'success');
+        fermerModal('modal-besoins');
+        chargerBesoinsAdmin();
+      } catch (e) { erreur(e.message); }
+      finally { const b = document.getElementById('modele-enregistrer'); if (b) b.disabled = false; }
+    };
+    document.getElementById('modele-reset').onclick = async () => {
+      if (!confirm('Rétablir les questions d\'origine (nouvelle version) ?')) return;
+      try {
+        const res = await apiCall('admin_besoins_modele_reinitialiser');
+        if (res.status !== 'success') throw new Error(res.message);
+        toast(res.message, 'success');
+        fermerModal('modal-besoins');
+        chargerBesoinsAdmin();
+      } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+    };
+  } catch (e) {
+    corps.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+/* ---------- Questionnaires des formateurs ---------- */
+const Q_BADGE = { 'Envoyé': ['badge-green', 'En cours'], 'Clos': ['badge-teal', 'Clôturé'], 'Suspendu': ['badge-red', 'Suspendu'] };
+async function chargerQuestionnairesAdmin() {
+  const zone = document.getElementById('q-admin-container');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_q_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    document.getElementById('q-admin-compteur').textContent = r.questionnaires.length ? r.questionnaires.length + ' envoyé(s)' : '';
+    if (!r.questionnaires.length) { zone.innerHTML = '<div class="empty-state"><p>Aucun questionnaire envoyé par les formateurs.</p></div>'; return; }
+    zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Questionnaire</th><th>Formateur</th><th>Filière</th><th>Envoyé</th><th>Réponses</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${r.questionnaires.map(q => `<tr>
+        <td><strong>${_escAdmin(_clairCours(q.titre))}</strong><br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(q.moment)} — ${q.nbQuestions} question(s)${q.anonyme ? ' — anonyme' : ''}</span>
+          ${q.alerte ? `<br><span class="badge badge-orange" style="margin-top:4px;" title="Mots sensibles détectés">Sujet sensible : ${_escAdmin(q.alerte)}</span>` : ''}</td>
+        <td style="font-size:12px;">${_escAdmin(q.nomFormateur)}</td>
+        <td style="font-size:12px;">${_escAdmin(q.filiereNom)}</td>
+        <td style="font-size:12px;">${_dateCourte(q.envoyeLe)}</td>
+        <td style="font-size:12px;">${q.nbReponses} / ${q.nbDestinataires}</td>
+        <td><span class="badge ${(Q_BADGE[q.statut] || ['badge-teal'])[0]}">${_escAdmin((Q_BADGE[q.statut] || [0, q.statut])[1])}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-primary btn-sm" onclick="resultatsQuestionnaireAdmin('${_escAdmin(q.id)}')">Résultats</button>
+          ${q.statut === 'Suspendu'
+            ? `<button class="btn btn-ghost btn-sm" onclick="suspendreQuestionnaire('${_escAdmin(q.id)}', false)">Réactiver</button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="suspendreQuestionnaire('${_escAdmin(q.id)}', true)">Suspendre</button>`}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+async function resultatsQuestionnaireAdmin(id) {
+  const corps = document.getElementById('besoins-corps');
+  document.getElementById('besoins-titre').textContent = 'Résultats';
+  corps.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  ouvrirModal('modal-besoins');
+  try {
+    const r = await apiCall('admin_q_resultats', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    const q = r.questionnaire;
+    document.getElementById('besoins-titre').textContent = _clairCours(q.titre) + ' — ' + q.nomFormateur;
+    const meta = { titre: _clairCours(q.titre), moment: q.moment, formateur: q.nomFormateur, anonyme: q.anonyme };
+    corps.innerHTML = FicheBesoins.resultatsHtml(r.resultats)
+      + (r.resultats.individuelles && r.resultats.individuelles.length ? '<h4 style="margin:16px 0 8px;">Réponses par apprenant</h4>'
+        + r.resultats.individuelles.map(x => `<details style="border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;"><summary style="cursor:pointer;font-weight:700;">${_escAdmin(x.apprenant)} — ${_dateCourte(x.date)}</summary>${FicheBesoins.lecture(q.schema, { reponses: x.reponses }, 'admin', meta)}</details>`).join('') : '')
+      + `<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn btn-ghost btn-sm" id="q-admin-pdf"><span class="iconify" data-icon="tabler:printer"></span> PDF vierge</button></div>`;
+    document.getElementById('q-admin-pdf').onclick = () => FicheBesoins.pdf(q.schema, null, 'admin', meta).catch(e => toast('Erreur : ' + e.message, 'error'));
+  } catch (e) {
+    corps.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+async function suspendreQuestionnaire(id, suspendre) {
+  if (suspendre && !confirm('Suspendre ce questionnaire ? Les apprenants ne le verront plus et le formateur sera prévenu.')) return;
+  try {
+    const r = await apiCall('admin_q_suspendre', { id, suspendre });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+    chargerQuestionnairesAdmin();
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
 async function chargerBesoinsAdmin() {
   const sel = document.getElementById('besoins-filiere');
   if (!sel.options.length) sel.innerHTML = '<option value="">Toutes les filières</option>' + FO_FILIERES.map(f => `<option value="${_escAdmin(f[0])}">${_escAdmin(f[1])}</option>`).join('');
   const zone = document.getElementById('besoins-container');
   zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   try {
+    chargerQuestionnairesAdmin();
     const r = await apiCall('admin_besoins_lister', { filiere: sel.value });
     if (r.status !== 'success') throw new Error(r.message);
     _besoins = r;
+    document.getElementById('modele-version').textContent = 'version ' + (r.version || 1);
     const aTraiter = r.fiches.filter(f => f.statut === 'Soumise').length;
     const badge = document.getElementById('badge-besoins');
     badge.textContent = aTraiter; badge.style.display = aTraiter ? '' : 'none';

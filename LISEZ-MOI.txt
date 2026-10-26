@@ -255,3 +255,37 @@ MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
       septembre (entrée en mars 2026 = 2025 / 2026).
     Onglet créé dans le classeur : "Fiches besoins" (réponses en JSON :
     consultez-les dans l admin, pas directement dans le classeur).
+
+  QUESTIONNAIRES DES FORMATEURS + FICHE MODIFIABLE — version 2026-10-27
+    GAS : AJOUTER le fichier "questionnaires" (nouveau) et remplacer
+    besoins, code, formateurs, admin -> Nouvelle version sur LES DEUX
+    déploiements. Vérification : l URL /exec doit afficher
+    "2026-10-27 questionnaires formateurs" et "questionnaires": true.
+    VERCEL : js/fiche-besoins.js, js/espace-formateur.js,
+    css/espace-formateur.css, espace-formateur.html,
+    espace-apprenant.html, admin.html.
+    1. Fiche d entrée (Direction) : Admin > Fiches besoins > "Modifier
+       les questions". Chaque enregistrement = nouvelle version (motif
+       obligatoire, historique). Les fiches déjà commencées gardent leurs
+       questions ; les fiches pas encore ouvertes et les nouvelles
+       prennent la dernière version. "Admin seul" = réponse jamais vue
+       par le formateur. Bouton "Rétablir le modèle d origine".
+    2. Questionnaires des formateurs : Espace formateur > Fiches >
+       "Mes questionnaires". 3 modèles (mi-parcours, fin de formation,
+       satisfaction) ou page blanche. Types : choix unique, choix
+       multiple, note de 1 à 5, réponse libre ; sections, questions
+       conditionnelles ("si oui...").
+       - Envoi à toute la filière ou à quelques apprenants ; email +
+         onglet "Mes fiches" de l apprenant. L admin reçoit une copie.
+       - Envoyé = plus modifiable (dupliquer pour réutiliser). Relance
+         des seuls non-répondants (1 fois / 24 h). Clôture.
+       - Anonyme : personne (formateur ni admin) ne voit qui a répondu
+         quoi ; au moins 3 destinataires ; résultats à partir de 3
+         réponses.
+       - Mots sensibles (santé, argent, famille...) : avertissement dans
+         l éditeur + alerte à l admin. Admin > Fiches besoins >
+         "Questionnaires des formateurs" : résultats, Suspendre /
+         Réactiver (le formateur est prévenu).
+    Onglets créés : "Modèle fiche besoins", "Questionnaires",
+    "Réponses questionnaires". La feuille "Fiches besoins" reçoit une
+    colonne "Version modèle" (ajoutée automatiquement).
