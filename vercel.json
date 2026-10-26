@@ -104,6 +104,16 @@
   ],
   "redirects": [
     {
+      "source": "/regularisation",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/regularisation.html",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
       "source": "/admin.html",
       "destination": "/admin",
       "permanent": true

@@ -33,6 +33,7 @@ function routerAdmin(data, action) {
       case 'admin_update_statut':       return requireAuth(data, adminUpdateStatut);
       case 'admin_update_paiement':     return requireAuth(data, adminUpdatePaiement);
       case 'admin_update_suivi':        return requireAuth(data, adminUpdateSuivi);
+      case 'admin_changer_photo':       return requireAuth(data, adminChangerPhoto);
       case 'admin_apercu_attestation':  return requireAuth(data, adminApercuAttestation);
       case 'admin_debloquer_telechargement': return requireAuth(data, adminDebloquerTelechargement);
       case 'admin_send_relance':        return requireAuth(data, adminSendRelance);

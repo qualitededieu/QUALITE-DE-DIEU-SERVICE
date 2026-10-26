@@ -289,3 +289,63 @@ MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
     Onglets créés : "Modèle fiche besoins", "Questionnaires",
     "Réponses questionnaires". La feuille "Fiches besoins" reçoit une
     colonne "Version modèle" (ajoutée automatiquement).
+
+  RANGEMENT DU DRIVE — version 2026-10-28
+    GAS : AJOUTER le fichier "drive" (nouveau) et remplacer code,
+    candidatures, cours, galerie, temoignages, annonces,
+    renseignements_suivi, init.
+    (Le module Régularisation n'existe plus : aucun fichier à ajouter.)
+    -> Nouvelle version sur LES DEUX déploiements.
+    Vérification : l URL /exec doit afficher "2026-10-28 rangement Drive"
+    et "driveRange": true. Aucun fichier du site (Vercel) ne change.
+
+    Nouvelle organisation (une seule racine "LQD Service") :
+      1. Apprenants / <année> / <ID — NOM Prénom>  (anciens dossiers REG- compris)
+      2. Candidatures / <année> / <ID — NOM Prénom>
+      3. Cours / <filière>
+      4. Site public / Galerie, Témoignages, Annonces
+      5. Renseignements
+      9. À classer  (fichiers non reconnus lors du rangement)
+    Les dossiers sont retrouvés par leur identifiant (Propriétés du
+    script DRIVE_ID_...) : ne pas supprimer ces propriétés. On peut
+    renommer ou déplacer "LQD Service" dans Drive sans rien casser.
+
+    Confidentialité : pièce d identité, signature et preuve de paiement
+    sont PRIVÉES. Pour les ouvrir depuis l admin ("Ouvrir Drive"), le
+    navigateur doit être connecté au compte Google de LQD Service. La
+    photo d identité reste lisible par lien (carte, attestation, badge).
+
+    RANGER LES ANCIENS FICHIERS (une fois, après le déploiement) :
+      1. Éditeur Apps Script > choisir rangerMonDrive_simulation > Exécuter.
+         Rien n est modifié. Lire l onglet "Rapport rangement Drive".
+      2. Si le rapport convient : choisir rangerMonDrive_executer > Exécuter.
+         Les dossiers sont DÉPLACÉS (leurs liens restent valides), les
+         pièces sensibles deviennent privées, l ancien dossier
+         "Inscriptions LQD Service" vide part à la corbeille (30 jours).
+      3. Si le journal dit "INTERROMPU (limite de temps)", relancez la
+         même fonction : elle reprend là où elle s est arrêtée. La relancer
+         une fois de trop ne fait rien (aucun doublon).
+
+  CHANGEMENT DE PHOTO + SUPPRESSION DE LA PAGE RÉGULARISATION — version 2026-10-29
+    PRÉREQUIS : le paquet "Rangement Drive" (drive.gs) doit être installé.
+    GAS : AJOUTER le fichier "photos" (nouveau) et remplacer admin, code
+    -> Nouvelle version sur LES DEUX déploiements.
+    Vérification : l URL /exec doit afficher "2026-10-29 changement photo
+    apprenant" et "changementPhoto": true.
+    GITHUB : remplacer admin.html, vercel.json, scripts/build.js ;
+    SUPPRIMER regularisation.html (les anciens liens /regularisation
+    redirigent vers /contact).
+
+    Utilisation : Admin > dossier d un apprenant > Pièces justificatives >
+    Photo identité > "Changer". Choisir une photo (JPEG ou PNG), motif
+    facultatif, "Enregistrer et prévenir l apprenant".
+    - La photo est réduite à 1 000 px avant l envoi, puis contrôlée par le
+      serveur (format réel, 5 Mo maximum).
+    - Nouvelle photo : dossier Drive de l apprenant, lisible par lien
+      (carte, attestation, badge). Ancienne : conservée en PRIVÉ dans le
+      sous-dossier "Anciennes photos" (rien n est supprimé).
+    - Classeur mis à jour (Toutes les inscriptions + feuille de la filière).
+    - Email automatique à l apprenant (miniature + motif + contact en cas
+      de doute). Sans email : l admin est invité à le prévenir par téléphone.
+    - Journal : onglet "Historique photos" (date, ancienne, nouvelle, motif,
+      admin, email envoyé ou non).

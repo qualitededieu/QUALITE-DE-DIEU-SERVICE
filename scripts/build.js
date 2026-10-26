@@ -24,7 +24,7 @@ const RACINE = path.resolve(__dirname, '..');
 const SORTIE = path.join(RACINE, 'dist');
 
 const PAGES_HTML = ['index.html', 'admin.html', 'article.html', 'espace-apprenant.html',
-  'postuler.html', 'regularisation.html', 'verifier.html'];
+  'postuler.html', 'verifier.html'];
 const FICHIERS_COPIES_TELS_QUELS = ['manifest.json', 'robots.txt', 'sitemap.xml'];
 const DOSSIERS_COPIES_TELS_QUELS = ['icons', 'tinymce'];   // images + bibliothèque tierce déjà minifiée
 const JS_A_OBFUSQUER = ['attestation_generator.js', 'carte_generator.js',

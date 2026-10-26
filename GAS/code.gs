@@ -316,7 +316,7 @@ function doPost(e) {
 // Marqueur de version : à changer à chaque mise à jour du code GAS.
 // Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
 // c'est la preuve que le déploiement EN LIGNE contient bien ce code.
-const VERSION_API = '2026-10-27 questionnaires formateurs';
+const VERSION_API = '2026-10-29 changement photo apprenant';
 
 // Liste des modules attendus : true = présent ET à jour dans le code exécuté.
 // ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
@@ -339,6 +339,8 @@ function _etatModules() {
     accesAnciens:             presente('formateurDemandeAnciens') && presente('adminDemandeAccesTraiter') && presente('_coursAccessible'),
     ficheBesoins:             presente('besoinsMaFiche') && presente('formateurBesoinsLister') && presente('adminBesoinsLister'),
     questionnaires:           presente('formateurQEnregistrer') && presente('questionnaireRepondre') && presente('_validerSchema') && presente('adminBesoinsModeleEnregistrer'),
+    driveRange:               presente('dossierApprenantDrive') && presente('rangerMonDrive_executer') && source('creerStructureDrive').indexOf('dossierApprenantDrive') !== -1,
+    changementPhoto:          presente('adminChangerPhoto') && source('routerAdmin').indexOf('admin_changer_photo') !== -1,
     motDePasseFormateur:      (() => { try { return _autoTestFormateur(); } catch (e) { return false; } })(),
     doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1 && source('doPost').indexOf('besoins_ma_fiche') !== -1 && source('doPost').indexOf('questionnaire_repondre') !== -1,
     routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1 && source('routerAdmin').indexOf('admin_demande_acces_traiter') !== -1 && source('routerAdmin').indexOf('admin_besoins_lister') !== -1 && source('routerAdmin').indexOf('admin_q_lister') !== -1
@@ -751,27 +753,19 @@ function validerDonneesRenseignement(data) {
   return erreurs;
 }
 
+// Rangement (drive.gs) : LQD Service / 1. Apprenants / <année> / <ID — NOM Prénom>.
+// Pièce, signature et preuve de paiement : privées ; photo : lisible (carte, attestation).
 function creerStructureDrive(inscription, data) {
 
-  let racine = trouverDossierDrive(CONFIG.DRIVE_DOSSIER_NOM);
-  if (!racine) racine = DriveApp.createFolder(CONFIG.DRIVE_DOSSIER_NOM);
-
-  const nomCategorie = inscription.formations.length === 1
-    ? inscription.formations[0]
-    : 'Multi-formations';
-
-  let dossierCat = trouverSousDossier(racine, nomCategorie);
-  if (!dossierCat) dossierCat = racine.createFolder(nomCategorie);
-
-  const nomApprenant  = `${inscription.id} — ${inscription.prenom} ${inscription.nom}`;
-  const dossierApprenant = dossierCat.createFolder(nomApprenant);
+  const dossierApprenant = dossierApprenantDrive(inscription.id, inscription.prenom, inscription.nom);
 
   const p1Mime = data.piece1MimeType || 'image/jpeg';
   const pieceUrl = sauvegarderFichierDrive(
     dossierApprenant,
     data.piece1Base64,
     `piece-identite_${inscription.id}.${extensionDepuisMime(p1Mime)}`,
-    p1Mime
+    p1Mime,
+    true
   );
 
   const phMime = data.photoMimeType || 'image/jpeg';
@@ -786,7 +780,8 @@ function creerStructureDrive(inscription, data) {
     dossierApprenant,
     data.signatureBase64,
     `signature_${inscription.id}.png`,
-    'image/png'
+    'image/png',
+    true
   );
 
   let preuveUrl = '';
@@ -796,18 +791,21 @@ function creerStructureDrive(inscription, data) {
       dossierApprenant,
       data.preuveBase64,
       `preuve-paiement_${inscription.id}.${extensionDepuisMime(prMime)}`,
-      prMime
+      prMime,
+      true
     );
   }
 
   return { pieceUrl, photoUrl, signatureUrl, preuveUrl, dossierUrl: dossierApprenant.getUrl() };
 }
 
-function sauvegarderFichierDrive(dossier, base64, nom, mimeType) {
+// prive = true : visible par le seul compte LQD (pièce, signature, preuve).
+// Sinon lisible avec le lien (photo d'identité : carte, attestation, badge).
+function sauvegarderFichierDrive(dossier, base64, nom, mimeType, prive) {
   const octets  = Utilities.base64Decode(base64);
   const blob    = Utilities.newBlob(octets, mimeType, nom);
   const fichier = dossier.createFile(blob);
-  fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  if (!prive) fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return fichier.getUrl();
 }
 

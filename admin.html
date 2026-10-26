@@ -407,7 +407,16 @@
       .modal-footer { flex-direction: column-reverse; }
       .modal-footer .btn { width: 100%; justify-content: center; }
     }
-  </style>
+      /* Changement de la photo d'identité */
+    .photo-mini { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .photo-mini img { width:52px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--border-l); background:var(--dark-700); }
+    .photo-compare { display:flex; align-items:center; justify-content:center; gap:14px; margin:6px 0 14px; }
+    .photo-compare figure { margin:0; text-align:center; }
+    .photo-compare img, .photo-compare .photo-vide { width:130px; height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--border-l); background:var(--dark-700); display:flex; align-items:center; justify-content:center; color:var(--text-3); font-size:12px; }
+    .photo-compare figcaption { font-size:12px; color:var(--text-3); margin-top:6px; }
+    .photo-compare > .iconify { font-size:22px; color:var(--teal); }
+    .photo-compare [hidden] { display:none !important; }
+</style>
 </head>
 <body>
 
@@ -1316,6 +1325,35 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-photo">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Changer la photo d'identité</h3>
+      <button class="modal-close" onclick="fermerChangementPhoto()"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body">
+      <p class="cours-aide" id="photo-qui"></p>
+      <div class="photo-compare">
+        <figure><div class="photo-vide" id="photo-avant-vide">Aucune</div><img id="photo-avant" alt="Photo actuelle" referrerpolicy="no-referrer"><figcaption>Actuelle</figcaption></figure>
+        <span class="iconify" data-icon="tabler:arrow-right"></span>
+        <figure><div class="photo-vide" id="photo-apres-vide">Aucune</div><img id="photo-apres" alt="Nouvelle photo" hidden><figcaption>Nouvelle</figcaption></figure>
+      </div>
+      <div style="text-align:center;">
+        <label class="btn btn-ghost btn-sm" for="photo-fichier" style="cursor:pointer;"><span class="iconify" data-icon="tabler:photo-up"></span> Choisir une photo</label>
+        <input type="file" id="photo-fichier" accept="image/jpeg,image/png" hidden onchange="choisirNouvellePhoto(this)">
+      </div>
+      <p class="cours-aide" style="margin-top:10px;">JPEG ou PNG, visage bien visible, fond clair. La photo est réduite automatiquement avant l'envoi. L'ancienne est conservée (privée) dans le dossier Drive de l'apprenant.</p>
+      <label class="auth-label" for="photo-motif" style="margin-top:12px;">Motif (inclus dans l'email à l'apprenant, facultatif)</label>
+      <input type="text" class="auth-input" id="photo-motif" maxlength="200" placeholder="Ex. : photo floue remplacée à votre demande">
+      <div class="auth-error" id="err-photo"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fermerChangementPhoto()">Annuler</button>
+      <button class="btn btn-primary" id="btn-photo-ok" disabled onclick="validerChangementPhoto()"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer et prévenir l'apprenant</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-besoins">
   <div class="modal" style="max-width:880px;">
     <div class="modal-header">
@@ -2125,7 +2163,101 @@ async function ouvrirDossier(id) {
   }
 }
 
+/* ---------- Changement de la photo d'identité (GAS photos.gs) ---------- */
+let _dossierCourant = null;
+let _nouvellePhoto = null;   // { base64, mime }
+
+// Miniature servie par Drive (domaine autorisé par la CSP), à partir du lien du classeur.
+function _miniaturePhoto(url) {
+  const m = String(url || '').match(/\/d\/([\w-]{20,})/) || String(url || '').match(/[?&]id=([\w-]{20,})/);
+  return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w300' : '';
+}
+
+function ouvrirChangementPhoto() {
+  const d = _dossierCourant;
+  if (!d) return;
+  _nouvellePhoto = null;
+  document.getElementById('photo-qui').innerHTML = `${_escAdmin(d.prenom)} ${_escAdmin(d.nom)} — <span class="mono">${_escAdmin(d.id)}</span>`
+    + (d.email ? ` — l'apprenant sera prévenu à <strong>${_escAdmin(d.email)}</strong>` : ' — <strong>pas d\'email</strong> : prévenez-le par téléphone');
+  const avant = document.getElementById('photo-avant'), mini = _miniaturePhoto(d.photoUrl);
+  avant.hidden = !mini;
+  document.getElementById('photo-avant-vide').hidden = !!mini;
+  if (mini) avant.src = mini;
+  document.getElementById('photo-apres').hidden = true;
+  document.getElementById('photo-apres-vide').hidden = false;
+  document.getElementById('photo-fichier').value = '';
+  document.getElementById('photo-motif').value = '';
+  document.getElementById('err-photo').classList.remove('show');
+  document.getElementById('btn-photo-ok').disabled = true;
+  ouvrirModal('modal-photo');
+}
+
+function fermerChangementPhoto() {
+  fermerModal('modal-photo');
+  document.body.style.overflow = 'hidden';   // la fiche du dossier reste ouverte dessous
+}
+
+function _erreurPhoto(msg) {
+  const e = document.getElementById('err-photo');
+  e.textContent = msg; e.classList.toggle('show', !!msg);
+}
+
+// Réduit la photo (1 000 px max, JPEG) : envoi rapide même en 3G, poids maîtrisé sur Drive.
+async function _reduirePhoto(fichier) {
+  const url = URL.createObjectURL(fichier);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Image illisible.')); i.src = url; });
+    if (Math.min(img.naturalWidth, img.naturalHeight) < 200) throw new Error('Photo trop petite (200 px minimum) : elle serait floue sur la carte.');
+    const k = Math.min(1, 1000 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, c.width, c.height);   // fond blanc si PNG transparent
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.88);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function choisirNouvellePhoto(input) {
+  _erreurPhoto('');
+  _nouvellePhoto = null;
+  document.getElementById('btn-photo-ok').disabled = true;
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (['image/jpeg', 'image/png'].indexOf(f.type) === -1) return _erreurPhoto('Format refusé : choisissez une photo JPEG ou PNG.');
+  if (f.size > 15 * 1024 * 1024) return _erreurPhoto('Fichier trop lourd (15 Mo maximum avant réduction).');
+  try {
+    const dataUrl = await _reduirePhoto(f);
+    _nouvellePhoto = { base64: dataUrl.split(',')[1], mime: 'image/jpeg' };
+    const apres = document.getElementById('photo-apres');
+    apres.src = dataUrl; apres.hidden = false;
+    document.getElementById('photo-apres-vide').hidden = true;
+    document.getElementById('btn-photo-ok').disabled = false;
+  } catch (e) { _erreurPhoto(e.message); }
+}
+
+async function validerChangementPhoto() {
+  const d = _dossierCourant;
+  if (!d || !_nouvellePhoto) return;
+  if (!confirm('Remplacer la photo d\'identité de ' + d.prenom + ' ' + d.nom + ' ? Elle apparaîtra sur sa carte, son attestation et son badge.')) return;
+  const btn = document.getElementById('btn-photo-ok');
+  btn.disabled = true;
+  _erreurPhoto('');
+  try {
+    const r = await apiCall('admin_changer_photo', { id: d.id, photoBase64: _nouvellePhoto.base64, photoMime: _nouvellePhoto.mime,
+      motif: document.getElementById('photo-motif').value.trim() });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, r.emailEnvoye ? 'success' : 'info');
+    fermerChangementPhoto();
+    ouvrirDossier(d.id);   // fiche rafraîchie avec la nouvelle photo
+  } catch (e) {
+    _erreurPhoto(e.message);
+    btn.disabled = false;
+  }
+}
+
 function renderModalDossier(d) {
+  _dossierCourant = d;
   document.getElementById('modal-body').innerHTML = `
     <div class="info-grid">
       <div class="info-field"><label>Référence</label><span class="mono">${d.id}</span></div>
@@ -2161,7 +2293,10 @@ function renderModalDossier(d) {
         <span>${d.pieceUrl && d.pieceUrl !== 'Erreur upload Drive' ? `<a href="${d.pieceUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
       </div>
       <div class="info-field"><label>Photo identité</label>
-        <span>${d.photoUrl && d.photoUrl !== 'Erreur upload Drive' ? `<a href="${d.photoUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
+        <span class="photo-mini">
+          ${_miniaturePhoto(d.photoUrl) ? `<img src="${_miniaturePhoto(d.photoUrl)}" alt="Photo actuelle" loading="lazy" referrerpolicy="no-referrer"> <a href="${d.photoUrl}" target="_blank">Ouvrir Drive</a>` : '—'}
+          <button class="btn btn-ghost btn-sm" onclick="ouvrirChangementPhoto()"><span class="iconify" data-icon="tabler:camera-up"></span> Changer</button>
+        </span>
       </div>
       <div class="info-field"><label>Signature</label>
         <span>${d.signatureUrl ? `<a href="${d.signatureUrl}" target="_blank">Ouvrir Drive</a>` : '—'}</span>
