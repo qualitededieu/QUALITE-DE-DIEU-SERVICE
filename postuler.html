@@ -56,7 +56,7 @@
     .hero-desc{font-size:15px;color:rgba(255,255,255,0.72);max-width:560px;line-height:1.75}
 
     /* ===== CHOIX DU TYPE ===== */
-    .type-choice{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+    .type-choice{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px}
     .type-card{border:1.5px solid var(--gray-300);border-radius:var(--radius-md);padding:18px;cursor:pointer;transition:all var(--transition);background:var(--white)}
     .type-card:hover{border-color:var(--teal-400)}
     .type-card.active{border-color:var(--teal-600);background:var(--teal-50);box-shadow:0 0 0 3px rgba(13,122,138,0.12)}
@@ -233,8 +233,13 @@
                 <div class="type-choice">
                   <div class="type-card active" id="typeCardFormateur" onclick="choisirType('formateur')">
                     <span class="iconify" data-icon="tabler:chalkboard"></span>
-                    <h4>Formateur / Staff</h4>
-                    <p>Rejoindre l'équipe pédagogique ou administrative du centre.</p>
+                    <h4>Formateur</h4>
+                    <p>Enseigner dans l'une de nos filières (bureautique, graphisme, sérigraphie, web...).</p>
+                  </div>
+                  <div class="type-card" id="typeCardStaff" onclick="choisirType('staff')">
+                    <span class="iconify" data-icon="tabler:briefcase"></span>
+                    <h4>Staff</h4>
+                    <p>Rejoindre l'équipe administrative : secrétariat, accueil, comptabilité, entretien...</p>
                   </div>
                   <div class="type-card" id="typeCardStage" onclick="choisirType('stage')">
                     <span class="iconify" data-icon="tabler:school"></span>
@@ -311,7 +316,7 @@
             <div class="form-card-body">
 
               <div class="form-group">
-                <label>Domaine / spécialité <span class="req">*</span></label>
+                <label><span id="labelDomaine">Domaine / spécialité enseignée</span> <span class="req">*</span></label>
                 <input type="text" id="domaine" placeholder="Ex : Secrétariat, Comptabilité, Graphisme, Montage audio-visuel, Sérigraphie, Développement web..." required />
                 <span class="field-error" id="err-domaine">Ce champ est requis.</span>
               </div>
@@ -584,7 +589,7 @@
   <div id="toast" role="alert" aria-live="polite"></div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
     const NB_ETAPES = 3;
     let etapeActuelle = 1;
     let typeChoisi = 'formateur';
@@ -606,10 +611,13 @@
     function choisirType(type) {
       typeChoisi = type;
       document.getElementById('typeCardFormateur').classList.toggle('active', type === 'formateur');
+      document.getElementById('typeCardStaff').classList.toggle('active', type === 'staff');
+      const pro = type === 'formateur' || type === 'staff';   // formateur et staff : même parcours (expérience + CV)
+      document.getElementById('labelDomaine').textContent = type === 'staff' ? 'Poste visé' : (type === 'formateur' ? 'Domaine / spécialité enseignée' : 'Domaine / spécialité');
       document.getElementById('typeCardStage').classList.toggle('active', type === 'stage');
-      document.getElementById('blocFormateur').style.display = type === 'formateur' ? '' : 'none';
+      document.getElementById('blocFormateur').style.display = pro ? '' : 'none';
       document.getElementById('blocStage').style.display     = type === 'stage'     ? '' : 'none';
-      document.getElementById('docCV').style.display    = type === 'formateur' ? '' : 'none';
+      document.getElementById('docCV').style.display    = pro ? '' : 'none';
       // Pièce d'identité demandée à TOUS les candidats (oct. 2026), et email
       // obligatoire pour un formateur : il sert à créer son accès.
       document.getElementById('docPiece').style.display = '';
@@ -771,7 +779,7 @@
 
       if (n === 2) {
         ok = marquerErreur('domaine', '', document.getElementById('domaine').value.trim().length >= 2) && ok;
-        if (typeChoisi === 'formateur') {
+        if (typeChoisi === 'formateur' || typeChoisi === 'staff') {
           ok = marquerErreur('experience', '', document.getElementById('experience').value.trim().length >= 10) && ok;
         } else {
           if (ancienApprenantActif && !ancienApprenantVerifie) {
@@ -789,7 +797,7 @@
       }
 
       if (n === 3) {
-        if (typeChoisi === 'formateur') {
+        if (typeChoisi === 'formateur' || typeChoisi === 'staff') {
           ok = marquerErreur('cv', '', !!fichiers.cv.base64) && ok;
           ok = marquerErreur('piece', '', !!fichiers.piece.base64) && ok;
         } else {
@@ -872,7 +880,7 @@
         adresse:       document.getElementById('adresse').value.trim(),
 
         domaine:        document.getElementById('domaine').value.trim(),
-        experience:     typeChoisi === 'formateur' ? document.getElementById('experience').value.trim() : '',
+        experience:     (typeChoisi === 'formateur' || typeChoisi === 'staff') ? document.getElementById('experience').value.trim() : '',
         etablissement:  typeChoisi === 'stage' ? document.getElementById('etablissement').value.trim() : '',
         niveauEtudes:   typeChoisi === 'stage' ? document.getElementById('niveauEtudes').value.trim() : '',
         dureeStage:     typeChoisi === 'stage' ? document.getElementById('dureeStage').value : '',
@@ -1012,7 +1020,7 @@
   <script src="js/attestation_generator.js"></script>
   <script>
     (function () {
-      var GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+      var GAS_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
       async function chargerBandeau() {
         try {
           var resp = await fetch(GAS_URL, {

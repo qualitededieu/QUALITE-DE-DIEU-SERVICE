@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbEkz8PsyWMnOMkXbV1ZY5pBSHTO4l-cw5r5tE8kDw2tEsXAmdRotmjaWg9cT6Ousg/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqsoRAJXxa1nSE0wSy_NhYq-j8kdFYrAqfJuz3zW-jtIVk7hXkC1Bx7rgyrdC3wYHf/exec';
   const CLE_SESSION = 'lqd_formateur';
   const CLE_APPAREILS = 'lqd_formateur_appareils';   // { email: clé } — option B, 30 jours
   const STATUTS = ['Présent', 'Absent', 'Retard', 'Excusé'];
