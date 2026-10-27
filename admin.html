@@ -212,6 +212,10 @@
     .page.active { display: block; }
 
     /* COMPOSANTS */
+    .alerte-admin { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 20px; border-radius: 12px; background: var(--orange-dim); border: 1px solid var(--orange); color: var(--text); font-size: 14px; }
+    .alerte-admin[hidden] { display: none; }
+    .alerte-admin .iconify { color: var(--orange); font-size: 22px; flex-shrink: 0; }
+    .alerte-admin span.alerte-texte { flex: 1; min-width: 180px; }
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
     .stat-card { background: var(--dark-800); border: 1px solid var(--border); border-radius: var(--radius-l); padding: 20px; transition: border-color .2s; }
     .stat-card:hover { border-color: var(--border-l); }
@@ -673,6 +677,11 @@
   <main class="main-content">
 
     <div class="page active" id="page-dashboard">
+      <div class="alerte-admin" id="alerte-photos" hidden role="status">
+        <span class="iconify" data-icon="tabler:camera-exclamation"></span>
+        <span class="alerte-texte" id="alerte-photos-texte"></span>
+        <button class="btn btn-primary btn-sm" onclick="naviguer('photos')">Examiner</button>
+      </div>
       <div class="stats-grid" id="stats-grid">
         <div class="loading-overlay" style="grid-column:1/-1;"><div class="spinner"></div></div>
       </div>
@@ -1936,7 +1945,9 @@ function ouvrirSession(token, email) {
   demarrerSurveillanceInactivite();
   chargerDashboard();
   actualiserBadgeForum();
+  actualiserAlertes();
   _demarrerPollingBadgeForum();
+  _ouvrirPageDemandee();
 }
 
 function deconnecter() {
@@ -1962,7 +1973,9 @@ document.addEventListener('DOMContentLoaded', function() {
     demarrerSurveillanceInactivite();
     chargerDashboard();
     actualiserBadgeForum();
+    actualiserAlertes();
     _demarrerPollingBadgeForum();
+    _ouvrirPageDemandee();
   }
 });
 
@@ -2213,8 +2226,7 @@ async function chargerDemandesPhoto() {
   try {
     const r = await apiCall('admin_photo_demandes_lister');
     if (r.status !== 'success') throw new Error(r.message);
-    const b = document.getElementById('badge-photos');
-    b.textContent = r.enAttente; b.style.display = r.enAttente ? '' : 'none';
+    _appliquerAlertePhotos(r.enAttente);
     document.getElementById('photos-compteur').textContent = r.enAttente ? r.enAttente + ' en attente' : '';
     if (!r.demandes.length) { zone.innerHTML = '<div class="empty-state"><p>Aucune demande pour le moment.</p></div>'; return; }
     zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
@@ -4750,9 +4762,51 @@ async function actualiserBadgeForum() {
 let _pollingBadgeForumId = null;
 function _demarrerPollingBadgeForum() {
   if (_pollingBadgeForumId) return;
+  let tours = 0;
   _pollingBadgeForumId = setInterval(() => {
-    if (!document.hidden && state.token) actualiserBadgeForum();
+    if (document.hidden || !state.token) return;
+    actualiserBadgeForum();
+    if (++tours % 3 === 0) actualiserAlertes();
   }, 20000);
+}
+
+/* ---------- Alertes admin (demandes de photo en attente) ---------- */
+// null = premier relevé : pas de notification pour les demandes déjà là.
+let _photosEnAttenteConnues = null;
+const _titreAdmin = document.title;
+
+function _appliquerAlertePhotos(n) {
+  n = Number(n) || 0;
+  const b = document.getElementById('badge-photos');
+  if (b) { b.textContent = n; b.style.display = n ? '' : 'none'; }
+  const bandeau = document.getElementById('alerte-photos');
+  if (bandeau) {
+    bandeau.hidden = !n;
+    document.getElementById('alerte-photos-texte').innerHTML = n === 1
+      ? '<strong>1 demande de photo</strong> attend votre validation.'
+      : '<strong>' + n + ' demandes de photo</strong> attendent votre validation.';
+  }
+  document.title = n ? '(' + n + ') ' + _titreAdmin : _titreAdmin;
+  if (_photosEnAttenteConnues !== null && n > _photosEnAttenteConnues) {
+    toast('Nouvelle demande de photo d\'identité à valider.', 'info');
+  }
+  _photosEnAttenteConnues = n;
+}
+
+async function actualiserAlertes() {
+  try {
+    const r = await apiCall('admin_alertes');
+    if (r.status === 'success') _appliquerAlertePhotos(r.alertes.photos);
+  } catch (e) { /* silencieux : simple compteur */ }
+}
+
+// Lien direct depuis un email (ex. /admin#photos).
+const PAGES_LIEN_DIRECT = ['photos', 'besoins', 'forum', 'candidatures'];
+function _ouvrirPageDemandee() {
+  const page = (location.hash || '').slice(1);
+  if (PAGES_LIEN_DIRECT.indexOf(page) === -1) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  naviguer(page);
 }
 
 /* ================================================================
