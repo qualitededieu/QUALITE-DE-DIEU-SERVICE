@@ -308,7 +308,10 @@ function doPost(e) {
     // visiteur, ce qui n'avait aucun sens pour lui.
     if (action !== 'inscription') {
       console.warn('[doPost] Action inconnue :', action, '— le déploiement GAS est-il à jour ?');
-      return reponseJSON({ status: 'error', message: 'Ce service est momentanément indisponible. Merci de réessayer un peu plus tard ou de nous contacter au +229 01 97 95 12 30.' });
+      // Le nom de l'action et la version en ligne permettent de voir tout de
+      // suite qu'une mise à jour Apps Script n'a pas été déployée.
+      return reponseJSON({ status: 'error', serveurPasAJour: true,
+        message: 'Ce service est momentanément indisponible (action « ' + String(action).slice(0, 40) + ' » inconnue du serveur, version ' + VERSION_API + '). Merci de réessayer plus tard ou de nous contacter au +229 01 97 95 12 30.' });
     }
     return traiterInscription(data);
 
