@@ -282,6 +282,7 @@ function doPost(e) {
   if (action === 'cours_lister_apprenant') return coursListerApprenant(data);
   if (action === 'cours_ouvrir') return coursOuvrir(data);
   if (action === 'apprenant_suivi') return apprenantSuivi(data);
+  if (action === 'apprenant_session') return apprenantSession(data);
   if (action === 'besoins_ma_fiche')    return besoinsMaFiche(data);
   if (action === 'besoins_enregistrer') return besoinsEnregistrer(data);
   if (action === 'questionnaires_mes')    return questionnairesMes(data);
@@ -308,15 +309,21 @@ function doPost(e) {
     return traiterInscription(data);
 
   } catch (err) {
-    console.error('[doPost]', err.toString());
-    return reponseJSON({ status: 'error', message: 'Erreur interne. Veuillez réessayer.' });
+    // La cause est renvoyée (courte, sans donnée personnelle) et journalisée
+    // dans Apps Script > Exécutions : indispensable pour diagnostiquer.
+    const ref = Utilities.formatDate(new Date(), 'Africa/Porto-Novo', 'HHmmss');
+    let action = '';
+    try { action = JSON.parse(e.postData.contents).action || ''; } catch (x) {}
+    console.error('[doPost] ' + action + ' réf. ' + ref, err && err.stack ? err.stack : String(err));
+    return reponseJSON({ status: 'error', message: 'Erreur interne (réf. ' + ref + (action ? ' — ' + action : '') + ' : '
+      + String(err && err.message || err).slice(0, 140) + '). Réessayez ; si le problème continue, transmettez ce message au centre.' });
   }
 }
 
 // Marqueur de version : à changer à chaque mise à jour du code GAS.
 // Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
 // c'est la preuve que le déploiement EN LIGNE contient bien ce code.
-const VERSION_API = '2026-10-29 changement photo apprenant';
+const VERSION_API = '2026-10-30 classeur mémorisé + session apprenant';
 
 // Liste des modules attendus : true = présent ET à jour dans le code exécuté.
 // ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
@@ -341,6 +348,7 @@ function _etatModules() {
     questionnaires:           presente('formateurQEnregistrer') && presente('questionnaireRepondre') && presente('_validerSchema') && presente('adminBesoinsModeleEnregistrer'),
     driveRange:               presente('dossierApprenantDrive') && presente('rangerMonDrive_executer') && source('creerStructureDrive').indexOf('dossierApprenantDrive') !== -1,
     changementPhoto:          presente('adminChangerPhoto') && source('routerAdmin').indexOf('admin_changer_photo') !== -1,
+    sessionApprenant:         presente('apprenantSession') && source('doPost').indexOf('apprenant_session') !== -1 && source('trouverSpreadsheet').indexOf('SPREADSHEET_ID_') !== -1,
     motDePasseFormateur:      (() => { try { return _autoTestFormateur(); } catch (e) { return false; } })(),
     doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1 && source('doPost').indexOf('besoins_ma_fiche') !== -1 && source('doPost').indexOf('questionnaire_repondre') !== -1,
     routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1 && source('routerAdmin').indexOf('admin_demande_acces_traiter') !== -1 && source('routerAdmin').indexOf('admin_besoins_lister') !== -1 && source('routerAdmin').indexOf('admin_q_lister') !== -1
@@ -1446,9 +1454,39 @@ function formatFCFA(n) {
   return Number(n || 0).toLocaleString('fr-BJ') + ' F CFA';
 }
 
+// Classeur principal : identifiant mémorisé (Propriétés du script) et
+// réutilisé pendant toute l'exécution. Avant, CHAQUE appel cherchait le
+// fichier par son nom dans tout Drive (souvent 5 à 10 fois par requête) :
+// lent, et Google refuse les recherches trop rapprochées ("Service invoked
+// too many times"), ce qui donnait "Erreur interne" au hasard. La
+// recherche ignore aussi les copies à la corbeille et les fichiers qui ne
+// sont pas des tableurs (export .xlsx, PDF du même nom...).
+const _classeursOuverts = {};
 function trouverSpreadsheet(nom) {
+  if (_classeursOuverts[nom]) return _classeursOuverts[nom];
+  const props = PropertiesService.getScriptProperties();
+  const cle = 'SPREADSHEET_ID_' + nom.replace(/[^A-Za-z0-9]/g, '_');
+  const memo = props.getProperty(cle);
+  if (memo) {
+    // Un seul accès Drive léger par exécution (pas une recherche) : un classeur
+    // mis à la corbeille reste ouvrable, il faut donc le vérifier.
+    try {
+      if (!DriveApp.getFileById(memo).isTrashed()) return (_classeursOuverts[nom] = SpreadsheetApp.openById(memo));
+    } catch (e) { /* supprimé ou inaccessible */ }
+    props.deleteProperty(cle);
+  }
   const f = DriveApp.getFilesByName(nom);
-  return f.hasNext() ? SpreadsheetApp.openById(f.next().getId()) : null;
+  while (f.hasNext()) {
+    const fichier = f.next();
+    try {
+      if (fichier.isTrashed && fichier.isTrashed()) continue;
+      if (fichier.getMimeType && fichier.getMimeType() !== MimeType.GOOGLE_SHEETS) continue;
+      const ss = SpreadsheetApp.openById(fichier.getId());
+      props.setProperty(cle, fichier.getId());
+      return (_classeursOuverts[nom] = ss);
+    } catch (e) { console.error('[trouverSpreadsheet]', e.toString()); }
+  }
+  return null;
 }
 
 function trouverDossierDrive(nom) {

@@ -448,22 +448,16 @@ function verifierAccesTelechargement(data) {
   // Avant ce correctif, les deux documents partageaient le même verrou
   // par erreur — signalé par le PDG le 22/09/2026.
   if (type === 'attestation') {
-    const dateFinBrute = String(trouve.row[25] || '').trim();
-    if (dateFinBrute) {
-      const dateFin = new Date(dateFinBrute);
-      if (!isNaN(dateFin.getTime())) {
-        const aujourdHui = new Date();
-        aujourdHui.setHours(0, 0, 0, 0);
-        dateFin.setHours(0, 0, 0, 0);
-        if (aujourdHui < dateFin) {
-          return reponseJSON({
-            status: 'success',
-            accesAutorise: false,
-            formationEnCours: true,
-            dateFin: dateFinBrute
-          });
-        }
-      }
+    // La cellule peut contenir une vraie date (Sheets) ou un texte
+    // (aaaa-mm-jj ou jj/mm/aaaa) : _dateIso gère les trois cas.
+    const dateFinIso = _dateIso(trouve.row[25]);
+    if (dateFinIso && dateFinIso > _dateIso(new Date())) {
+      return reponseJSON({
+        status: 'success',
+        accesAutorise: false,
+        formationEnCours: true,
+        dateFin: dateFinIso
+      });
     }
   }
 
@@ -592,6 +586,15 @@ function confirmerPaiementTelechargement(data) {
 
   console.log('[Téléchargement] Paiement confirmé pour', id, '— référence FedaPay :', data.referenceFedapay || '—');
   return reponseJSON({ status: 'success' });
+}
+
+// Reprise de session après actualisation de l'espace apprenant : le jeton
+// est revérifié (signature, 8 h, dossier toujours actif) et les données
+// renvoyées sont celles du classeur à l'instant T (photo changée, etc.).
+function apprenantSession(data) {
+  const session = _sessionApprenant(data.token);
+  if (session.erreur) return _reponseSession(session);
+  return reponseJSON({ status: 'success', apprenant: session.apprenant });
 }
 
 function _genererTokenCarte(apprenant) {

@@ -349,3 +349,23 @@ MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
       de doute). Sans email : l admin est invité à le prévenir par téléphone.
     - Journal : onglet "Historique photos" (date, ancienne, nouvelle, motif,
       admin, email envoyé ou non).
+
+  CORRECTIFS ATTESTATION + ACTUALISATION ESPACE APPRENANT — version 2026-10-30
+    GAS : remplacer code et carte -> Nouvelle version sur LES DEUX
+    déploiements. Vérification : /exec affiche "2026-10-30 classeur
+    mémorisé + session apprenant" et "sessionApprenant": true.
+    GITHUB : remplacer espace-apprenant.html.
+    - Le classeur n est plus cherché par son nom dans tout Drive à chaque
+      action : son identifiant est mémorisé (Propriétés du script,
+      SPREADSHEET_ID_...). Fin des "Erreur interne" aléatoires dues aux
+      recherches Drive trop rapprochées, et serveur plus rapide.
+      Les copies à la corbeille et les exports (.xlsx, PDF) du même nom
+      sont ignorés.
+    - En cas d erreur serveur, le message affiche désormais la cause
+      (réf. heure — action : cause). Le détail complet est dans Apps
+      Script > Exécutions.
+    - Attestation : la date de fin est lue correctement qu elle soit une
+      date Sheets, "aaaa-mm-jj" ou "jj/mm/aaaa".
+    - Espace apprenant : l actualisation de la page ne déconnecte plus
+      (session gardée dans l onglet, revérifiée par le serveur, 8 h max).
+      Fermer l onglet ou "Déconnexion" déconnecte.

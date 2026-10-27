@@ -507,6 +507,15 @@
     ================================================================ */
     let _espaceApprenant = null; // { apprenant, token } — rempli après identification réussie
 
+    // Session gardée dans l'ONGLET (sessionStorage) : survit à l'actualisation
+    // de la page, disparaît à la fermeture de l'onglet (ordinateurs partagés,
+    // cybercafés). Le serveur revérifie le jeton à chaque reprise (8 h max).
+    const CLE_SESSION_APPRENANT = 'lqd_apprenant_session';
+    const CLE_ONGLET_APPRENANT  = 'lqd_apprenant_onglet';
+    function _memoriserSession(token) { try { sessionStorage.setItem(CLE_SESSION_APPRENANT, token); } catch (e) {} }
+    function _oublierSession() { try { sessionStorage.removeItem(CLE_SESSION_APPRENANT); sessionStorage.removeItem(CLE_ONGLET_APPRENANT); } catch (e) {} }
+    function _lireSession(cle) { try { return sessionStorage.getItem(cle) || ''; } catch (e) { return ''; } }
+
     // Localisation approximative (pays/ville) à des fins de suivi admin
     // UNIQUEMENT — jamais de position GPS précise (aucune permission
     // navigateur n'est demandée à l'apprenant). Résolue une seule fois par
@@ -555,6 +564,7 @@
 
         if (result.status === 'success') {
           _espaceApprenant = { apprenant: result.apprenant, token: result.token };
+          _memoriserSession(result.token);
           afficherApplication(result.apprenant);
         } else {
           msg.style.display    = 'block';
@@ -574,18 +584,19 @@
       btn.innerHTML = '<span class="iconify" data-icon="tabler:login-2"></span> Me connecter';
     }
 
-    function afficherApplication(apprenant) {
+    function afficherApplication(apprenant, onglet) {
       document.getElementById('ecran-connexion').style.display = 'none';
       document.getElementById('ecran-app').style.display = 'block';
       document.getElementById('espace-nom').textContent     = `${apprenant.prenom} ${apprenant.nom}`;
       document.getElementById('espace-filiere').textContent = apprenant.filiere || '—';
       document.getElementById('espace-avatar').textContent  = (apprenant.prenom || '?').charAt(0).toUpperCase();
       document.getElementById('badge-fiche-apprenant').style.display = 'none';
-      basculerOngletEspace('documents');
+      basculerOngletEspace(onglet && TITRES_ONGLET[onglet] ? onglet : 'documents');
       _verifierFicheEnAttente();
     }
 
     function reinitialiserEspace() {
+      _oublierSession();
       _arreterPollingForum();
       _forumDernierSnapshot = null;
       _espaceApprenant = null;
@@ -864,6 +875,7 @@
     };
 
     function basculerOngletEspace(nom) {
+      try { sessionStorage.setItem(CLE_ONGLET_APPRENANT, nom); } catch (e) {}
       document.querySelectorAll('.app-nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === nom));
       document.querySelectorAll('.app-panel').forEach(p => p.classList.remove('active'));
       document.getElementById('espace-tab-' + nom).classList.add('active');
@@ -1330,6 +1342,37 @@
         if (e.target === overlay) overlay.classList.remove('open');
       });
     });
+
+    // Reprise de la session après actualisation de la page.
+    (async function reprendreSession() {
+      const token = _lireSession(CLE_SESSION_APPRENANT);
+      if (!token) return;
+      const onglet = _lireSession(CLE_ONGLET_APPRENANT);
+      const btn = document.getElementById('carte-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="iconify" data-icon="tabler:loader-2" style="animation:spin 0.8s linear infinite"></span> Reconnexion…';
+      try {
+        const resp = await fetch(GAS_WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'apprenant_session', token: token }) });
+        const r = await resp.json();
+        if (r.status === 'success') {
+          _espaceApprenant = { apprenant: r.apprenant, token: token };
+          afficherApplication(r.apprenant, onglet);
+        } else {
+          _oublierSession();
+          if (r.sessionExpiree) {
+            const msg = document.getElementById('carte-msg');
+            msg.style.display = 'block'; msg.style.background = 'rgba(224,92,42,0.1)'; msg.style.color = '#E05C2A';
+            msg.textContent = r.message || 'Votre session a expiré. Reconnectez-vous.';
+          }
+        }
+      } catch (e) {
+        // Réseau coupé : on garde la session pour la prochaine actualisation.
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="iconify" data-icon="tabler:login-2"></span> Me connecter';
+      }
+    })();
 
     // Connexion au clavier (touche Entrée) sur les deux champs du formulaire
     document.getElementById('carte-tel').addEventListener('keydown', e => { if (e.key === 'Enter') obtenirCarte(); });
