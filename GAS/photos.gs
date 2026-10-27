@@ -137,25 +137,47 @@ const DEMANDES_PHOTO = {
   FEUILLE:      'Demandes photo',
   PAR_AN:       3,
   SOURCES:      ['Caméra', 'Import'],
-  DOSSIER:      'Demandes de photo'
+  DOSSIER:      'Demandes de photo',
+  // Défi guidé (preuve de présence) : gestes tirés au hasard PAR LE SERVEUR,
+  // une image prise automatiquement à chaque geste, contrôlée par l'admin.
+  NB_GESTES:    3,
+  DEFI_MINUTES: 10,           // validité d'un défi
+  DEFI_MIN_SEC: 6,            // en dessous, la série n'a pas pu être réalisée réellement
+  IMAGE_MAX:    1.5 * 1024 * 1024,
+  IMPORT_JOURS: 7             // exception "import d'un fichier" accordée par l'admin
+};
+const GESTES_DEFI = {
+  gauche:  { consigne: 'Tournez lentement la tête vers votre gauche', admin: 'Tête tournée vers SA gauche' },
+  droite:  { consigne: 'Tournez lentement la tête vers votre droite', admin: 'Tête tournée vers SA droite' },
+  haut:    { consigne: 'Levez légèrement le menton',                  admin: 'Menton levé' },
+  sourire: { consigne: 'Souriez largement',                           admin: 'Sourire' }
 };
 // 0 ID | 1 Date | 2 Dossier | 3 Apprenant | 4 Source | 5 Fichier (ID Drive) |
-// 6 Contrôles (JSON) | 7 Statut | 8 Traité par | 9 Date traitement | 10 Motif
+// 6 Contrôles (JSON) | 7 Statut | 8 Traité par | 9 Date traitement | 10 Motif |
+// 11 Gestes du défi (JSON) | 12 Images du défi (IDs Drive, JSON)
 const ENTETES_DEMANDES_PHOTO = ['ID', 'Date', 'Dossier', 'Apprenant', 'Source', 'Fichier (ID Drive)', 'Contrôles',
-  'Statut', 'Traité par', 'Date traitement', 'Motif'];
+  'Statut', 'Traité par', 'Date traitement', 'Motif', 'Défi (gestes)', 'Images du défi'];
+
+function _feuilleDemandesPhoto() {
+  const f = _feuilleFormation(DEMANDES_PHOTO.FEUILLE, ENTETES_DEMANDES_PHOTO);
+  // Feuille créée avant l'ajout des colonnes du défi.
+  if (f && f.getLastColumn() < ENTETES_DEMANDES_PHOTO.length) f.getRange(1, 1, 1, ENTETES_DEMANDES_PHOTO.length).setValues([ENTETES_DEMANDES_PHOTO]);
+  return f;
+}
 
 function _lireDemandesPhoto() {
-  const f = _feuilleFormation(DEMANDES_PHOTO.FEUILLE, ENTETES_DEMANDES_PHOTO);
+  const f = _feuilleDemandesPhoto();
   if (!f) return [];
   return f.getDataRange().getValues().map((r, i) => ({
     ligne: i + 1, id: String(r[0] || ''), date: _isoDate(r[1]), dossierId: String(r[2] || ''), apprenant: String(r[3] || ''),
     source: String(r[4] || ''), fichierId: String(r[5] || ''), controles: _jsonSur(r[6]), statut: String(r[7] || ''),
-    traitePar: String(r[8] || ''), dateTraitement: _isoDate(r[9]), motif: String(r[10] || '')
+    traitePar: String(r[8] || ''), dateTraitement: _isoDate(r[9]), motif: String(r[10] || ''),
+    gestes: _jsonTableau(r[11]), imagesDefi: _jsonTableau(r[12])
   })).slice(1).filter(d => d.id);
 }
 
 function _ecrireDemandePhoto(d, valeurs) {
-  const f = _feuilleFormation(DEMANDES_PHOTO.FEUILLE, ENTETES_DEMANDES_PHOTO);
+  const f = _feuilleDemandesPhoto();
   Object.keys(valeurs).forEach(c => f.getRange(d.ligne, Number(c) + 1).setValue(valeurs[c]));
 }
 
@@ -185,10 +207,61 @@ function photoDemandeEtat(data) {
   const session = _sessionApprenant(data.token);
   if (session.erreur) return _reponseSession(session);
   const e = _etatDemandesApprenant(session.apprenant.id);
-  return reponseJSON({ status: 'success',
+  return reponseJSON({ status: 'success', importAutorise: !!_importAutorise(session.apprenant.id),
     enAttente: e.enAttente ? { id: e.enAttente.id, date: e.enAttente.date, source: e.enAttente.source } : null,
     derniere: e.derniere ? { statut: e.derniere.statut, date: e.derniere.dateTraitement, motif: e.derniere.statut === 'Refusée' ? e.derniere.motif : '' } : null,
     restantes: e.restantes, prochaineLe: e.prochaineLe });
+}
+
+/* ------------------------ Défi guidé (preuve de présence) ------------------------ */
+
+function _cleDefi(id) { return 'PHDEFI_' + id; }
+
+// Exception "import d'un fichier" (téléphone sans caméra qui fonctionne) :
+// accordée par l'admin pour 7 jours, valable pour UNE demande.
+function _cleImport(id) { return 'PHOTO_IMPORT_' + id; }
+function _importAutorise(id) {
+  const v = PropertiesService.getScriptProperties().getProperty(_cleImport(id));
+  return v && new Date(v).getTime() > Date.now() ? v : '';
+}
+
+function photoDefiDemarrer(data) {
+  const session = _sessionApprenant(data.token);
+  if (session.erreur) return _reponseSession(session);
+  const e = _etatDemandesApprenant(session.apprenant.id);
+  if (e.enAttente) return reponseJSON({ status: 'error', message: 'Une demande est déjà en cours de validation.' });
+  if (e.restantes <= 0) return reponseJSON({ status: 'error', message: 'Limite de ' + DEMANDES_PHOTO.PAR_AN + ' demandes sur 12 mois atteinte.' });
+  // Tirage au hasard côté serveur : impossible de choisir ou de prévoir l'ordre.
+  const codes = Object.keys(GESTES_DEFI);
+  for (let i = codes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); const t = codes[i]; codes[i] = codes[j]; codes[j] = t;
+  }
+  const gestes = codes.slice(0, DEMANDES_PHOTO.NB_GESTES);
+  const defi = { id: Utilities.getUuid(), gestes: gestes, emis: Date.now() };
+  CacheService.getScriptCache().put(_cleDefi(session.apprenant.id), JSON.stringify(defi), DEMANDES_PHOTO.DEFI_MINUTES * 60);
+  return reponseJSON({ status: 'success', defiId: defi.id,
+    gestes: gestes.map(c => ({ code: c, consigne: GESTES_DEFI[c].consigne })) });
+}
+
+// Contrôle du défi envoyé avec la photo. Renvoie { gestes, images } ou { erreur }.
+function _verifierDefi(dossierId, data) {
+  const cache = CacheService.getScriptCache();
+  let defi = null;
+  try { defi = JSON.parse(cache.get(_cleDefi(dossierId)) || 'null'); } catch (e) { defi = null; }
+  if (!defi || !defi.id || defi.id !== String(data.defiId || '')) return { erreur: 'Vérification expirée ou déjà utilisée : recommencez la prise de photo.' };
+  const ecoule = (Date.now() - defi.emis) / 1000;
+  if (ecoule > DEMANDES_PHOTO.DEFI_MINUTES * 60) return { erreur: 'Vérification expirée (10 minutes) : recommencez la prise de photo.' };
+  if (ecoule < DEMANDES_PHOTO.DEFI_MIN_SEC) return { erreur: 'Vérification trop rapide : recommencez en suivant chaque consigne.' };
+  const images = Array.isArray(data.imagesDefi) ? data.imagesDefi : [];
+  if (images.length !== defi.gestes.length) return { erreur: 'Il manque des images de la vérification : recommencez la prise de photo.' };
+  const preparees = [];
+  for (let i = 0; i < images.length; i++) {
+    const p = _preparerPhotoIdentite(images[i], 'image/jpeg');
+    if (p.erreur) return { erreur: 'Image de vérification n° ' + (i + 1) + ' : ' + p.erreur };
+    if (p.octets.length > DEMANDES_PHOTO.IMAGE_MAX) return { erreur: 'Image de vérification trop lourde.' };
+    preparees.push(p);
+  }
+  return { defi: defi, images: preparees };
 }
 
 function photoDemandeEnvoyer(data) {
@@ -202,16 +275,29 @@ function photoDemandeEnvoyer(data) {
     if (e.enAttente) return reponseJSON({ status: 'error', message: 'Une demande est déjà en cours de validation. Patientez ou annulez-la.' });
     if (e.restantes <= 0) return reponseJSON({ status: 'error', message: 'Vous avez atteint la limite de ' + DEMANDES_PHOTO.PAR_AN + ' demandes sur 12 mois. Prochaine demande possible le ' + _jjmmaaaa(e.prochaineLe) + ', ou adressez-vous à l\'administration.' });
     const source = DEMANDES_PHOTO.SOURCES.indexOf(data.source) !== -1 ? data.source : 'Import';
+    // Galerie fermée : un fichier importé n'est accepté qu'avec l'exception de l'admin.
+    if (source === 'Import' && !_importAutorise(a.id)) {
+      return reponseJSON({ status: 'error', message: 'La photo doit être prise avec la caméra. Si la caméra de votre téléphone ne fonctionne pas, demandez à l\'administration l\'autorisation d\'importer une photo.' });
+    }
     const photo = _preparerPhotoIdentite(data.photoBase64, data.photoMime);
     if (photo.erreur) return reponseJSON({ status: 'error', message: photo.erreur });
+    const defi = source === 'Caméra' ? _verifierDefi(a.id, data) : null;
+    if (defi && defi.erreur) return reponseJSON({ status: 'error', message: defi.erreur, defiARefaire: true });
     // Fichier PRIVÉ tant que l'administration n'a pas validé.
     const dossier = dossierApprenantDrive(a.id, a.prenom, a.nom);
     const sous = _sousDossierActif(dossier, DEMANDES_PHOTO.DOSSIER) || dossier.createFolder(DEMANDES_PHOTO.DOSSIER);
     const horodatage = Utilities.formatDate(new Date(), 'Africa/Porto-Novo', 'yyyy-MM-dd_HHmm');
     const fichier = sous.createFile(Utilities.newBlob(photo.octets, photo.mime, 'demande-photo_' + a.id + '_' + horodatage + '.' + photo.ext));
+    // Images du défi : privées, supprimées après la décision de l'admin.
+    const imagesIds = defi ? defi.images.map((p, i) => sous.createFile(Utilities.newBlob(p.octets, p.mime,
+      'verification_' + a.id + '_' + horodatage + '_' + (i + 1) + '-' + defi.defi.gestes[i] + '.' + p.ext)).getId()) : [];
     const id = 'PH-' + Utilities.formatDate(new Date(), 'Africa/Porto-Novo', 'yyMMdd') + '-' + Utilities.getUuid().slice(0, 6).toUpperCase();
-    _ajouterLignes(_feuilleFormation(DEMANDES_PHOTO.FEUILLE, ENTETES_DEMANDES_PHOTO),
-      [[id, new Date(), a.id, (a.prenom + ' ' + a.nom).trim(), source, fichier.getId(), JSON.stringify(_normaliserControles(data.controles)), 'En attente', '', '', '']]);
+    _ajouterLignes(_feuilleDemandesPhoto(),
+      [[id, new Date(), a.id, (a.prenom + ' ' + a.nom).trim(), source, fichier.getId(), JSON.stringify(_normaliserControles(data.controles)), 'En attente', '', '', '',
+        JSON.stringify(defi ? defi.defi.gestes : []), JSON.stringify(imagesIds)]]);
+    // Défi et exception à usage unique.
+    if (defi) CacheService.getScriptCache().put(_cleDefi(a.id), JSON.stringify({ utilise: true }), 60);
+    if (source === 'Import') PropertiesService.getScriptProperties().deleteProperty(_cleImport(a.id));
     try {
       GmailApp.sendEmail(CONFIG.ADMIN_EMAIL, 'Photo à valider : ' + a.prenom + ' ' + a.nom, 'Nouvelle demande de photo d\'identité. Admin > Demandes de photo.', {
         htmlBody: _gabaritBesoins('Administration — LQD Service', 'Nouvelle photo d\'identité à valider',
@@ -224,6 +310,10 @@ function photoDemandeEnvoyer(data) {
   }
 }
 
+function _supprimerImagesDefi(d) {
+  (d.imagesDefi || []).forEach(fid => { const f = _fichierValide(fid); if (f) f.setTrashed(true); });
+}
+
 function photoDemandeAnnuler(data) {
   const session = _sessionApprenant(data.token);
   if (session.erreur) return _reponseSession(session);
@@ -232,6 +322,7 @@ function photoDemandeAnnuler(data) {
   _ecrireDemandePhoto(d, { 7: 'Annulée', 8: 'Apprenant', 9: new Date() });
   const f = _fichierValide(d.fichierId);
   if (f) f.setTrashed(true);
+  _supprimerImagesDefi(d);
   return reponseJSON({ status: 'success', message: 'Demande annulée.' });
 }
 
@@ -241,7 +332,8 @@ function adminPhotoDemandesLister(data, email) {
   const ordre = { 'En attente': 0, 'Refusée': 1, 'Validée': 1, 'Annulée': 2 };
   const liste = _lireDemandesPhoto().sort((a, b) => (ordre[a.statut] - ordre[b.statut]) || String(b.date).localeCompare(String(a.date)))
     .slice(0, 200).map(d => ({ id: d.id, date: d.date, dossierId: d.dossierId, apprenant: d.apprenant, source: d.source,
-      controles: d.controles, statut: d.statut, traitePar: d.traitePar, dateTraitement: d.dateTraitement, motif: d.motif }));
+      controles: d.controles, statut: d.statut, traitePar: d.traitePar, dateTraitement: d.dateTraitement, motif: d.motif,
+      defi: d.gestes.length > 0 }));
   return reponseJSON({ status: 'success', demandes: liste, enAttente: liste.filter(d => d.statut === 'En attente').length });
 }
 
@@ -251,7 +343,10 @@ function adminPhotoDemandeGet(data, email) {
   if (!d) return reponseJSON({ status: 'error', message: 'Demande introuvable.' });
   const f = _fichierValide(d.fichierId);
   const row = _ligneApprenant(d.dossierId);
-  return reponseJSON({ status: 'success', demande: {
+  const enDonnees = fichier => fichier ? 'data:' + (fichier.getBlob().getContentType() || 'image/jpeg') + ';base64,' + Utilities.base64Encode(fichier.getBlob().getBytes()) : '';
+  const verification = d.gestes.map((g, i) => ({ geste: g, libelle: (GESTES_DEFI[g] || {}).admin || g,
+    image: enDonnees(_fichierValide(d.imagesDefi[i])) }));
+  return reponseJSON({ status: 'success', demande: { verification: verification,
     id: d.id, date: d.date, dossierId: d.dossierId, apprenant: d.apprenant, source: d.source, controles: d.controles, statut: d.statut, motif: d.motif,
     photo: f ? 'data:' + (f.getBlob().getContentType() || 'image/jpeg') + ';base64,' + Utilities.base64Encode(f.getBlob().getBytes()) : '',
     photoActuelle: row && _idDriveDepuisLien(row[32]) ? _miniatureDrive(_idDriveDepuisLien(row[32]), 400) : '',
@@ -272,6 +367,7 @@ function adminPhotoDemandeTraiter(data, email) {
     const ext = /\.png$/i.test(f.getName()) ? 'png' : 'jpg';
     const r = _remplacerPhotoApprenant(row, f, ext, motif || 'Nouvelle photo envoyée depuis votre espace apprenant et validée par l\'administration.', email);
     _ecrireDemandePhoto(d, { 7: 'Validée', 8: email, 9: new Date(), 10: motif });
+    _supprimerImagesDefi(d);
     return reponseJSON({ status: 'success', emailEnvoye: r.emailEnvoye,
       message: r.emailEnvoye ? 'Photo validée et appliquée. L\'apprenant est prévenu par email.' : 'Photo validée et appliquée. Pas d\'email : prévenez l\'apprenant par téléphone.' });
   }
@@ -280,6 +376,7 @@ function adminPhotoDemandeTraiter(data, email) {
     _ecrireDemandePhoto(d, { 7: 'Refusée', 8: email, 9: new Date(), 10: motif });
     const f = _fichierValide(d.fichierId);
     if (f) f.setTrashed(true);
+    _supprimerImagesDefi(d);
     const mail = String(row[10] || '').trim().toLowerCase();
     let emailEnvoye = false;
     if (_emailValide(mail)) {
@@ -294,4 +391,26 @@ function adminPhotoDemandeTraiter(data, email) {
       message: emailEnvoye ? 'Demande refusée. L\'apprenant reçoit le motif par email.' : 'Demande refusée. Pas d\'email : prévenez l\'apprenant par téléphone.' });
   }
   return reponseJSON({ status: 'error', message: 'Décision inconnue.' });
+}
+
+// Exception : autoriser un apprenant à IMPORTER une photo (pas de caméra qui
+// fonctionne). Valable 7 jours, pour une seule demande.
+function adminPhotoAutoriserImport(data, email) {
+  const id = String(data.dossierId || '').trim();
+  const row = id ? _ligneApprenant(id) : null;
+  if (!row) return reponseJSON({ status: 'error', message: 'Dossier introuvable : vérifiez le numéro (ex. LQD-261025-AB12).' });
+  const jusquA = new Date(Date.now() + DEMANDES_PHOTO.IMPORT_JOURS * 86400000);
+  PropertiesService.getScriptProperties().setProperty(_cleImport(id), jusquA.toISOString());
+  const mail = String(row[10] || '').trim().toLowerCase();
+  let emailEnvoye = false;
+  if (_emailValide(mail)) {
+    try {
+      const corps = `<p>Bonjour ${row[2] || ''},</p><p>L'administration vous autorise à <strong>importer une photo</strong> depuis votre appareil (au lieu de la caméra) pour mettre à jour votre photo d'identité, jusqu'au <strong>${Utilities.formatDate(jusquA, 'Africa/Porto-Novo', 'dd/MM/yyyy')}</strong>.</p><p>Espace apprenant > Mes documents > Mettre à jour ma photo. La photo sera vérifiée avant d'être appliquée.</p>`;
+      GmailApp.sendEmail(mail, 'Import de photo autorisé', corps.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '), {
+        htmlBody: _gabaritBesoins('Espace apprenant — LQD Service', 'Import de photo autorisé', corps), name: CONFIG.EXPEDITEUR_NOM, replyTo: CONFIG.ADMIN_EMAIL });
+      emailEnvoye = true;
+    } catch (e) { console.error('[adminPhotoAutoriserImport] email', e.toString()); }
+  }
+  return reponseJSON({ status: 'success', message: 'Import autorisé pour ' + String(row[2] || '') + ' ' + String(row[3] || '') + ' jusqu\'au '
+    + Utilities.formatDate(jusquA, 'Africa/Porto-Novo', 'dd/MM/yyyy') + (emailEnvoye ? ' (prévenu par email).' : ' — pas d\'email : prévenez-le par téléphone.') });
 }

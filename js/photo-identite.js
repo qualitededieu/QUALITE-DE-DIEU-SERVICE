@@ -2,7 +2,11 @@
    js/photo-identite.js — Prise de photo d'identité (espace apprenant)
    Inspiré des guichets d'identité : consignes, caméra frontale avec cadre
    ovale, capture, contrôles de qualité, recadrage au format 3,5 x 4,5 cm,
-   « Reprendre » à volonté, import d'un fichier en secours.
+   puis VÉRIFICATION DE PRÉSENCE : 3 gestes tirés au hasard par le serveur
+   (tourner la tête, lever le menton, sourire), une image prise
+   automatiquement à chaque geste, contrôlée par l'administration.
+   Galerie fermée : l'import d'un fichier n'est possible qu'avec
+   l'autorisation de l'administration.
    La photo n'est PAS appliquée ici : elle part en validation à
    l'administration (GAS photos.gs : photo_demande_envoyer).
    Aucune bibliothèque externe (poids minimal, fonctionne en 3G).
@@ -50,7 +54,18 @@
 .pi-msg{font-size:13.5px;padding:10px 12px;border-radius:10px;margin-bottom:12px}
 .pi-msg.erreur{background:#FDEDEC;color:#C0392B}
 .pi-msg.ok{background:#E6F6EF;color:#0F6E56}
-.pi-discret{font-size:12.5px;color:#6B7280;margin:10px 0 0;text-align:center}`;
+.pi-discret{font-size:12.5px;color:#6B7280;margin:10px 0 0;text-align:center}
+.pi-etape{position:absolute;top:10px;left:10px;right:10px;text-align:center;color:#FFF;font-size:12.5px;font-weight:700;background:rgba(0,0,0,.45);border-radius:20px;padding:5px 10px}
+.pi-defi{position:absolute;left:12px;right:12px;bottom:14px;background:rgba(13,122,138,.92);color:#FFF;border-radius:14px;padding:12px;text-align:center}
+.pi-defi-texte{font-size:17px;font-weight:800;line-height:1.3}
+.pi-decompte{font-size:34px;font-weight:800;line-height:1.1;min-height:38px}
+.pi-flash{position:absolute;inset:0;background:#FFF;opacity:0;pointer-events:none}
+.pi-flash-on{animation:pi-flash .35s ease-out}
+@keyframes pi-flash{0%{opacity:.85}100%{opacity:0}}
+.pi-serie{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.pi-serie figure{margin:0;text-align:center}
+.pi-serie img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB}
+.pi-serie figcaption{font-size:11px;color:#6B7280;margin-top:3px;line-height:1.25}`;
     document.head.appendChild(s);
   }
 
@@ -106,8 +121,22 @@
     return c;
   }
 
+  // Image de vérification (plus petite que la photo d'identité).
+  function imageVerification(video) {
+    const W = 480, H = 640, sw = video.videoWidth, sh = video.videoHeight;
+    let cw = sw, ch = sw * H / W;
+    if (ch > sh) { ch = sh; cw = sh * W / H; }
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    c.getContext('2d').drawImage(video, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, W, H);
+    return c.toDataURL('image/jpeg', 0.75);
+  }
+
+  const attendre = ms => new Promise(r => setTimeout(r, ms));
+
   /* ------------------------------ Fenêtre ------------------------------ */
-  // opts.envoyer({ base64, mime, source, controles }) -> Promise<{status, message}>
+  // opts.demarrerDefi() -> Promise<{status, defiId, gestes:[{code, consigne}]}>
+  // opts.envoyer({ base64, mime, source, controles, defiId, imagesDefi }) -> Promise<{status, message}>
+  // opts.importAutorise : exception accordée par l'admin (sinon galerie fermée)
   function ouvrir(opts) {
     styles();
     const fond = document.createElement('div');
@@ -118,13 +147,13 @@
       <button type="button" class="pi-fermer" aria-label="Fermer">${ICONE('x')}</button></div><div class="pi-corps"></div></div>`;
     document.body.appendChild(fond);
     const corps = fond.querySelector('.pi-corps');
-    let flux = null, minuteur = null, cameras = [], indexCamera = 0, capture = null;
+    let flux = null, minuteur = null, cameras = [], indexCamera = 0, capture = null, defi = null, ferme = false;
 
     function arreterCamera() {
       clearInterval(minuteur); minuteur = null;
       if (flux) { flux.getTracks().forEach(t => t.stop()); flux = null; }
     }
-    function fermer() { arreterCamera(); fond.remove(); document.removeEventListener('keydown', echap); }
+    function fermer() { ferme = true; arreterCamera(); fond.remove(); document.removeEventListener('keydown', echap); }
     function echap(e) { if (e.key === 'Escape') fermer(); }
     document.addEventListener('keydown', echap);
     fond.querySelector('.pi-fermer').addEventListener('click', fermer);
@@ -133,6 +162,7 @@
 
     function ecranConsignes(message) {
       arreterCamera();
+      const sansCamera = 'Pas de caméra qui fonctionne ? Demandez à l\'administration l\'autorisation d\'importer une photo.';
       corps.innerHTML = `${message ? `<div class="pi-msg erreur">${message}</div>` : ''}
         <p style="margin:0 0 12px;font-size:14px;">Comme pour une pièce d'identité, votre photo doit respecter ces règles :</p>
         <ul class="pi-consignes">
@@ -141,15 +171,34 @@
           <li>${ICONE('square')}<span>Fond <strong>clair et uni</strong> (mur blanc ou gris clair).</span></li>
           <li>${ICONE('eyeglass-off')}<span>Sans lunettes de soleil, casquette ni masque. Le voile religieux est accepté si le visage est entièrement visible.</span></li>
           <li>${ICONE('focus-2')}<span>Tête et haut des épaules dans le cadre.</span></li>
+          <li>${ICONE('rotate-clockwise')}<span>Après la photo, une <strong>vérification de présence</strong> vous demandera 3 gestes simples (tourner la tête, lever le menton, sourire).</span></li>
         </ul>
-        ${cameraPossible ? `<button type="button" class="pi-btn pi-plein" data-pi="camera">${ICONE('camera')} Ouvrir la caméra</button>` : '<div class="pi-msg erreur">Caméra indisponible sur cet appareil ou ce navigateur : importez une photo.</div>'}
-        <button type="button" class="${cameraPossible ? 'pi-lien' : 'pi-btn pi-plein'}" data-pi="importer">${ICONE('photo-up')} Importer une photo depuis l'appareil</button>
-        <input type="file" accept="image/jpeg,image/png" hidden data-pi="fichier">
+        ${cameraPossible ? `<button type="button" class="pi-btn pi-plein" data-pi="camera">${ICONE('camera')} Commencer avec la caméra</button>`
+          : `<div class="pi-msg erreur">Caméra indisponible sur cet appareil ou ce navigateur.${opts.importAutorise ? '' : ' ' + sansCamera}</div>`}
+        ${opts.importAutorise ? `<button type="button" class="${cameraPossible ? 'pi-lien' : 'pi-btn pi-plein'}" data-pi="importer">${ICONE('photo-up')} Importer une photo (autorisé par l'administration)</button>
+          <input type="file" accept="image/jpeg,image/png" hidden data-pi="fichier">`
+          : (cameraPossible ? `<p class="pi-discret">${sansCamera}</p>` : '')}
         <p class="pi-discret">Votre photo sera vérifiée par l'administration avant de remplacer l'actuelle sur votre carte et votre attestation.</p>`;
       const btn = corps.querySelector('[data-pi="camera"]');
-      if (btn) btn.addEventListener('click', ouvrirCamera);
-      corps.querySelector('[data-pi="importer"]').addEventListener('click', () => corps.querySelector('[data-pi="fichier"]').click());
-      corps.querySelector('[data-pi="fichier"]').addEventListener('change', e => importer(e.target.files && e.target.files[0]));
+      if (btn) btn.addEventListener('click', demarrer);
+      const imp = corps.querySelector('[data-pi="importer"]');
+      if (imp) {
+        imp.addEventListener('click', () => corps.querySelector('[data-pi="fichier"]').click());
+        corps.querySelector('[data-pi="fichier"]').addEventListener('change', e => importer(e.target.files && e.target.files[0]));
+      }
+    }
+
+    // Le défi est demandé au serveur AVANT la caméra : gestes tirés au hasard,
+    // valables 10 minutes et une seule fois.
+    async function demarrer() {
+      corps.innerHTML = '<p style="text-align:center;padding:30px 0;color:#6B7280;">Préparation de la vérification…</p>';
+      try {
+        const r = await opts.demarrerDefi();
+        if (!r) return fermer();
+        if (r.status !== 'success') return ecranConsignes(r.message || 'Vérification indisponible.');
+        defi = { id: r.defiId, gestes: r.gestes };
+      } catch (e) { return ecranConsignes('Connexion interrompue. Réessayez.'); }
+      ouvrirCamera();
     }
 
     async function ouvrirCamera() {
@@ -163,11 +212,13 @@
           try { cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch (e) { cameras = []; }
         }
       } catch (e) {
-        const msg = e && e.name === 'NotAllowedError' ? 'Accès à la caméra refusé. Autorisez la caméra dans votre navigateur, ou importez une photo.'
-          : (e && e.name === 'NotFoundError' ? 'Aucune caméra détectée sur cet appareil : importez une photo.'
-          : 'Impossible d\'ouvrir la caméra (' + (e && e.name || 'erreur') + ') : importez une photo.');
+        const suite = opts.importAutorise ? ' Vous pouvez aussi importer une photo.' : ' Si le problème continue, demandez à l\'administration l\'autorisation d\'importer une photo.';
+        const msg = e && e.name === 'NotAllowedError' ? 'Accès à la caméra refusé. Autorisez la caméra dans les réglages de votre navigateur, puis recommencez.' + suite
+          : (e && e.name === 'NotFoundError' ? 'Aucune caméra détectée sur cet appareil.' + suite
+          : 'Impossible d\'ouvrir la caméra (' + (e && e.name || 'erreur') + ').' + suite);
         return ecranConsignes(msg);
       }
+      if (ferme) return arreterCamera();
       corps.innerHTML = `<div class="pi-video">
           <video playsinline autoplay muted></video>
           <svg viewBox="0 0 300 400" preserveAspectRatio="none" aria-hidden="true">
@@ -175,14 +226,17 @@
             <rect width="300" height="400" fill="rgba(0,0,0,.45)" mask="url(#pi-masque)"/>
             <ellipse cx="150" cy="178" rx="92" ry="122" fill="none" stroke="#FFF" stroke-width="2.5" stroke-dasharray="7 6"/>
           </svg>
+          <div class="pi-etape" data-pi="etape">Étape 1 / ${defi.gestes.length + 1} — Photo de face</div>
+          <div class="pi-defi" data-pi="defi" hidden><div class="pi-defi-texte" data-pi="defi-texte"></div><div class="pi-decompte" data-pi="decompte"></div></div>
+          <div class="pi-flash" data-pi="flash"></div>
           <div class="pi-consigne-live" data-pi="live">Placez votre visage dans l'ovale</div>
         </div>
-        <div class="pi-commandes">
+        <div class="pi-commandes" data-pi="commandes">
           <button type="button" class="pi-rond" data-pi="retour" title="Retour aux consignes">${ICONE('arrow-left')}</button>
-          <button type="button" class="pi-declencheur" data-pi="declencher" aria-label="Prendre la photo"></button>
+          <button type="button" class="pi-declencheur" data-pi="declencher" aria-label="Prendre la photo de face"></button>
           <button type="button" class="pi-rond" data-pi="basculer" title="Changer de caméra"${cameras.length > 1 ? '' : ' style="visibility:hidden"'}>${ICONE('camera-rotate')}</button>
         </div>
-        <p class="pi-discret">Tenez l'appareil à hauteur des yeux, à environ 50 cm.</p>`;
+        <p class="pi-discret" data-pi="aide">Regardez l'objectif, puis appuyez sur le bouton rond. Tenez l'appareil à hauteur des yeux, à environ 50 cm.</p>`;
       const video = corps.querySelector('video');
       video.srcObject = flux;
       try { await video.play(); } catch (e) { /* lecture automatique bloquée : le flux s'affichera au premier geste */ }
@@ -201,12 +255,41 @@
       corps.querySelector('[data-pi="basculer"]').addEventListener('click', () => { arreterCamera(); indexCamera = (indexCamera + 1) % cameras.length; ouvrirCamera(); });
       corps.querySelector('[data-pi="declencher"]').addEventListener('click', () => {
         if (!video.videoWidth) return;
-        // Image enregistrée NON inversée (comme une vraie photo d'identité),
+        // Photo d'identité enregistrée NON inversée (comme une vraie photo),
         // même si l'aperçu vidéo est en miroir pour être naturel.
-        capture = { canvas: recadrer(video, video.videoWidth, video.videoHeight), source: 'Caméra' };
-        arreterCamera();
-        ecranApercu();
+        capture = { canvas: recadrer(video, video.videoWidth, video.videoHeight), source: 'Caméra', images: [] };
+        flash();
+        verificationPresence(video);
       });
+    }
+
+    function flash() {
+      const f = corps.querySelector('[data-pi="flash"]');
+      if (!f) return;
+      f.classList.remove('pi-flash-on'); void f.offsetWidth; f.classList.add('pi-flash-on');
+    }
+
+    // Les gestes s'enchaînent : consigne, compte à rebours, image automatique.
+    async function verificationPresence(video) {
+      clearInterval(minuteur); minuteur = null;
+      corps.querySelector('[data-pi="commandes"]').style.visibility = 'hidden';
+      corps.querySelector('[data-pi="live"]').textContent = '';
+      corps.querySelector('[data-pi="aide"]').textContent = 'Vérification de présence : suivez chaque consigne. Les images sont prises automatiquement.';
+      const boite = corps.querySelector('[data-pi="defi"]'), texte = corps.querySelector('[data-pi="defi-texte"]'), decompte = corps.querySelector('[data-pi="decompte"]');
+      boite.hidden = false;
+      for (let i = 0; i < defi.gestes.length; i++) {
+        if (ferme || !flux) return;
+        corps.querySelector('[data-pi="etape"]').textContent = 'Étape ' + (i + 2) + ' / ' + (defi.gestes.length + 1) + ' — Vérification de présence';
+        texte.textContent = defi.gestes[i].consigne;
+        for (let n = 3; n >= 1; n--) { decompte.textContent = n; await attendre(1000); if (ferme || !flux) return; }
+        decompte.textContent = '';
+        capture.images.push(imageVerification(video));
+        flash();
+        await attendre(500);
+        if (i < defi.gestes.length - 1) { texte.textContent = 'Revenez de face…'; await attendre(1000); }
+      }
+      arreterCamera();
+      ecranApercu();
     }
 
     function importer(fichier) {
@@ -218,7 +301,7 @@
       img.onload = () => {
         URL.revokeObjectURL(url);
         if (Math.min(img.naturalWidth, img.naturalHeight) < 300) return ecranConsignes('Photo trop petite (300 px minimum) : elle serait floue sur la carte.');
-        capture = { canvas: recadrer(img, img.naturalWidth, img.naturalHeight), source: 'Import' };
+        capture = { canvas: recadrer(img, img.naturalWidth, img.naturalHeight), source: 'Import', images: [] };
         ecranApercu();
       };
       img.onerror = () => { URL.revokeObjectURL(url); ecranConsignes('Image illisible.'); };
@@ -229,27 +312,36 @@
       const m = mesurer(capture.canvas);
       capture.controles = m;
       const lignes = [
-        ['Luminosité', m.avertissements.some(a => /sombre|claire/.test(a) && !/Fond/.test(a)) ? m.avertissements.filter(a => /Photo trop/.test(a))[0] : 'Correcte'],
+        ['Luminosité', m.avertissements.filter(a => /^Photo trop/.test(a))[0] || 'Correcte'],
         ['Netteté', m.avertissements.indexOf('Photo floue') !== -1 ? 'Photo floue' : 'Correcte'],
         ['Fond', m.avertissements.filter(a => /Fond/.test(a))[0] || 'Clair et uni']
       ];
+      const camera = capture.source === 'Caméra';
       corps.innerHTML = `<img class="pi-apercu" alt="Aperçu de la photo" src="${capture.canvas.toDataURL('image/jpeg', 0.9)}">
         <ul class="pi-controles">${lignes.map(l => {
           const ok = /Correcte|Clair et uni/.test(l[1]);
           return `<li class="${ok ? 'ok' : 'alerte'}">${ICONE(ok ? 'circle-check' : 'alert-triangle')} <strong>${l[0]} :</strong>&nbsp;${l[1]}</li>`;
-        }).join('')}</ul>
-        ${m.avertissements.length ? '<p style="font-size:13px;margin:0 0 12px;color:#8A5A12;">Nous vous conseillons de reprendre la photo : une photo de mauvaise qualité risque d\'être refusée.</p>' : ''}
+        }).join('')}
+        ${camera ? `<li class="ok">${ICONE('shield-check')} <strong>Vérification de présence :</strong>&nbsp;${capture.images.length} image(s) prise(s)</li>` : ''}</ul>
+        ${camera ? `<div class="pi-serie">${capture.images.map((src, i) => `<figure><img src="${src}" alt=""><figcaption>${defi.gestes[i].consigne}</figcaption></figure>`).join('')}</div>` : ''}
+        ${m.avertissements.length ? '<p style="font-size:13px;margin:0 0 12px;color:#8A5A12;">Nous vous conseillons de recommencer : une photo de mauvaise qualité risque d\'être refusée.</p>' : ''}
         <div data-pi="msg"></div>
         <button type="button" class="pi-btn pi-plein" data-pi="envoyer">${ICONE('send')} Envoyer pour validation</button>
-        <button type="button" class="pi-btn pi-contour" data-pi="reprendre">${ICONE('refresh')} Reprendre la photo</button>`;
-      corps.querySelector('[data-pi="reprendre"]').addEventListener('click', () => (capture.source === 'Caméra' ? ouvrirCamera() : ecranConsignes()));
+        <button type="button" class="pi-btn pi-contour" data-pi="reprendre">${ICONE('refresh')} Tout recommencer</button>`;
+      // Recommencer = nouveau défi (on ne peut pas réutiliser les gestes déjà vus).
+      corps.querySelector('[data-pi="reprendre"]').addEventListener('click', () => (camera ? demarrer() : ecranConsignes()));
       corps.querySelector('[data-pi="envoyer"]').addEventListener('click', async e => {
         const b = e.currentTarget; b.disabled = true;
         const zone = corps.querySelector('[data-pi="msg"]');
         try {
-          const r = await opts.envoyer({ base64: capture.canvas.toDataURL('image/jpeg', 0.88).split(',')[1], mime: 'image/jpeg', source: capture.source, controles: capture.controles });
+          const r = await opts.envoyer({ base64: capture.canvas.toDataURL('image/jpeg', 0.88).split(',')[1], mime: 'image/jpeg', source: capture.source,
+            controles: capture.controles, defiId: camera ? defi.id : '', imagesDefi: capture.images.map(d => d.split(',')[1]) });
           if (!r) { fermer(); return; }
-          if (r.status !== 'success') { zone.innerHTML = `<div class="pi-msg erreur"></div>`; zone.firstChild.textContent = r.message || 'Envoi impossible.'; b.disabled = false; return; }
+          if (r.status !== 'success') {
+            zone.innerHTML = '<div class="pi-msg erreur"></div>'; zone.firstChild.textContent = r.message || 'Envoi impossible.';
+            b.disabled = !!r.defiARefaire;
+            return;
+          }
           corps.innerHTML = `<div class="pi-msg ok" style="text-align:center;padding:18px;">${ICONE('circle-check')} ${r.message}</div>
             <button type="button" class="pi-btn pi-plein" data-pi="fin">Fermer</button>`;
           corps.querySelector('[data-pi="fin"]').addEventListener('click', fermer);

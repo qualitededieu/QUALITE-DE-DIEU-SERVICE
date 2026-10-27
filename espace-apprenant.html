@@ -1231,6 +1231,7 @@
        La photo part en validation : elle ne remplace l'actuelle qu'après
        accord de l'administration.
     ================================================================ */
+    let _importPhotoAutorise = false;   // exception accordée par l'admin (galerie fermée sinon)
     async function chargerEtatPhoto() {
       if (!_espaceApprenant) return;
       const etat = document.getElementById('photo-etat'), actions = document.getElementById('photo-actions');
@@ -1240,6 +1241,7 @@
         const r = await _postEspace({ action: 'photo_demande_etat', token: _espaceApprenant.token });
         if (_sessionTerminee(r)) return;
         if (r.status !== 'success') { etat.textContent = r.message || 'Indisponible.'; actions.innerHTML = ''; return; }
+        _importPhotoAutorise = !!r.importAutorise;
         const date = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
         if (r.enAttente) {
           etat.innerHTML = '<span style="color:#B7791F;font-weight:700;">Nouvelle photo en attente de validation</span> — envoyée le ' + _txt(date(r.enAttente.date)) + '.';
@@ -1264,9 +1266,16 @@
     function ouvrirMiseAJourPhoto() {
       if (!_espaceApprenant || typeof PhotoIdentite === 'undefined') return showToast('Module photo indisponible. Actualisez la page.', 'error');
       PhotoIdentite.ouvrir({
+        importAutorise: _importPhotoAutorise,
+        demarrerDefi: async () => {
+          const r = await _postEspace({ action: 'photo_defi_demarrer', token: _espaceApprenant.token });
+          if (_sessionTerminee(r)) return null;
+          return r;
+        },
         envoyer: async (p) => {
           const r = await _postEspace({ action: 'photo_demande_envoyer', token: _espaceApprenant.token,
-            photoBase64: p.base64, photoMime: p.mime, source: p.source, controles: p.controles });
+            photoBase64: p.base64, photoMime: p.mime, source: p.source, controles: p.controles,
+            defiId: p.defiId, imagesDefi: p.imagesDefi });
           if (_sessionTerminee(r)) return null;
           return r;
         },

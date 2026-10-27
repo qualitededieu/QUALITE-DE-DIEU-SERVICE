@@ -398,3 +398,30 @@ MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
       fichier refusé part à la corbeille.
     Onglet créé : "Demandes photo". Sous-dossier Drive de l'apprenant :
     "Demandes de photo".
+
+  VÉRIFICATION DE PRÉSENCE (DÉFI GUIDÉ) — version 2026-11-01
+    GAS : remplacer photos, code, admin -> Nouvelle version sur LES DEUX
+    déploiements. Vérification : /exec affiche "2026-11-01 photo apprenant
+    + défi guidé" et "defiPhoto": true.
+    GITHUB : remplacer js/photo-identite.js, espace-apprenant.html,
+    admin.html.
+
+    Apprenant : après la photo de face, 3 gestes tirés au hasard PAR LE
+    SERVEUR parmi : tourner la tête à gauche, à droite, lever le menton,
+    sourire. Chaque consigne s'affiche avec un compte à rebours (3 s) et
+    une image est prise automatiquement. Durée totale : environ 15 s.
+    - Défi valable 10 minutes, une seule fois ; "Tout recommencer" tire
+      un nouveau défi. Le serveur refuse une série incomplète, trop rapide
+      (moins de 6 s), réutilisée ou dont les images ne sont pas des photos.
+    - Galerie FERMÉE : l'import d'un fichier n'est proposé qu'avec
+      l'autorisation de l'admin.
+    Admin > Demandes de photo :
+    - "Examiner" affiche la série de vérification (1. Sourire, 2. Tête
+      tournée vers SA droite...) : même personne, geste conforme. Une photo
+      imprimée ou un écran ne peut pas tourner la tête -> refuser.
+    - "Autoriser l'import" (n° de dossier) : pour un apprenant dont la
+      caméra ne fonctionne pas ; 7 jours, une demande ; il est prévenu
+      par email.
+    - Les images de vérification sont PRIVÉES et mises à la corbeille dès
+      la décision (validation, refus ou annulation) : seule la photo
+      d'identité validée est conservée.

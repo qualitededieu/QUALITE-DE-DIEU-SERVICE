@@ -416,6 +416,10 @@
     .photo-compare figcaption { font-size:12px; color:var(--text-3); margin-top:6px; }
     .photo-compare > .iconify { font-size:22px; color:var(--teal); }
     .photo-compare [hidden] { display:none !important; }
+    .dp-serie { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:6px 0 8px; }
+    .dp-serie figure { margin:0; text-align:center; }
+    .dp-serie img, .dp-serie .photo-vide { width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:10px; border:1px solid var(--border-l); }
+    .dp-serie figcaption { font-size:12px; color:var(--text-2); margin-top:4px; }
 </style>
 </head>
 <body>
@@ -1024,7 +1028,12 @@
           <span class="table-card-title"><span class="iconify" data-icon="tabler:camera-check"></span> Demandes de nouvelle photo <span id="photos-compteur" class="gal-compteur"></span></span>
           <button class="btn btn-ghost btn-sm" onclick="chargerDemandesPhoto()"><span class="iconify" data-icon="tabler:refresh"></span> Actualiser</button>
         </div>
-        <p class="cours-aide" style="padding:0 20px;">Les apprenants envoient leur photo depuis leur espace (caméra ou fichier). Elle ne remplace l'actuelle qu'après votre validation. Comparez bien les deux visages : c'est la photo de la carte et de l'attestation.</p>
+        <p class="cours-aide" style="padding:0 20px;">Les apprenants prennent leur photo avec la caméra, suivie d'une <strong>vérification de présence</strong> (3 gestes tirés au hasard). Elle ne remplace l'actuelle qu'après votre validation. Comparez bien les visages : c'est la photo de la carte et de l'attestation.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 20px 14px;">
+          <span style="font-size:12.5px;color:var(--text-2);">Apprenant sans caméra qui fonctionne : autoriser l'import d'une photo (7 jours, une demande)</span>
+          <input type="text" class="filter-select" id="import-dossier" placeholder="N° de dossier (LQD-…)" maxlength="40" style="min-width:190px;">
+          <button class="btn btn-ghost btn-sm" onclick="autoriserImportPhoto()"><span class="iconify" data-icon="tabler:photo-up"></span> Autoriser l'import</button>
+        </div>
         <div id="photos-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
       </div>
     </div>
@@ -2213,7 +2222,7 @@ async function chargerDemandesPhoto() {
       <tbody>${r.demandes.map(d => `<tr>
         <td><strong>${_escAdmin(_clairCours(d.apprenant))}</strong><br><span class="mono" style="font-size:11px;color:var(--text-3);">${_escAdmin(d.dossierId)}</span></td>
         <td style="font-size:12px;">${_dateCourte(d.date)}</td>
-        <td>${d.source === 'Import' ? '<span class="badge badge-orange" title="Fichier importé : vérifiez que la photo est récente">Fichier importé</span>' : '<span class="badge badge-teal">Caméra</span>'}</td>
+        <td>${d.source === 'Import' ? '<span class="badge badge-orange" title="Fichier importé (exception accordée) : vérifiez que la photo est récente">Fichier importé</span>' : '<span class="badge badge-teal">Caméra' + (d.defi ? ' + vérification' : '') + '</span>'}</td>
         <td style="font-size:12px;">${_controlesTexte(d.controles)}</td>
         <td><span class="badge ${DP_BADGE[d.statut] || 'badge-teal'}">${_escAdmin(d.statut)}</span>${d.motif ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(d.motif))}</span>` : ''}</td>
         <td>${d.statut === 'En attente' ? `<button class="btn btn-primary btn-sm" onclick="examinerDemandePhoto('${_escAdmin(d.id)}')">Examiner</button>` : ''}</td>
@@ -2221,6 +2230,18 @@ async function chargerDemandesPhoto() {
   } catch (e) {
     zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
   }
+}
+
+async function autoriserImportPhoto() {
+  const id = document.getElementById('import-dossier').value.trim();
+  if (!id) return toast('Saisissez le numéro de dossier de l\'apprenant.', 'error');
+  if (!confirm('Autoriser ' + id + ' à importer une photo au lieu d\'utiliser la caméra (7 jours, une demande) ?')) return;
+  try {
+    const r = await apiCall('admin_photo_autoriser_import', { dossierId: id });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+    document.getElementById('import-dossier').value = '';
+  } catch (e) { toast('Erreur : ' + e.message, 'error'); }
 }
 
 async function examinerDemandePhoto(id) {
@@ -2238,6 +2259,9 @@ async function examinerDemandePhoto(id) {
         <span class="iconify" data-icon="tabler:arrow-right"></span>
         <figure>${d.photo ? `<img src="${d.photo}" alt="Photo demandée">` : '<div class="photo-vide">Fichier introuvable</div>'}<figcaption>Photo demandée</figcaption></figure>
       </div>
+      ${(d.verification || []).length ? `<div class="modal-section-title">Vérification de présence (gestes tirés au hasard)</div>
+        <div class="dp-serie">${d.verification.map((v, i) => `<figure>${v.image ? `<img src="${v.image}" alt="${_escAdmin(v.libelle)}">` : '<div class="photo-vide">Image absente</div>'}<figcaption>${i + 1}. ${_escAdmin(v.libelle)}</figcaption></figure>`).join('')}</div>
+        <p class="cours-aide">Chaque image doit montrer <strong>la même personne</strong> faisant <strong>le geste indiqué</strong>. Une photo imprimée ou un écran ne peut pas tourner la tête : si les images sont identiques ou ne correspondent pas aux gestes, refusez.</p>` : ''}
       <div class="info-grid" style="margin-bottom:12px;">
         <div class="info-field"><label>Envoyée le</label><span>${_dateCourte(d.date)}</span></div>
         <div class="info-field"><label>Source</label><span>${d.source === 'Import' ? '<strong style="color:var(--orange);">Fichier importé</strong> — vérifiez qu\'elle est récente' : 'Caméra (prise en direct)'}</span></div>

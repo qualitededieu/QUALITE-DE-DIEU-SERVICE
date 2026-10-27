@@ -284,6 +284,7 @@ function doPost(e) {
   if (action === 'apprenant_suivi') return apprenantSuivi(data);
   if (action === 'apprenant_session') return apprenantSession(data);
   if (action === 'photo_demande_etat')    return photoDemandeEtat(data);
+  if (action === 'photo_defi_demarrer')   return photoDefiDemarrer(data);
   if (action === 'photo_demande_envoyer') return photoDemandeEnvoyer(data);
   if (action === 'photo_demande_annuler') return photoDemandeAnnuler(data);
   if (action === 'besoins_ma_fiche')    return besoinsMaFiche(data);
@@ -326,7 +327,7 @@ function doPost(e) {
 // Marqueur de version : à changer à chaque mise à jour du code GAS.
 // Ouvrir l'URL /exec du site dans un navigateur affiche cette valeur :
 // c'est la preuve que le déploiement EN LIGNE contient bien ce code.
-const VERSION_API = '2026-10-31 demandes de photo apprenant';
+const VERSION_API = '2026-11-01 photo apprenant + défi guidé';
 
 // Liste des modules attendus : true = présent ET à jour dans le code exécuté.
 // ATTENTION Apps Script : si deux fichiers déclarent la même fonction (ex.
@@ -353,6 +354,7 @@ function _etatModules() {
     changementPhoto:          presente('adminChangerPhoto') && source('routerAdmin').indexOf('admin_changer_photo') !== -1,
     sessionApprenant:         presente('apprenantSession') && source('doPost').indexOf('apprenant_session') !== -1 && source('trouverSpreadsheet').indexOf('SPREADSHEET_ID_') !== -1,
     demandesPhoto:            presente('photoDemandeEnvoyer') && presente('adminPhotoDemandeTraiter') && source('doPost').indexOf('photo_demande_envoyer') !== -1 && source('routerAdmin').indexOf('admin_photo_demande_traiter') !== -1,
+    defiPhoto:                presente('photoDefiDemarrer') && presente('adminPhotoAutoriserImport') && source('doPost').indexOf('photo_defi_demarrer') !== -1 && source('routerAdmin').indexOf('admin_photo_autoriser_import') !== -1,
     motDePasseFormateur:      (() => { try { return _autoTestFormateur(); } catch (e) { return false; } })(),
     doPostAJour:      source('doPost').indexOf('galerie_lister') !== -1 && source('doPost').indexOf('formateur_') !== -1 && source('doPost').indexOf('besoins_ma_fiche') !== -1 && source('doPost').indexOf('questionnaire_repondre') !== -1,
     routerAdminAJour: source('routerAdmin').indexOf('admin_galerie_ajouter') !== -1 && source('routerAdmin').indexOf('admin_formateur_creer') !== -1 && source('routerAdmin').indexOf('admin_demande_acces_traiter') !== -1 && source('routerAdmin').indexOf('admin_besoins_lister') !== -1 && source('routerAdmin').indexOf('admin_q_lister') !== -1
