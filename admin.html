@@ -593,6 +593,10 @@
       <button class="nav-item" onclick="naviguer('formateurs')">
         <span class="iconify" data-icon="tabler:school"></span> Formateurs
       </button>
+      <button class="nav-item" onclick="naviguer('photos')">
+        <span class="iconify" data-icon="tabler:camera-check"></span> Demandes de photo
+        <span class="nav-badge" id="badge-photos" style="display:none;">0</span>
+      </button>
       <button class="nav-item" onclick="naviguer('besoins')">
         <span class="iconify" data-icon="tabler:clipboard-text"></span> Fiches besoins
         <span class="nav-badge" id="badge-besoins" style="display:none;">0</span>
@@ -1014,6 +1018,17 @@
       </div>
     </div>
 
+    <div class="page" id="page-photos">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:camera-check"></span> Demandes de nouvelle photo <span id="photos-compteur" class="gal-compteur"></span></span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerDemandesPhoto()"><span class="iconify" data-icon="tabler:refresh"></span> Actualiser</button>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">Les apprenants envoient leur photo depuis leur espace (caméra ou fichier). Elle ne remplace l'actuelle qu'après votre validation. Comparez bien les deux visages : c'est la photo de la carte et de l'attestation.</p>
+        <div id="photos-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
     <div class="page" id="page-besoins">
       <div class="table-card">
         <div class="table-card-header">
@@ -1322,6 +1337,17 @@
       <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-formateur')">Annuler</button>
       <button class="btn btn-primary btn-sm" id="btn-fo-enreg" onclick="enregistrerFormateur()"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-demande-photo">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h3 id="dp-titre">Demande de photo</h3>
+      <button class="modal-close" onclick="fermerModal('modal-demande-photo')"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body" id="dp-corps"></div>
+    <div class="modal-footer" id="dp-pied"></div>
   </div>
 </div>
 
@@ -1940,7 +1966,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', besoins: 'Fiches de recueil des besoins', galerie: 'Galerie photos', temoignages: 'Témoignages' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', besoins: 'Fiches de recueil des besoins', photos: 'Demandes de photo', galerie: 'Galerie photos', temoignages: 'Témoignages' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -1954,6 +1980,7 @@ function naviguer(page, filtre = '') {
   if (page === 'forum')           chargerForumAdmin();
   if (page === 'formateurs')      chargerFormateursAdmin();
   if (page === 'besoins')         chargerBesoinsAdmin();
+  if (page === 'photos')          chargerDemandesPhoto();
   if (page === 'galerie')         chargerGalerieAdmin();
   if (page === 'temoignages')     chargerTemoignagesAdmin();
   if (filtre && page === 'dossiers') {
@@ -2160,6 +2187,90 @@ async function ouvrirDossier(id) {
     renderModalDossier(result.dossier);
   } catch(e) {
     document.getElementById('modal-body').innerHTML = `<div class="empty-state"><p>Erreur : ${e.message}</p></div>`;
+  }
+}
+
+/* ---------- Demandes de nouvelle photo (espace apprenant -> validation) ---------- */
+const DP_BADGE = { 'En attente': 'badge-orange', 'Validée': 'badge-green', 'Refusée': 'badge-red', 'Annulée': 'badge-teal' };
+function _controlesTexte(c) {
+  if (!c || c.luminosite == null) return '—';
+  const av = (c.avertissements || []).map(a => _escAdmin(_clairCours(a)));
+  return av.length ? '<span style="color:var(--orange);">' + av.join(', ') + '</span>' : '<span style="color:var(--green, #1D9E75);">Aucun défaut détecté</span>';
+}
+
+async function chargerDemandesPhoto() {
+  const zone = document.getElementById('photos-container');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_photo_demandes_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    const b = document.getElementById('badge-photos');
+    b.textContent = r.enAttente; b.style.display = r.enAttente ? '' : 'none';
+    document.getElementById('photos-compteur').textContent = r.enAttente ? r.enAttente + ' en attente' : '';
+    if (!r.demandes.length) { zone.innerHTML = '<div class="empty-state"><p>Aucune demande pour le moment.</p></div>'; return; }
+    zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Apprenant</th><th>Envoyée</th><th>Source</th><th>Contrôles automatiques</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${r.demandes.map(d => `<tr>
+        <td><strong>${_escAdmin(_clairCours(d.apprenant))}</strong><br><span class="mono" style="font-size:11px;color:var(--text-3);">${_escAdmin(d.dossierId)}</span></td>
+        <td style="font-size:12px;">${_dateCourte(d.date)}</td>
+        <td>${d.source === 'Import' ? '<span class="badge badge-orange" title="Fichier importé : vérifiez que la photo est récente">Fichier importé</span>' : '<span class="badge badge-teal">Caméra</span>'}</td>
+        <td style="font-size:12px;">${_controlesTexte(d.controles)}</td>
+        <td><span class="badge ${DP_BADGE[d.statut] || 'badge-teal'}">${_escAdmin(d.statut)}</span>${d.motif ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(d.motif))}</span>` : ''}</td>
+        <td>${d.statut === 'En attente' ? `<button class="btn btn-primary btn-sm" onclick="examinerDemandePhoto('${_escAdmin(d.id)}')">Examiner</button>` : ''}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+async function examinerDemandePhoto(id) {
+  const corps = document.getElementById('dp-corps'), pied = document.getElementById('dp-pied');
+  corps.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>'; pied.innerHTML = '';
+  ouvrirModal('modal-demande-photo');
+  try {
+    const r = await apiCall('admin_photo_demande_get', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    const d = r.demande;
+    document.getElementById('dp-titre').textContent = _clairCours(d.apprenant) + ' — ' + d.dossierId;
+    corps.innerHTML = `
+      <div class="photo-compare">
+        <figure>${d.photoActuelle ? `<img src="${d.photoActuelle}" alt="Photo actuelle" referrerpolicy="no-referrer">` : '<div class="photo-vide">Aucune</div>'}<figcaption>Photo actuelle</figcaption></figure>
+        <span class="iconify" data-icon="tabler:arrow-right"></span>
+        <figure>${d.photo ? `<img src="${d.photo}" alt="Photo demandée">` : '<div class="photo-vide">Fichier introuvable</div>'}<figcaption>Photo demandée</figcaption></figure>
+      </div>
+      <div class="info-grid" style="margin-bottom:12px;">
+        <div class="info-field"><label>Envoyée le</label><span>${_dateCourte(d.date)}</span></div>
+        <div class="info-field"><label>Source</label><span>${d.source === 'Import' ? '<strong style="color:var(--orange);">Fichier importé</strong> — vérifiez qu\'elle est récente' : 'Caméra (prise en direct)'}</span></div>
+        <div class="info-field"><label>Contrôles automatiques</label><span>${_controlesTexte(d.controles)}</span></div>
+        <div class="info-field"><label>Contact</label><span>${_escAdmin(d.email || 'pas d\'email')} ${d.telephone ? '— ' + _escAdmin(d.telephone) : ''}</span></div>
+      </div>
+      <p class="cours-aide">À vérifier : <strong>même personne</strong> que la photo actuelle, visage de face et entier, fond clair, pas de lunettes de soleil ni couvre-chef masquant le visage.</p>
+      <label class="auth-label" for="dp-motif" style="margin-top:10px;">Motif (obligatoire pour un refus ; envoyé à l'apprenant)</label>
+      <input type="text" class="auth-input" id="dp-motif" maxlength="200" placeholder="Ex. : photo floue / fond trop sombre / visage coupé">
+      <div class="auth-error" id="err-dp"></div>`;
+    pied.innerHTML = `<button class="btn btn-ghost" id="dp-refuser"><span class="iconify" data-icon="tabler:x"></span> Refuser</button>
+      <button class="btn btn-primary" id="dp-valider"><span class="iconify" data-icon="tabler:check"></span> Valider et appliquer</button>`;
+    const traiter = async (decision) => {
+      const motif = document.getElementById('dp-motif').value.trim();
+      const err = document.getElementById('err-dp');
+      if (decision === 'Refusée' && motif.length < 5) { err.textContent = 'Indiquez le motif du refus : l\'apprenant le reçoit pour refaire une bonne photo.'; err.classList.add('show'); return; }
+      if (decision === 'Validée' && !confirm('Valider cette photo ? Elle remplacera l\'actuelle sur la carte, l\'attestation et le badge.')) return;
+      pied.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      try {
+        const res = await apiCall('admin_photo_demande_traiter', { id, decision, motif });
+        if (res.status !== 'success') throw new Error(res.message);
+        toast(res.message, res.emailEnvoye ? 'success' : 'info');
+        fermerModal('modal-demande-photo');
+        chargerDemandesPhoto();
+      } catch (e) {
+        err.textContent = e.message; err.classList.add('show');
+        pied.querySelectorAll('button').forEach(b => { b.disabled = false; });
+      }
+    };
+    document.getElementById('dp-valider').onclick = () => traiter('Validée');
+    document.getElementById('dp-refuser').onclick = () => traiter('Refusée');
+  } catch (e) {
+    corps.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
   }
 }
 

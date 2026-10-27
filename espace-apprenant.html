@@ -345,6 +345,14 @@
                 <span class="iconify" data-icon="tabler:award"></span> Badge
               </button>
             </div>
+            <div class="carte-bloc" id="bloc-photo" style="margin-top:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+              <img id="photo-actuelle" alt="Ma photo d'identité" style="width:70px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--gray-300);background:var(--gray-100);" referrerpolicy="no-referrer">
+              <div style="flex:1;min-width:190px;">
+                <div style="font-weight:700;">Ma photo d'identité</div>
+                <div id="photo-etat" style="font-size:13px;color:var(--gray-500);margin-top:2px;">Chargement…</div>
+              </div>
+              <div id="photo-actions"></div>
+            </div>
           </section>
 
           <section id="espace-tab-cours" class="app-panel">
@@ -881,6 +889,7 @@
       document.getElementById('espace-tab-' + nom).classList.add('active');
       document.getElementById('topbar-titre').textContent = TITRES_ONGLET[nom].titre;
       document.getElementById('topbar-sous-titre').textContent = TITRES_ONGLET[nom].sousTitre;
+      if (nom === 'documents') chargerEtatPhoto();
       if (nom === 'cours') chargerCoursEspace();
       if (nom === 'suivi') chargerSuiviEspace();
       if (nom === 'fiche') chargerFicheEspace();
@@ -1217,6 +1226,64 @@
       }
     }
 
+    /* ================================================================
+       MISE À JOUR DE LA PHOTO (js/photo-identite.js + GAS photos.gs)
+       La photo part en validation : elle ne remplace l'actuelle qu'après
+       accord de l'administration.
+    ================================================================ */
+    async function chargerEtatPhoto() {
+      if (!_espaceApprenant) return;
+      const etat = document.getElementById('photo-etat'), actions = document.getElementById('photo-actions');
+      const img = document.getElementById('photo-actuelle');
+      if (_espaceApprenant.apprenant.photoUrl) img.src = _espaceApprenant.apprenant.photoUrl;
+      try {
+        const r = await _postEspace({ action: 'photo_demande_etat', token: _espaceApprenant.token });
+        if (_sessionTerminee(r)) return;
+        if (r.status !== 'success') { etat.textContent = r.message || 'Indisponible.'; actions.innerHTML = ''; return; }
+        const date = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
+        if (r.enAttente) {
+          etat.innerHTML = '<span style="color:#B7791F;font-weight:700;">Nouvelle photo en attente de validation</span> — envoyée le ' + _txt(date(r.enAttente.date)) + '.';
+          actions.innerHTML = '<button class="btn-principal" style="width:auto;padding:8px 14px;background:none;color:#C0392B;border:1.5px solid #C0392B;" id="btn-photo-annuler">Annuler ma demande</button>';
+          document.getElementById('btn-photo-annuler').onclick = annulerDemandePhoto;
+          return;
+        }
+        let txt = '';
+        if (r.derniere && r.derniere.statut === 'Refusée') txt = '<span style="color:#C0392B;font-weight:700;">Dernière photo non retenue</span>' + (r.derniere.motif ? ' : « ' + _txt(r.derniere.motif) + ' »' : '') + '. ';
+        else if (r.derniere && r.derniere.statut === 'Validée') txt = '<span style="color:#0F6E56;font-weight:700;">Photo validée le ' + _txt(date(r.derniere.date)) + '.</span> ';
+        txt += r.restantes > 0 ? 'Vous pouvez demander à la changer (' + r.restantes + ' demande' + (r.restantes > 1 ? 's' : '') + ' restante' + (r.restantes > 1 ? 's' : '') + ' sur 12 mois).'
+          : 'Limite de demandes atteinte' + (r.prochaineLe ? ' jusqu\'au ' + _txt(date(r.prochaineLe)) : '') + ' : adressez-vous à l\'administration.';
+        etat.innerHTML = txt;
+        actions.innerHTML = r.restantes > 0 ? '<button class="btn-principal" style="width:auto;padding:9px 16px;" id="btn-photo-maj"><span class="iconify" data-icon="tabler:camera"></span> Mettre à jour ma photo</button>' : '';
+        const b = document.getElementById('btn-photo-maj');
+        if (b) b.onclick = ouvrirMiseAJourPhoto;
+      } catch (e) {
+        etat.textContent = 'Erreur réseau. Réessayez.';
+      }
+    }
+
+    function ouvrirMiseAJourPhoto() {
+      if (!_espaceApprenant || typeof PhotoIdentite === 'undefined') return showToast('Module photo indisponible. Actualisez la page.', 'error');
+      PhotoIdentite.ouvrir({
+        envoyer: async (p) => {
+          const r = await _postEspace({ action: 'photo_demande_envoyer', token: _espaceApprenant.token,
+            photoBase64: p.base64, photoMime: p.mime, source: p.source, controles: p.controles });
+          if (_sessionTerminee(r)) return null;
+          return r;
+        },
+        apresEnvoi: chargerEtatPhoto
+      });
+    }
+
+    async function annulerDemandePhoto() {
+      if (!confirm('Annuler votre demande de nouvelle photo ?')) return;
+      try {
+        const r = await _postEspace({ action: 'photo_demande_annuler', token: _espaceApprenant.token });
+        if (_sessionTerminee(r)) return;
+        showToast(r.message || 'Demande annulée.', r.status === 'success' ? 'success' : 'error');
+        chargerEtatPhoto();
+      } catch (e) { showToast('Erreur réseau. Réessayez.', 'error'); }
+    }
+
     async function poserQuestionForum() {
       if (!_espaceApprenant) return;
       const zone = document.getElementById('forum-question');
@@ -1380,6 +1447,7 @@
   </script>
 
   <script src="js/fiche-besoins.js"></script>
+  <script src="js/photo-identite.js"></script>
   <script src="js/attestation_generator.js"></script>
   <script src="js/fiche_apprenant_generator.js"></script>
   <script src="js/badge_certification_generator.js"></script>

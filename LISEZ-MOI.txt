@@ -369,3 +369,32 @@ MISE À JOUR — ESPACE FORMATEUR (20 octobre 2026)
     - Espace apprenant : l actualisation de la page ne déconnecte plus
       (session gardée dans l onglet, revérifiée par le serveur, 8 h max).
       Fermer l onglet ou "Déconnexion" déconnecte.
+
+  MISE À JOUR DE LA PHOTO PAR L'APPRENANT — version 2026-10-31
+    PRÉREQUIS : paquets "Rangement Drive" et "Changement de photo" installés.
+    GAS : remplacer photos, code, admin -> Nouvelle version sur LES DEUX
+    déploiements. Vérification : /exec affiche "2026-10-31 demandes de
+    photo apprenant" et "demandesPhoto": true.
+    GITHUB : AJOUTER js/photo-identite.js ; remplacer espace-apprenant.html,
+    admin.html, vercel.json (caméra autorisée pour le site uniquement :
+    Permissions-Policy camera=(self)).
+
+    Apprenant : Mes documents > "Ma photo d'identité" > "Mettre à jour ma
+    photo". Consignes, caméra frontale avec cadre ovale (import d'un
+    fichier en secours), contrôles automatiques (luminosité du visage,
+    netteté, fond clair et uni), recadrage 35 x 45 mm, "Reprendre" à
+    volonté, puis "Envoyer pour validation".
+    - La photo reste PRIVÉE et n'est PAS appliquée tant que
+      l'administration ne l'a pas validée.
+    - 1 demande en attente à la fois ; 3 demandes maximum sur 12 mois
+      (les refus comptent, les annulations non). L'apprenant peut annuler
+      sa demande en attente.
+    Admin : menu "Demandes de photo" (pastille = nombre en attente).
+    "Examiner" : photo actuelle et photo demandée côte à côte, source
+    (caméra / fichier importé), contrôles automatiques.
+    - Valider : la photo est appliquée (dossier Drive, carte, attestation,
+      ancienne archivée en privé, email à l'apprenant, Historique photos).
+    - Refuser : motif obligatoire, envoyé par email à l'apprenant ; le
+      fichier refusé part à la corbeille.
+    Onglet créé : "Demandes photo". Sous-dossier Drive de l'apprenant :
+    "Demandes de photo".
