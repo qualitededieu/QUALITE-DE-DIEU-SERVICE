@@ -215,7 +215,7 @@
     .am-onglets { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
     .am-onglets button { border: 1px solid var(--border, rgba(255,255,255,.12)); background: transparent; color: var(--text-2); padding: 9px 16px; border-radius: 50px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
     .am-onglets button.actif { background: var(--teal); border-color: var(--teal); color: #fff; }
-    .am-vue[hidden] { display: none; }
+    .am-vue[hidden], .am-onglets button[hidden], .am-interrupteur[hidden], #page-attestations .table-card[hidden], #page-attestations .alerte-admin[hidden] { display: none; }
     .am-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 1000px) { .am-grille { grid-template-columns: 1fr; } }
     .am-carte { padding: 20px; }
@@ -1111,10 +1111,16 @@
       <div class="am-onglets" role="tablist">
         <button type="button" class="actif" data-am-vue="nouvelle" onclick="basculerVueAm('nouvelle')"><span class="iconify" data-icon="tabler:file-plus"></span> Nouvelle attestation</button>
         <button type="button" data-am-vue="registre" onclick="basculerVueAm('registre')"><span class="iconify" data-icon="tabler:notebook"></span> Registre</button>
+        <button type="button" data-am-vue="equipe" onclick="basculerVueAm('equipe')" hidden><span class="iconify" data-icon="tabler:users-group"></span> Rôles et journal</button>
+        <span class="badge badge-teal" id="am-role" style="margin-left:auto;align-self:center;"></span>
       </div>
 
       <div class="am-vue" id="am-vue-nouvelle">
-        <p class="cours-aide" style="margin-bottom:14px;">Pour une personne <strong>hors inscription en ligne</strong> (ancien apprenant, formation sur mesure). Même maquette que les attestations du centre, photo comprise. Le numéro attribué est définitif : une attestation ne se supprime pas, elle s'annule.</p>
+        <p class="cours-aide" style="margin-bottom:14px;">Pour une personne <strong>hors inscription en ligne</strong> (ancien apprenant, formation sur mesure). Même maquette que les attestations du centre, photo comprise. Numéro définitif et <strong>code de vérification</strong> attribués à l'émission ; le PDF est archivé dans Drive avec son empreinte. Une attestation ne se supprime pas, elle s'annule.</p>
+        <div class="alerte-admin" id="am-bandeau-demo" hidden>
+          <span class="iconify" data-icon="tabler:presentation"></span>
+          <span class="alerte-texte"><strong>Mode démonstration.</strong> Numérotation DEMO- séparée, PDF marqué « DÉMONSTRATION », invisible pour le centre. La vérification en ligne l'affiche comme une démonstration, jamais comme valide.</span>
+        </div>
         <form id="am-form" novalidate>
           <div class="am-grille">
             <div class="table-card am-carte">
@@ -1168,15 +1174,17 @@
                 <div><label class="auth-label" for="am-debut">Début *</label><input id="am-debut" class="auth-input" type="date"></div>
                 <div><label class="auth-label" for="am-fin">Fin *</label><input id="am-fin" class="auth-input" type="date"></div>
                 <div><label class="auth-label" for="am-duree">Durée *</label><input id="am-duree" class="auth-input" maxlength="60" placeholder="calculée d'après les dates" autocomplete="off">
-                  <div class="am-aide">Calculée d'après les dates ; modifiable (ex. « trois (03) ans »).</div></div>
+                  <div class="am-aide" id="am-aide-duree">Calculée automatiquement d'après les dates ; modifiable (ex. « trois (03) ans »).</div></div>
                 <div><label class="auth-label" for="am-mention">Mention</label><select id="am-mention" class="auth-input"></select></div>
               </div>
               <h2 class="am-titre" style="margin-top:20px;"><span class="iconify" data-icon="tabler:calendar-check"></span> Délivrance</h2>
               <div class="am-champs">
                 <div><label class="auth-label" for="am-delivrance">Date de délivrance *</label><input id="am-delivrance" class="auth-input" type="date"></div>
                 <div>
-                  <label class="am-interrupteur"><input type="checkbox" id="am-signer" checked><span>Signer et apposer le cachet</span></label>
+                  <label class="am-interrupteur" id="am-bloc-demo" hidden><input type="checkbox" id="am-demo"><span>Mode démonstration</span></label>
+                  <label class="am-interrupteur" id="am-bloc-signer" hidden><input type="checkbox" id="am-signer"><span>Signer et apposer le cachet</span></label>
                   <label class="am-interrupteur"><input type="checkbox" id="am-envoyer" disabled><span>Envoyer le PDF par e-mail</span></label>
+                  <div class="am-aide" id="am-aide-signer">Sans signature : à signer et cacheter à la main. Seul le Principal émet une attestation signée.</div>
                 </div>
               </div>
             </div>
@@ -1187,6 +1195,19 @@
             <button class="btn btn-primary" type="submit" id="am-btn-emettre"><span class="iconify" data-icon="tabler:rosette-discount-check"></span> Émettre l'attestation</button>
           </div>
         </form>
+      </div>
+
+      <div class="am-vue" id="am-vue-equipe" hidden>
+        <div class="table-card" id="am-carte-roles" hidden>
+          <div class="table-card-header"><span class="table-card-title"><span class="iconify" data-icon="tabler:shield-lock"></span> Rôles des comptes admin</span></div>
+          <p class="cours-aide" style="padding:0 20px;"><strong>Principal</strong> : signe et cachète, annule. <strong>Secrétariat</strong> : émet sans signature, télécharge, envoie. <strong>Développeur</strong> : annule, démonstrations, journal (ne signe jamais). Effet immédiat ; personne ne modifie son propre rôle.</p>
+          <div id="am-roles"></div>
+        </div>
+        <div class="table-card" id="am-carte-journal" hidden>
+          <div class="table-card-header"><span class="table-card-title"><span class="iconify" data-icon="tabler:history"></span> Journal d'activité</span>
+            <button class="btn btn-ghost btn-sm" onclick="chargerJournalAm()"><span class="iconify" data-icon="tabler:refresh"></span> Actualiser</button></div>
+          <div id="am-journal"></div>
+        </div>
       </div>
 
       <div class="am-vue" id="am-vue-registre" hidden>
@@ -2609,47 +2630,25 @@ async function examinerDemandePhoto(id) {
   }
 }
 
-/* ---------- Attestations manuelles (GAS attestations_manuelles.gs) ---------- */
-const _am = { pret: false, filieres: [], mentions: [], liste: [], photo: null, dureeModifiee: false };
+/* ---------- Attestations manuelles (GAS attestations_manuelles.gs, logique LEADER ELECTRONIC) ---------- */
+const _am = { pret: false, moi: null, filieres: [], mentions: [], liste: [], photo: null };
 const AM_CIVILITES = { M: ['Monsieur'], F: ['Madame', 'Mademoiselle'] };
-const AM_UNITES = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize'];
-const AM_DIZAINES = { 20: 'vingt', 30: 'trente', 40: 'quarante', 50: 'cinquante', 60: 'soixante' };
-
-// Nombre en lettres (1 à 99), orthographe traditionnelle : "vingt et un", "soixante-dix", "quatre-vingts".
-function _nombreEnLettres(n) {
-  if (n <= 16) return AM_UNITES[n];
-  if (n < 20) return 'dix-' + AM_UNITES[n - 10];
-  if (n < 70) { const d = Math.floor(n / 10) * 10, u = n % 10; return AM_DIZAINES[d] + (u === 0 ? '' : (u === 1 ? ' et un' : '-' + AM_UNITES[u])); }
-  if (n < 80) return 'soixante' + (n === 71 ? ' et onze' : '-' + _nombreEnLettres(n - 60));
-  if (n === 80) return 'quatre-vingts';
-  return 'quatre-vingt-' + _nombreEnLettres(n - 80);
-}
-// "six (06) mois", "un (01) an", "trois (03) ans", "quinze (15) jours".
-function _dureeEnLettres(debut, fin) {
-  const d1 = new Date(debut + 'T00:00:00'), d2 = new Date(fin + 'T00:00:00');
-  if (isNaN(d1) || isNaN(d2) || d2 <= d1) return '';
-  const f = (n, unite) => _nombreEnLettres(n) + ' (' + String(n).padStart(2, '0') + ') ' + unite;
-  // Mois complets, puis arrondi au mois le plus proche (15 jours restants ou plus).
-  let mois = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-  if (d2.getDate() < d1.getDate()) mois -= 1;
-  const repere = new Date(d1); repere.setMonth(repere.getMonth() + mois);
-  if ((d2 - repere) / 86400000 >= 15) mois += 1;
-  if (mois < 1) { const j = Math.round((d2 - d1) / 86400000); return j >= 14 ? f(Math.round(j / 7), Math.round(j / 7) > 1 ? 'semaines' : 'semaine') : f(j, j > 1 ? 'jours' : 'jour'); }
-  if (mois % 12 === 0) return f(mois / 12, mois / 12 > 1 ? 'ans' : 'an');
-  return f(mois, 'mois');
-}
+const AM_AIDE_DUREE = 'Calculée automatiquement d\'après les dates ; modifiable (ex. « trois (03) ans »).';
+const AM_STATUTS = { valide: ['Valide', 'badge-green'], en_cours: ['PDF à régénérer', 'badge-orange'], annulee: ['Annulée', 'badge-red'] };
 
 const _amVal = id => document.getElementById(id).value.trim();
 const _amGenre = () => (document.querySelector('input[name="am-genre"]:checked') || {}).value || 'M';
 const _amNom = v => v.replace(/\s+/g, ' ').trim().toUpperCase();
 const _amPrenoms = v => v.replace(/\s+/g, ' ').trim().toLowerCase().replace(/(^|[\s\-'’])(\p{L})/gu, (m, sep, l) => sep + l.toUpperCase());
 const _amAujourdhui = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const _amPeut = d => !!(_am.moi && _am.moi.droits.indexOf(d) !== -1);
+const _amDateFr = iso => iso ? new Date(String(iso).slice(0, 10) + 'T00:00:00').toLocaleDateString('fr-FR') : '—';
 
 function basculerVueAm(vue) {
   document.querySelectorAll('[data-am-vue]').forEach(b => b.classList.toggle('actif', b.dataset.amVue === vue));
-  document.getElementById('am-vue-nouvelle').hidden = vue !== 'nouvelle';
-  document.getElementById('am-vue-registre').hidden = vue !== 'registre';
+  ['nouvelle', 'registre', 'equipe'].forEach(v => { document.getElementById('am-vue-' + v).hidden = v !== vue; });
   if (vue === 'registre') chargerRegistreAm();
+  if (vue === 'equipe') { _rendreRolesAm(); if (_amPeut('journal')) chargerJournalAm(); }
 }
 
 function _amCivilites() {
@@ -2659,50 +2658,81 @@ function _amCivilites() {
 }
 
 function _amMajFormulaire() {
-  const autre = _amVal('am-filiere') === 'Autre';
-  document.getElementById('am-bloc-autre').hidden = !autre;
+  document.getElementById('am-bloc-autre').hidden = _amVal('am-filiere') !== 'Autre';
   const date = _amVal('am-naissance-type') === 'date';
   document.getElementById('am-naissance-annee').hidden = date;
   document.getElementById('am-naissance-date').hidden = !date;
   document.getElementById('am-lbl-naissance').textContent = date ? 'Date de naissance *' : 'Année de naissance *';
   document.getElementById('am-lbl-naissance').setAttribute('for', date ? 'am-naissance-date' : 'am-naissance-annee');
-  const email = _amVal('am-email'), envoyer = document.getElementById('am-envoyer');
-  envoyer.disabled = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const envoyer = document.getElementById('am-envoyer');
+  envoyer.disabled = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_amVal('am-email'));
   if (envoyer.disabled) envoyer.checked = false;
+  // Démonstration : jamais signée (règle LEADER)
+  const demo = document.getElementById('am-demo').checked, signer = document.getElementById('am-signer');
+  if (demo) signer.checked = false;
+  signer.disabled = demo;
+  document.getElementById('am-bandeau-demo').hidden = !demo;
   const nom = _amNom(_amVal('am-nom')), pr = _amPrenoms(_amVal('am-prenoms'));
   document.getElementById('am-apercu-nom').textContent = nom || pr ? 'Sur l\'attestation : ' + _amVal('am-civilite') + ' ' + nom + ' ' + pr
     : 'Mise en forme automatique : NOM en majuscules, prénoms avec initiale majuscule.';
 }
 
+// Durée : proposée d'après les dates tant qu'elle n'est pas saisie à la main ; contrôlée à la sortie du champ.
+function _amDureeAuto() {
+  const champ = document.getElementById('am-duree');
+  if (champ.dataset.auto !== '1') return;
+  champ.value = window.LEDuree.suggerer(_amVal('am-debut'), _amVal('am-fin'));
+  _amAideDuree('');
+}
+function _amAideDuree(message) {
+  const aide = document.getElementById('am-aide-duree');
+  aide.textContent = message || AM_AIDE_DUREE;
+  aide.style.color = message ? 'var(--red)' : '';
+}
+function _amControlerDuree() {
+  const v = _amVal('am-duree');
+  if (!v || !_amVal('am-debut') || !_amVal('am-fin')) return null;
+  const r = window.LEDuree.controler(v, _amVal('am-debut'), _amVal('am-fin'));
+  if (r.ok) { document.getElementById('am-duree').value = r.texte; _amAideDuree(''); } else _amAideDuree(r.message);
+  return r;
+}
+
 async function initialiserAm() {
   if (_am.pret) return;
   try {
-    const r = await apiCall('admin_am_lister');
+    const r = await apiCall('admin_am_moi');
     if (r.status !== 'success') throw new Error(r.message);
-    _am.filieres = r.filieres; _am.mentions = r.mentions; _am.liste = r.attestations;
+    _am.moi = r; _am.filieres = r.filieres; _am.mentions = r.mentions;
   } catch (e) { toast('Attestations manuelles : ' + e.message, 'error'); return; }
+  document.getElementById('am-role').textContent = _am.moi.roleLibelle + (_am.moi.prochainNumero ? ' — prochain n° ' + _am.moi.prochainNumero : '');
+  document.getElementById('am-bloc-signer').hidden = !_amPeut('signer');
+  document.getElementById('am-bloc-demo').hidden = !_amPeut('demo');
+  document.querySelector('[data-am-vue="equipe"]').hidden = !(_amPeut('roles') || _amPeut('journal'));
+  document.getElementById('am-carte-roles').hidden = !_amPeut('roles');
+  document.getElementById('am-carte-journal').hidden = !_amPeut('journal');
   document.getElementById('am-filiere').innerHTML = '<option value="">Choisir</option>' + _am.filieres.map(f => `<option>${_escAdmin(f)}</option>`).join('') + '<option value="Autre">Autre (intitulé libre)</option>';
   document.getElementById('am-mention').innerHTML = '<option value="">Aucune</option>' + _am.mentions.map(m => `<option>${_escAdmin(m)}</option>`).join('');
   document.getElementById('am-communes').innerHTML = Object.values(typeof ATT_LIEUX_ACCENTUES !== 'undefined' ? ATT_LIEUX_ACCENTUES : {})
     .filter(v => v !== 'Bénin').sort().map(v => `<option value="${_escAdmin(v)}">`).join('');
   document.getElementById('am-delivrance').value = _amAujourdhui();
-  document.getElementById('am-naissance-annee').max = new Date().getFullYear() - 8;
+  document.getElementById('am-naissance-annee').max = new Date().getFullYear() - 10;
+  document.getElementById('am-duree').dataset.auto = '1';
   _amCivilites();
   const form = document.getElementById('am-form');
   document.querySelectorAll('input[name="am-genre"]').forEach(r => r.addEventListener('change', () => { _amCivilites(); _amMajFormulaire(); }));
   form.addEventListener('input', _amMajFormulaire);
   form.addEventListener('change', _amMajFormulaire);
-  ['am-debut', 'am-fin'].forEach(id => document.getElementById(id).addEventListener('change', () => {
-    if (_am.dureeModifiee) return;
-    document.getElementById('am-duree').value = _dureeEnLettres(_amVal('am-debut'), _amVal('am-fin'));
-  }));
-  document.getElementById('am-duree').addEventListener('input', () => { _am.dureeModifiee = !!_amVal('am-duree'); });
+  ['am-debut', 'am-fin'].forEach(id => document.getElementById(id).addEventListener('change', _amDureeAuto));
+  const duree = document.getElementById('am-duree');
+  duree.addEventListener('input', () => { duree.dataset.auto = duree.value.trim() ? '0' : '1'; });
+  duree.addEventListener('blur', _amControlerDuree);
   document.getElementById('am-nom').addEventListener('blur', e => { e.target.value = _amNom(e.target.value); });
   document.getElementById('am-prenoms').addEventListener('blur', e => { e.target.value = _amPrenoms(e.target.value); });
   document.getElementById('am-photo').addEventListener('change', choisirPhotoAm);
   document.getElementById('am-btn-apercu').addEventListener('click', apercuAm);
   form.addEventListener('submit', e => { e.preventDefault(); preparerEmissionAm(); });
-  document.getElementById('am-recherche').addEventListener('input', _rendreRegistreAm);
+  let minuteur = null;
+  document.getElementById('am-recherche').addEventListener('input', () => { clearTimeout(minuteur); minuteur = setTimeout(chargerRegistreAm, 350); });
   _amMajFormulaire();
   _am.pret = true;
 }
@@ -2723,6 +2753,7 @@ async function choisirPhotoAm(e) {
 }
 
 // Lecture + contrôles (mêmes règles que le serveur, qui revérifie tout).
+const AM_TEXTE_RE = /^[A-Za-zÀ-ÖØ-öø-ÿŒœ0-9 '’.,()\/:&+;-]+$/;
 function _amLireFormulaire(avecPhoto) {
   const type = _amVal('am-naissance-type');
   const d = { genre: _amGenre(), civilite: _amVal('am-civilite'), nom: _amNom(_amVal('am-nom')), prenoms: _amPrenoms(_amVal('am-prenoms')),
@@ -2730,36 +2761,42 @@ function _amLireFormulaire(avecPhoto) {
     lieu: _amVal('am-lieu'), nationalite: _amVal('am-nationalite').toLowerCase(), email: _amVal('am-email').toLowerCase(),
     filiere: _amVal('am-filiere'), intitule: _amVal('am-intitule'), competences: _amVal('am-competences'),
     debut: _amVal('am-debut'), fin: _amVal('am-fin'), duree: _amVal('am-duree'), mention: _amVal('am-mention'),
-    dateDelivrance: _amVal('am-delivrance'), signee: document.getElementById('am-signer').checked };
+    dateDelivrance: _amVal('am-delivrance'), signer: document.getElementById('am-signer').checked && _amPeut('signer'),
+    demo: document.getElementById('am-demo').checked && _amPeut('demo') };
   const e = [], an = new Date().getFullYear();
   if (!/^[\p{L}][\p{L}' .\-]{1,39}$/u.test(d.nom)) e.push('nom');
   if (!/^[\p{L}][\p{L}' .\-]{1,59}$/u.test(d.prenoms)) e.push('prénoms');
-  if (type === 'annee' ? !(/^\d{4}$/.test(d.naissance) && +d.naissance >= 1940 && +d.naissance <= an - 8) : !(d.naissance && d.naissance >= '1940-01-01' && +d.naissance.slice(0, 4) <= an - 8)) e.push(type === 'annee' ? 'année de naissance' : 'date de naissance');
-  if (d.lieu.length < 2) e.push('lieu de naissance');
-  if (d.nationalite.length < 3) e.push('nationalité');
+  if (type === 'annee' ? !(/^\d{4}$/.test(d.naissance) && +d.naissance >= 1940 && +d.naissance <= an - 10) : !(d.naissance && d.naissance >= '1940-01-01' && +d.naissance.slice(0, 4) <= an - 10)) e.push(type === 'annee' ? 'année de naissance' : 'date de naissance');
+  if (d.lieu.length < 2 || !AM_TEXTE_RE.test(d.lieu)) e.push('lieu de naissance');
+  if (d.nationalite.length < 3 || !AM_TEXTE_RE.test(d.nationalite)) e.push('nationalité');
   if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.push('email');
   if (!d.filiere) e.push('filière');
-  if (d.filiere === 'Autre' && d.intitule.length < 5) e.push('intitulé de la formation');
+  if (d.filiere === 'Autre' && (d.intitule.length < 5 || !AM_TEXTE_RE.test(d.intitule))) e.push('intitulé de la formation');
+  if (d.filiere === 'Autre' && d.competences && !AM_TEXTE_RE.test(d.competences)) e.push('compétences (symboles non autorisés)');
   if (!d.debut) e.push('date de début');
   if (!d.fin) e.push('date de fin');
   if (d.debut && d.fin && d.fin <= d.debut) e.push('fin postérieure au début');
-  if (d.duree.length < 3) e.push('durée');
   if (!d.dateDelivrance) e.push('date de délivrance');
   else if (d.dateDelivrance > _amAujourdhui()) e.push('date de délivrance dans le futur');
   else if (d.fin && d.dateDelivrance < d.fin) e.push('délivrance avant la fin de la formation');
   if (avecPhoto && !_am.photo) e.push('photo d\'identité');
+  if (!e.length) {
+    const r = _amControlerDuree();
+    if (!r || !r.ok) e.push('durée');
+    else d.duree = r.texte;
+  }
   return { donnees: d, erreurs: e };
 }
 
 // Attestation (formulaire ou registre) -> objet attendu par js/attestation_generator.js
 function _amVersApprenant(a, photo, specimen) {
   const autre = a.filiere === 'Autre';
-  return { id: a.numero || 'SPÉCIMEN', refVerification: a.numero || '', prenom: a.prenoms, nom: a.nom, sexe: a.genre, civilite: a.civilite,
+  return { id: a.numero || 'SPÉCIMEN', codeVerification: a.code || '', prenom: a.prenoms, nom: a.nom, sexe: a.genre, civilite: a.civilite,
     dateNaissance: a.naissanceType === 'date' ? a.naissance : '', anneeNaissance: a.naissanceType === 'annee' ? a.naissance : '',
     lieuNaissance: a.lieu, nationalite: a.nationalite, filiere: autre ? a.intitule : a.filiere,
     competences: autre ? (a.competences ? [{ categorie: 'Compétences', texte: _clairCours(a.competences) }] : []) : undefined,
     dateEntree: a.debut, dateFin: a.fin, dureeTexte: a.duree, mention: a.mention, dateDelivrance: a.dateDelivrance,
-    sansSignature: !a.signee, photoData: photo || '', gabaritLong: true, specimen: !!specimen, source: 'attestation-manuelle' };
+    sansSignature: !a.signee, photoData: photo || '', gabaritLong: true, specimen: !!specimen, demo: !!a.demo, source: 'attestation-manuelle' };
 }
 
 function _amErreur(liste) {
@@ -2767,12 +2804,13 @@ function _amErreur(liste) {
   err.textContent = 'À vérifier : ' + liste.join(', ') + '.'; err.classList.add('show');
 }
 
+// Aperçu : spécimen sans numéro ni signature (règle LEADER).
 async function apercuAm() {
   const l = _amLireFormulaire(false);
   document.getElementById('err-am').classList.remove('show');
   if (l.erreurs.length) return _amErreur(l.erreurs);
   ouvrirModal('modal-attestation');
-  afficherAttestationCanvas(_amVersApprenant(l.donnees, _am.photo, true), null);
+  afficherAttestationCanvas(_amVersApprenant(Object.assign({}, l.donnees, { signee: false, demo: false }), _am.photo, true), null);
 }
 
 function preparerEmissionAm() {
@@ -2781,52 +2819,78 @@ function preparerEmissionAm() {
   if (l.erreurs.length) return _amErreur(l.erreurs);
   const d = l.donnees;
   const lignes = [['Apprenant(e)', d.civilite + ' ' + d.nom + ' ' + d.prenoms],
-    ['Naissance', (d.naissanceType === 'date' ? new Date(d.naissance + 'T00:00:00').toLocaleDateString('fr-FR') : 'en ' + d.naissance) + ' à ' + d.lieu],
+    ['Naissance', (d.naissanceType === 'date' ? _amDateFr(d.naissance) : 'en ' + d.naissance) + ' à ' + d.lieu],
     ['Nationalité', d.nationalite], ['Formation', d.filiere === 'Autre' ? d.intitule : d.filiere],
-    ['Période', new Date(d.debut + 'T00:00:00').toLocaleDateString('fr-FR') + ' au ' + new Date(d.fin + 'T00:00:00').toLocaleDateString('fr-FR') + ' (' + d.duree + ')'],
-    ['Mention', d.mention || 'Aucune'], ['Délivrée le', new Date(d.dateDelivrance + 'T00:00:00').toLocaleDateString('fr-FR')],
-    ['Signature et cachet', d.signee ? 'Imprimés' : 'À apposer à la main'],
-    ['Envoi par e-mail', document.getElementById('am-envoyer').checked ? d.email : 'Non']];
+    ['Période', _amDateFr(d.debut) + ' au ' + _amDateFr(d.fin) + ' (' + d.duree + ')'],
+    ['Mention', d.mention || 'Aucune'], ['Délivrée le', _amDateFr(d.dateDelivrance)],
+    ['Signature', d.signer ? 'Signée et cachetée' : 'À signer à la main'],
+    ['E-mail', document.getElementById('am-envoyer').checked ? 'Envoi à ' + d.email : 'Pas d\'envoi']]
+    .concat(d.demo ? [['Mode', 'DÉMONSTRATION (numéro DEMO-, sans valeur)']] : []);
   document.getElementById('am-recap').innerHTML = lignes.map(x => `<dt>${x[0]}</dt><dd>${_escAdmin(x[1])}</dd>`).join('');
-  document.getElementById('am-btn-confirmer').onclick = () => emettreAm(d, false);
+  document.getElementById('am-btn-confirmer').onclick = () => emettreAm(d);
   ouvrirModal('modal-am-confirmer');
 }
 
-async function emettreAm(d, confirmerDoublon) {
-  const b = document.getElementById('am-btn-confirmer'); b.disabled = true;
+// PDF produit ici (jsPDF), empreinte SHA-256 calculée ici puis recalculée par le serveur à l'archivage.
+async function _amPdf(attestation) {
+  await _amChargerJsPdf();
+  const canvas = await genererAttestationCanvas(_amVersApprenant(attestation, attestation.photoData, false), null);
+  const pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+  const octets = new Uint8Array(pdf.output('arraybuffer'));
+  const empreinte = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', octets))).map(b => b.toString(16).padStart(2, '0')).join('');
+  let bin = '';
+  for (let i = 0; i < octets.length; i += 0x8000) bin += String.fromCharCode.apply(null, octets.subarray(i, i + 0x8000));
+  return { octets, base64: btoa(bin), sha256: empreinte };
+}
+function _amNomFichier(numero, nom) {
+  return 'Attestation-' + numero.replace(/\//g, '-') + '-' + String(nom || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '.pdf';
+}
+function _amEnregistrer(octets, nomFichier) {
+  const url = URL.createObjectURL(new Blob([octets], { type: 'application/pdf' }));
+  const a = document.createElement('a'); a.href = url; a.download = nomFichier; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+// Génère et archive le PDF d'une attestation numérotée ; en cas d'échec, le numéro reste à régénérer.
+async function _amGenererEtArchiver(a, envoyer) {
+  const reserve = ' Numéro ' + a.numero + ' réservé : utilisez « Régénérer » dans le Registre.';
+  let p, r;
   try {
-    const r = await apiCall('admin_am_emettre', Object.assign({}, d, { photoBase64: _am.photo.split(',')[1], photoMime: 'image/jpeg', confirmerDoublon: confirmerDoublon }));
-    if (r.doublon && !confirmerDoublon) {
-      b.disabled = false;
-      if (confirm(r.message + '\n\nÉmettre quand même un second exemplaire ?')) return emettreAm(d, true);
-      return;
-    }
+    p = await _amPdf(a);
+    r = await apiCall('admin_am_archiver', { numero: a.numero, pdf: p.base64, sha256: p.sha256, envoyer: !!envoyer });
+  } catch (e) {
+    // Coupure réseau (fréquente sur mobile) : le numéro est déjà attribué, il faut le dire.
+    throw new Error('Archivage interrompu (' + (/fetch|network/i.test(e.message) ? 'connexion perdue' : e.message) + ').' + reserve);
+  }
+  if (r.status !== 'success') throw new Error((r.message || 'Archivage impossible.') + reserve);
+  _amEnregistrer(p.octets, _amNomFichier(a.numero, a.nom));
+  return r;
+}
+
+async function emettreAm(d) {
+  const b = document.getElementById('am-btn-confirmer'); b.disabled = true; b.textContent = 'Émission…';
+  try {
+    const r = await apiCall('admin_am_emettre', Object.assign({}, d, { photoBase64: _am.photo.split(',')[1], photoMime: 'image/jpeg' }));
     if (r.status !== 'success') throw new Error(r.message);
     fermerModal('modal-am-confirmer');
-    const a = r.attestation;
-    const canvas = await genererAttestationCanvas(_amVersApprenant(a, a.photoData, false), null);
-    await telechargerAttestation(canvas, a.numero, 'pdf');
-    let message = r.message;
-    if (document.getElementById('am-envoyer').checked && a.email) {
-      const env = await _amEnvoyerPdf(a.numero, a.email, canvas);
-      message += ' ' + env.message;
-    }
-    toast(message, 'success');
+    const arch = await _amGenererEtArchiver(r.attestation, document.getElementById('am-envoyer').checked);
+    toast(arch.message + ' Code de vérification : ' + arch.code + '.', 'success');
     _amReinitialiser();
-    _am.liste.unshift(a);
-  } catch (e) { toast(e.message, 'error'); }
-  finally { b.disabled = false; }
+  } catch (e) { fermerModal('modal-am-confirmer'); toast(e.message, 'error'); }
+  finally { b.disabled = false; b.innerHTML = '<span class="iconify" data-icon="tabler:check"></span> Émettre'; }
 }
 
 function _amReinitialiser() {
-  const form = document.getElementById('am-form');
   ['am-nom', 'am-prenoms', 'am-naissance-annee', 'am-naissance-date', 'am-lieu', 'am-email', 'am-intitule', 'am-competences', 'am-debut', 'am-fin', 'am-duree'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('am-mention').value = ''; document.getElementById('am-filiere').value = '';
-  document.getElementById('am-photo').value = ''; _am.photo = null; _am.dureeModifiee = false;
+  document.getElementById('am-nationalite').value = 'béninoise';
+  document.getElementById('am-signer').checked = false; document.getElementById('am-demo').checked = false;
+  document.getElementById('am-photo').value = ''; _am.photo = null;
+  document.getElementById('am-duree').dataset.auto = '1'; _amAideDuree('');
   document.getElementById('am-photo-apercu').hidden = true; document.getElementById('am-photo-vide').hidden = false;
   document.getElementById('am-delivrance').value = _amAujourdhui();
   _amMajFormulaire();
-  form.scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('am-form').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function _amChargerJsPdf() {
@@ -2839,75 +2903,72 @@ async function _amChargerJsPdf() {
   });
 }
 
-// PDF produit ici, joint à l'email par le serveur.
-async function _amEnvoyerPdf(numero, email, canvas) {
-  await _amChargerJsPdf();
-  const pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
-  const base64 = pdf.output('datauristring').split(',')[1];
-  const r = await apiCall('admin_am_envoyer', { numero, email, pdfBase64: base64 });
-  if (r.status !== 'success') throw new Error(r.message);
-  return r;
-}
-
 async function chargerRegistreAm() {
   const zone = document.getElementById('am-registre');
   zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
   try {
-    const r = await apiCall('admin_am_lister');
+    const r = await apiCall('admin_am_lister', { q: _amVal('am-recherche').slice(0, 80) });
     if (r.status !== 'success') throw new Error(r.message);
     _am.liste = r.attestations;
+    document.getElementById('am-compteur').textContent = r.total ? r.total + ' au total' : '';
     _rendreRegistreAm();
   } catch (e) { zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>'; }
 }
 
 function _rendreRegistreAm() {
-  const q = _amVal('am-recherche').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const liste = _am.liste.filter(a => !q || norm([a.numero, a.nom, a.prenoms, a.filiere, a.intitule].join(' ')).indexOf(q) !== -1);
-  document.getElementById('am-compteur').textContent = _am.liste.length ? _am.liste.length + ' au total' : '';
   const zone = document.getElementById('am-registre');
-  if (!liste.length) { zone.innerHTML = '<div class="empty-state"><p>' + (q ? 'Aucun résultat.' : 'Aucune attestation manuelle pour le moment.') + '</p></div>'; return; }
+  if (!_am.liste.length) { zone.innerHTML = '<div class="empty-state"><p>' + (_amVal('am-recherche') ? 'Aucun résultat.' : 'Aucune attestation manuelle pour le moment.') + '</p></div>'; return; }
   zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
     <thead><tr><th>N°</th><th>Apprenant(e)</th><th>Formation</th><th>Délivrée le</th><th>Statut</th><th></th></tr></thead>
-    <tbody>${liste.map(a => `<tr>
-      <td class="mono" style="font-size:12px;white-space:nowrap;">${_escAdmin(a.numero)}</td>
-      <td><strong>${_escAdmin(a.nom)} ${_escAdmin(a.prenoms)}</strong>${a.email ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(a.email)}</span>` : ''}</td>
-      <td style="font-size:12.5px;">${_escAdmin(_clairCours(a.filiere === 'Autre' ? a.intitule : a.filiere))}${a.mention ? `<br><span style="font-size:11px;color:var(--text-3);">Mention ${_escAdmin(a.mention)}</span>` : ''}</td>
-      <td style="font-size:12px;white-space:nowrap;">${new Date(a.dateDelivrance + 'T00:00:00').toLocaleDateString('fr-FR')}</td>
-      <td><span class="badge ${a.statut === 'Valide' ? 'badge-green' : 'badge-red'}">${_escAdmin(a.statut)}</span>${a.motif ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(a.motif))}</span>` : ''}</td>
-      <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" onclick="voirAm('${_escAdmin(a.numero)}')"><span class="iconify" data-icon="tabler:eye"></span> Voir / PDF</button>
-        ${a.statut === 'Valide' ? `<button class="btn btn-ghost btn-sm" onclick="actionAm('${_escAdmin(a.numero)}', 'envoyer')"><span class="iconify" data-icon="tabler:mail-forward"></span> Envoyer</button>
-        <button class="btn btn-ghost btn-sm" onclick="actionAm('${_escAdmin(a.numero)}', 'annuler')"><span class="iconify" data-icon="tabler:ban"></span> Annuler</button>` : ''}
-      </td></tr>`).join('')}</tbody></table></div>`;
+    <tbody>${_am.liste.map((a, i) => {
+      const [lib, cls] = AM_STATUTS[a.statut] || [a.statut, 'badge-teal'];
+      const btn = (icone, libelle, action, classe) => `<button class="btn ${classe || 'btn-ghost'} btn-sm" onclick="actionRegistreAm(${i}, '${action}', this)"><span class="iconify" data-icon="${icone}"></span> ${libelle}</button>`;
+      const actions = [];
+      if (a.pdf) actions.push(btn('tabler:download', 'PDF', 'telecharger'));
+      if (!a.pdf && a.statut === 'en_cours') actions.push(btn('tabler:reload', 'Régénérer', 'regenerer', 'btn-primary'));
+      if (a.pdf && a.statut === 'valide') actions.push(btn('tabler:mail-forward', 'Envoyer', 'envoyer'));
+      if (_amPeut('annuler') && a.statut !== 'annulee') actions.push(btn('tabler:ban', 'Annuler', 'annuler', 'btn-danger'));
+      return `<tr>
+        <td class="mono" style="font-size:12px;white-space:nowrap;">${_escAdmin(a.numero)}${a.signee ? ' <span class="iconify" data-icon="tabler:signature" title="Signée électroniquement" style="color:var(--orange);"></span>' : ''}${a.demo ? ' <span class="badge badge-yellow">Démo</span>' : ''}</td>
+        <td><strong>${_escAdmin(a.nom)} ${_escAdmin(a.prenoms)}</strong>${a.envoyeA ? `<br><span style="font-size:11px;color:var(--text-3);">Envoyée à ${_escAdmin(a.envoyeA)}</span>` : ''}</td>
+        <td style="font-size:12.5px;">${_escAdmin(_clairCours(a.formation))}${a.mention ? `<br><span style="font-size:11px;color:var(--text-3);">Mention ${_escAdmin(a.mention)}</span>` : ''}</td>
+        <td style="font-size:12px;white-space:nowrap;">${_amDateFr(a.dateDelivrance)}</td>
+        <td><span class="badge ${cls}">${_escAdmin(lib)}</span>${a.motif ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(a.motif))}</span>` : ''}</td>
+        <td style="white-space:nowrap;">${actions.join(' ')}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
 }
 
-async function _amCharger(numero) {
-  const r = await apiCall('admin_am_get', { numero });
-  if (r.status !== 'success') throw new Error(r.message);
-  return r.attestation;
-}
-
-async function voirAm(numero) {
-  ouvrirModal('modal-attestation');
-  document.getElementById('attestation-preview').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+async function actionRegistreAm(i, action, bouton) {
+  const a = _am.liste[i];
+  if (!a) return;
+  if (action === 'envoyer' || action === 'annuler') return _amOuvrirAction(a, action);
+  bouton.disabled = true;
   try {
-    const a = await _amCharger(numero);
-    // Annulée : jamais réimprimable comme valide.
-    afficherAttestationCanvas(_amVersApprenant(a, a.photoData, a.statut !== 'Valide'), null);
-  } catch (e) { fermerModal('modal-attestation'); toast(e.message, 'error'); }
+    if (action === 'telecharger') {
+      const r = await apiCall('admin_am_telecharger', { numero: a.numero });
+      if (r.status !== 'success') throw new Error(r.message);
+      const bin = atob(r.pdf), octets = new Uint8Array(bin.length);
+      for (let k = 0; k < bin.length; k++) octets[k] = bin.charCodeAt(k);
+      _amEnregistrer(octets, r.filename);
+    } else if (action === 'regenerer') {
+      const r = await apiCall('admin_am_dossier', { numero: a.numero });
+      if (r.status !== 'success') throw new Error(r.message);
+      const arch = await _amGenererEtArchiver(r.attestation, false);
+      toast(arch.message, 'success');
+      chargerRegistreAm();
+    }
+  } catch (e) { toast(e.message, 'error'); }
+  finally { bouton.disabled = false; }
 }
 
-function actionAm(numero, action) {
-  const a = _am.liste.find(x => x.numero === numero) || {};
+function _amOuvrirAction(a, action) {
   const champ = document.getElementById('am-action-champ'), err = document.getElementById('err-am-action');
   err.classList.remove('show');
   const envoi = action === 'envoyer';
-  document.getElementById('am-action-titre').textContent = (envoi ? 'Envoyer l\'attestation ' : 'Annuler l\'attestation ') + numero;
-  document.getElementById('am-action-aide').textContent = envoi ? 'Le PDF est joint à l\'email, avec le lien de vérification.'
-    : 'L\'attestation reste au registre ; la vérification en ligne affichera « annulée » avec ce motif. Action définitive.';
-  document.getElementById('am-action-label').textContent = envoi ? 'Adresse e-mail' : 'Motif (obligatoire)';
+  document.getElementById('am-action-titre').textContent = (envoi ? 'Envoyer l\'attestation ' : 'Annuler l\'attestation ') + a.numero;
+  document.getElementById('am-action-aide').textContent = envoi ? 'Le PDF archivé est joint à l\'e-mail, avec le code et le lien de vérification.'
+    : 'L\'attestation restera au registre ; la vérification en ligne affichera « annulée ». Action définitive.';
+  document.getElementById('am-action-label').textContent = envoi ? 'Adresse e-mail' : 'Motif (obligatoire, 5 à 200 caractères)';
   champ.type = envoi ? 'email' : 'text'; champ.value = envoi ? (a.email || '') : '';
   const ok = document.getElementById('am-action-ok');
   ok.className = 'btn btn-sm ' + (envoi ? 'btn-primary' : 'btn-danger');
@@ -2915,23 +2976,50 @@ function actionAm(numero, action) {
   ok.onclick = async () => {
     const v = champ.value.trim();
     if (envoi && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { err.textContent = 'Adresse e-mail invalide.'; err.classList.add('show'); return; }
-    if (!envoi && v.length < 5) { err.textContent = 'Indiquez le motif.'; err.classList.add('show'); return; }
+    if (!envoi && (v.length < 5 || v.length > 200)) { err.textContent = 'Motif obligatoire (5 à 200 caractères).'; err.classList.add('show'); return; }
     ok.disabled = true;
     try {
-      let r;
-      if (envoi) {
-        const att = await _amCharger(numero);
-        const canvas = await genererAttestationCanvas(_amVersApprenant(att, att.photoData, false), null);
-        r = await _amEnvoyerPdf(numero, v, canvas);
-      } else {
-        r = await apiCall('admin_am_annuler', { numero, motif: v });
-        if (r.status !== 'success') throw new Error(r.message);
-      }
+      const r = await apiCall(envoi ? 'admin_am_renvoyer' : 'admin_am_annuler', envoi ? { numero: a.numero, email: v } : { numero: a.numero, motif: v });
+      if (r.status !== 'success') throw new Error(r.message);
       toast(r.message, 'success'); fermerModal('modal-am-action'); chargerRegistreAm();
     } catch (x) { err.textContent = x.message; err.classList.add('show'); }
     finally { ok.disabled = false; }
   };
   ouvrirModal('modal-am-action');
+}
+
+function _rendreRolesAm() {
+  const zone = document.getElementById('am-roles');
+  if (!_amPeut('roles') || !_am.moi.comptes) { zone.innerHTML = ''; return; }
+  zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Compte</th><th>Rôle</th></tr></thead><tbody>
+    ${_am.moi.comptes.map((c, i) => `<tr><td>${_escAdmin(c.email)}${c.email === _am.moi.email ? ' <span class="badge badge-teal">vous</span>' : ''}</td>
+      <td>${c.modifiable ? `<select class="filter-select" onchange="changerRoleAm(${i}, this)">${_am.moi.roles.map(r => `<option value="${r.valeur}"${r.valeur === c.role ? ' selected' : ''}>${_escAdmin(r.libelle)}</option>`).join('')}</select>`
+        : _escAdmin(c.roleLibelle)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+async function changerRoleAm(i, select) {
+  const c = _am.moi.comptes[i];
+  if (!confirm('Attribuer le rôle « ' + select.options[select.selectedIndex].text + ' » à ' + c.email + ' ? Effet immédiat.')) { select.value = c.role; return; }
+  try {
+    const r = await apiCall('admin_am_role', { email: c.email, role: select.value });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+    const m = await apiCall('admin_am_moi');
+    if (m.status === 'success') { _am.moi = m; _rendreRolesAm(); }
+  } catch (e) { toast(e.message, 'error'); select.value = c.role; }
+}
+
+async function chargerJournalAm() {
+  const zone = document.getElementById('am-journal');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_am_journal');
+    if (r.status !== 'success') throw new Error(r.message);
+    zone.innerHTML = r.lignes.length ? `<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Action</th><th>Compte</th><th>Détail</th></tr></thead><tbody>
+      ${r.lignes.map(l => `<tr><td style="font-size:12px;white-space:nowrap;">${new Date(l.date).toLocaleString('fr-FR')}</td><td class="mono" style="font-size:12px;">${_escAdmin(l.action)}</td>
+        <td style="font-size:12px;">${_escAdmin(l.compte || 'public')}</td><td style="font-size:12px;">${_escAdmin(_clairCours(l.detail))}</td></tr>`).join('')}</tbody></table></div>`
+      : '<div class="empty-state"><p>Journal vide.</p></div>';
+  } catch (e) { zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>'; }
 }
 
 /* ---------- Registre du personnel + documents de travail (GAS personnel.gs) ---------- */
@@ -6238,7 +6326,8 @@ async function supprimerForumAdmin(id) {
 }
 </script>
 <script src="js/fiche-besoins.js?v=20261102"></script>
-<script src="js/attestation_generator.js?v=20261105"></script>
+<script src="js/duree.js?v=20261107"></script>
+<script src="js/attestation_generator.js?v=20261107"></script>
 <script src="js/travail_generator.js?v=20261104"></script>
 </body>
 </html>

@@ -460,9 +460,9 @@ async function genererAttestationCanvas(apprenant, token) {
   const dateDocument = apprenant.dateDelivrance ? fmt(apprenant.dateDelivrance) : dateAujourdhui;
 
   const ATT_VERIF_URL = `https://${ATT_ENTREPRISE.SITE}/verifier`;
-  // Attestation manuelle : QR vers la référence (registre), pas un jeton.
-  const lienVerif = apprenant.refVerification
-    ? `${ATT_VERIF_URL}?ref=${encodeURIComponent(apprenant.refVerification)}`
+  // Attestation manuelle : QR vers le code de vérification (non devinable), pas un jeton.
+  const lienVerif = apprenant.codeVerification
+    ? `${ATT_VERIF_URL}?c=${encodeURIComponent(apprenant.codeVerification)}`
     : token
       ? `${ATT_VERIF_URL}?t=${encodeURIComponent(token)}`
       : ATT_VERIF_URL;
@@ -1118,7 +1118,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 30, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";
-  const refTxt = `Réf : ${apprenant.id}   —   Document ${apprenant.dateDelivrance ? "délivré" : "généré"} le ${dateDocument}`;
+  const refTxt = `Réf : ${apprenant.id}   —   ${apprenant.codeVerification ? "Code de vérification : " + apprenant.codeVerification + "   —   " : ""}Document ${apprenant.dateDelivrance ? "délivré" : "généré"} le ${dateDocument}`;
   ctx.fillText(refTxt, (ATT.W - _mw(ctx, refTxt)) / 2, FTR_Y + 62);
 
   _font(ctx, 40, "bold", "DM Sans");
@@ -1144,24 +1144,25 @@ async function genererAttestationCanvas(apprenant, token) {
   // recadrer, rendant le document inutilisable comme preuve officielle
   // tant que la date de fin n'est pas passée.
   _dessinerFiligraneSiNonTerminee(ctx, apprenant);
-  if (apprenant.specimen) _dessinerSpecimen(ctx);
+  if (apprenant.demo) _dessinerSpecimen(ctx, "DÉMONSTRATION", "SANS VALEUR — NE PAS REMETTRE");
+  else if (apprenant.specimen) _dessinerSpecimen(ctx, "SPÉCIMEN", "APERÇU — SANS VALEUR");
 
   return canvas;
 }
 
 // Aperçu d'une attestation manuelle avant émission : inutilisable comme preuve.
-function _dessinerSpecimen(ctx) {
+function _dessinerSpecimen(ctx, titre, sousTitre) {
   ctx.save();
   ctx.translate(ATT.W / 2, ATT.H / 2);
   ctx.rotate(-Math.PI / 7);
   ctx.textAlign = "center";
   ctx.globalAlpha = 0.22;
   ctx.fillStyle = "#C81E1E";
-  _font(ctx, 300, "bold");
-  ctx.fillText("SPÉCIMEN", 0, 40);
+  _font(ctx, titre.length > 10 ? 220 : 300, "bold");
+  ctx.fillText(titre, 0, 40);
   ctx.globalAlpha = 0.5;
   _font(ctx, 70, "bold", "DM Sans");
-  ctx.fillText("APERÇU — SANS VALEUR", 0, 170);
+  ctx.fillText(sousTitre, 0, 170);
   ctx.textAlign = "left";
   ctx.restore();
 }
