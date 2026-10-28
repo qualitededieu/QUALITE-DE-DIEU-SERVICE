@@ -236,7 +236,7 @@
 
   const chargeurs = {
     accueil: chargerAccueil, apprenants: chargerApprenants, presences: chargerSeances,
-    notes: chargerEvals, cours: chargerCours, questions: chargerQuestions,
+    notes: chargerEvals, cours: chargerCours, questions: chargerQuestions, rh: chargerRh,
     fiches: () => { chargerFiches(); if (!$('vue-questionnaires').hidden && $('q-editeur-vue').hidden) chargerQuestionnaires(); }
   };
 
@@ -252,6 +252,63 @@
     if (b.dataset.action === 'appel') ouvrirAppel('');
     if (b.dataset.action === 'eval') ouvrirEval('');
   }));
+
+  /* ------------------- Mes documents de travail ------------------- */
+  const RH_BADGES = { 'Demandée': 'orange', 'Délivrée': 'vert', 'Refusée': '', 'Annulée': '' };
+  async function chargerRh() {
+    const zone = $('rh-contenu');
+    chargement(zone);
+    try {
+      const r = await api('formateur_rh_etat');
+      if (r.status !== 'success') throw new Error(r.message);
+      if (!r.employe) {
+        zone.innerHTML = '<div class="carte vide">Votre fiche n\'est pas encore dans le registre du personnel.<br>Demandez à l\'administration de l\'ajouter, liée à votre compte formateur.</div>';
+        return;
+      }
+      const e = r.employe;
+      let html = `<div class="carte"><h2 class="titre-carte"><span class="iconify" data-icon="tabler:briefcase"></span> ${esc(e.poste)}</h2>
+        <p class="discret" style="margin:0;">${esc(e.contrat)} — depuis le ${dateFr(e.dateEmbauche)}${e.dateSortie ? ' jusqu\'au ' + dateFr(e.dateSortie) : ''} — <strong>${esc(e.statut)}</strong></p>
+        <p class="discret" style="margin:8px 0 0;">Une information est inexacte (poste, dates) ? Signalez-la à l'administration avant de demander un document.</p>`;
+      const boutons = [];
+      if (r.peutDemander.attestation) boutons.push('<button type="button" class="btn btn-plein" data-rh-demander="attestation"><span class="iconify" data-icon="tabler:file-plus"></span> Demander une attestation de travail</button>');
+      if (r.peutDemander.certificat) boutons.push('<button type="button" class="btn btn-plein" data-rh-demander="certificat"><span class="iconify" data-icon="tabler:file-plus"></span> Demander un certificat de travail</button>');
+      if (boutons.length) html += `<label for="rh-usage">Usage du document (facultatif)</label><input type="text" id="rh-usage" maxlength="200" placeholder="Ex. : dossier de prêt bancaire, visa, concours"><div class="actions-rapides" style="margin-top:12px;">${boutons.join('')}</div>`;
+      else html += '<p class="discret" style="margin:12px 0 0;">Une demande est déjà en cours de traitement.</p>';
+      html += '</div>';
+      html += r.documents.length ? `<div class="carte"><h2 class="titre-carte"><span class="iconify" data-icon="tabler:files"></span> Historique</h2>${r.documents.map(d => `
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--gris-100);">
+          <div style="flex:1;min-width:200px;"><strong>${esc(d.type)}</strong> <span class="badge ${RH_BADGES[d.statut] || ''}">${esc(d.statut)}</span><br>
+            <span class="discret">Réf. ${esc(d.ref)} — ${d.statut === 'Délivrée' ? 'délivré le ' + dateFr(d.dateDelivrance) : 'demandé le ' + dateFr(d.date)}</span>
+            ${d.motif ? `<br><span class="discret">Motif : ${esc(d.motif)}</span>` : ''}</div>
+          ${d.statut === 'Délivrée' ? `<button type="button" class="btn btn-contour btn-petit" data-rh-pdf="${esc(d.ref)}"><span class="iconify" data-icon="tabler:download"></span> PDF</button>` : ''}
+        </div>`).join('')}</div>` : '';
+      zone.innerHTML = html;
+      zone.querySelectorAll('[data-rh-demander]').forEach(b => b.addEventListener('click', () => demanderRh(b.dataset.rhDemander, b)));
+      zone.querySelectorAll('[data-rh-pdf]').forEach(b => b.addEventListener('click', () => telechargerRh(b.dataset.rhPdf, b)));
+    } catch (e) {
+      if (e.message !== 'session') zone.innerHTML = '<div class="carte vide">' + esc(e.message) + '</div>';
+    }
+  }
+  async function demanderRh(type, bouton) {
+    const libelle = type === 'certificat' ? 'un certificat de travail' : 'une attestation de travail';
+    if (!confirm('Demander ' + libelle + ' ? L\'administration vérifiera votre fiche avant de le délivrer.')) return;
+    bouton.disabled = true;
+    try {
+      const r = await api('formateur_rh_demander', { type: type, motif: ($('rh-usage') || {}).value || '' });
+      if (r.status !== 'success') throw new Error(r.message);
+      toast(r.message);
+      chargerRh();
+    } catch (e) { bouton.disabled = false; echec(e); }
+  }
+  async function telechargerRh(ref, bouton) {
+    bouton.disabled = true;
+    try {
+      const r = await api('formateur_rh_document', { ref: ref });
+      if (r.status !== 'success') throw new Error(r.message);
+      await telechargerDocumentTravail(r.document);
+    } catch (e) { echec(e); }
+    finally { bouton.disabled = false; }
+  }
 
   /* ---------------------------- Accueil ---------------------------- */
   async function chargerAccueil() {

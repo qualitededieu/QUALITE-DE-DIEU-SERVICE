@@ -102,7 +102,7 @@ async function genererBadgeCertification(apprenant, token) {
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=1&data=" + encodeURIComponent(lienVerif);
 
   const [logo, photo, qr] = await Promise.all([
-    _bLoadImg(LOGO_URL), _bLoadImg(apprenant.photoUrl), _bLoadImg(QR_URL),
+    _bLoadImg(LOGO_URL), _bLoadImg(apprenant.photoData || apprenant.photoUrl), _bLoadImg(QR_URL),
   ]);
 
   const couleur = BADGE_C.OR;

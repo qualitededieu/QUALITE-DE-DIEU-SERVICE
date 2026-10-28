@@ -212,6 +212,18 @@
     .page.active { display: block; }
 
     /* COMPOSANTS */
+    .pr-table td, .pr-table th { vertical-align: top; }
+    .pr-table .pr-apres { font-weight: 700; color: var(--text); }
+    .pr-table .pr-perime { color: var(--red); font-size: 11.5px; font-weight: 700; }
+    .pr-coche { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .pr-coche input { width: 18px; height: 18px; accent-color: var(--green, #1D9E75); }
+    .pr-alerte { padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; font-size: 13px; }
+    .pr-alerte.alerte { background: var(--red-dim); color: var(--red); }
+    .pr-alerte.info { background: var(--teal-dim); color: var(--teal-l); }
+    .pr-justif img { max-width: 100%; max-height: 420px; border-radius: 10px; border: 1px solid var(--border, rgba(255,255,255,.1)); display: block; margin: 0 auto; }
+    .pr-verif { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid var(--orange); border-radius: 10px; background: var(--orange-dim); margin: 12px 0; font-size: 13px; cursor: pointer; }
+    .pr-verif input { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }
+    .pr-verif[hidden] { display: none; }
     .alerte-admin { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 20px; border-radius: 12px; background: var(--orange-dim); border: 1px solid var(--orange); color: var(--text); font-size: 14px; }
     .alerte-admin[hidden] { display: none; }
     .alerte-admin .iconify { color: var(--orange); font-size: 22px; flex-shrink: 0; }
@@ -601,9 +613,17 @@
       <button class="nav-item" onclick="naviguer('formateurs')">
         <span class="iconify" data-icon="tabler:school"></span> Formateurs
       </button>
+      <button class="nav-item" onclick="naviguer('personnel')">
+        <span class="iconify" data-icon="tabler:briefcase"></span> Personnel
+        <span class="nav-badge" id="badge-rh" style="display:none;">0</span>
+      </button>
       <button class="nav-item" onclick="naviguer('photos')">
         <span class="iconify" data-icon="tabler:camera-check"></span> Demandes de photo
         <span class="nav-badge" id="badge-photos" style="display:none;">0</span>
+      </button>
+      <button class="nav-item" onclick="naviguer('profils')">
+        <span class="iconify" data-icon="tabler:user-edit"></span> Modifications profil
+        <span class="nav-badge" id="badge-profils" style="display:none;">0</span>
       </button>
       <button class="nav-item" onclick="naviguer('besoins')">
         <span class="iconify" data-icon="tabler:clipboard-text"></span> Fiches besoins
@@ -681,6 +701,16 @@
         <span class="iconify" data-icon="tabler:camera-exclamation"></span>
         <span class="alerte-texte" id="alerte-photos-texte"></span>
         <button class="btn btn-primary btn-sm" onclick="naviguer('photos')">Examiner</button>
+      </div>
+      <div class="alerte-admin" id="alerte-rh" hidden role="status">
+        <span class="iconify" data-icon="tabler:file-certificate"></span>
+        <span class="alerte-texte" id="alerte-rh-texte"></span>
+        <button class="btn btn-primary btn-sm" onclick="naviguer('personnel')">Traiter</button>
+      </div>
+      <div class="alerte-admin" id="alerte-profils" hidden role="status">
+        <span class="iconify" data-icon="tabler:user-exclamation"></span>
+        <span class="alerte-texte" id="alerte-profils-texte"></span>
+        <button class="btn btn-primary btn-sm" onclick="naviguer('profils')">Examiner</button>
       </div>
       <div class="stats-grid" id="stats-grid">
         <div class="loading-overlay" style="grid-column:1/-1;"><div class="spinner"></div></div>
@@ -1047,6 +1077,44 @@
       </div>
     </div>
 
+    <div class="page" id="page-personnel">
+      <div class="table-card" id="rh-demandes-carte" hidden>
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:inbox"></span> Demandes à traiter <span id="rh-compteur" class="gal-compteur"></span></span>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">Vérifiez la fiche (poste, contrat, dates, naissance) <strong>avant</strong> de délivrer : le document reprend ces données telles quelles et reste vérifiable en ligne.</p>
+        <div id="rh-demandes"></div>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:briefcase"></span> Registre du personnel</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="chargerPersonnel()"><span class="iconify" data-icon="tabler:refresh"></span> Actualiser</button>
+            <button class="btn btn-primary btn-sm" onclick="ouvrirEmploye('')"><span class="iconify" data-icon="tabler:user-plus"></span> Ajouter un employé</button>
+          </div>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;"><strong>Attestation de travail</strong> : employé en poste. <strong>Certificat de travail</strong> : fin de contrat (renseignez la date de sortie). Un formateur lié à sa fiche peut demander ses documents depuis son espace.</p>
+        <div id="rh-employes"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:file-certificate"></span> Documents délivrés</span>
+        </div>
+        <div id="rh-documents"></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-profils">
+      <div class="table-card">
+        <div class="table-card-header">
+          <span class="table-card-title"><span class="iconify" data-icon="tabler:user-edit"></span> Demandes de modification de profil <span id="profils-compteur" class="gal-compteur"></span></span>
+          <button class="btn btn-ghost btn-sm" onclick="chargerDemandesProfil()"><span class="iconify" data-icon="tabler:refresh"></span> Actualiser</button>
+        </div>
+        <p class="cours-aide" style="padding:0 20px;">Les apprenants ne modifient rien eux-mêmes : chaque champ demandé attend votre décision. <strong>État civil</strong> (nom, prénoms, sexe, naissance, nationalité, pièce) : comparez avec le justificatif joint, ces données figurent sur l'attestation.</p>
+        <div id="profils-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
     <div class="page" id="page-besoins">
       <div class="table-card">
         <div class="table-card-header">
@@ -1366,6 +1434,72 @@
     </div>
     <div class="modal-body" id="dp-corps"></div>
     <div class="modal-footer" id="dp-pied"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-employe">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="emp-titre">Nouvel employé</h3>
+      <button class="modal-close" onclick="fermerModal('modal-employe')"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body">
+      <div id="emp-import-bloc" style="margin-bottom:12px;">
+        <label class="auth-label" for="emp-import">Lier à un compte formateur (facultatif)</label>
+        <select id="emp-import" class="auth-input" onchange="importerFormateurEmploye()"><option value="">— Aucun (employé hors espace formateur) —</option></select>
+      </div>
+      <div class="cours-form-grille" style="padding:0;">
+        <div><label class="auth-label" for="emp-nom">Nom *</label><input type="text" id="emp-nom" class="auth-input" maxlength="60" /></div>
+        <div><label class="auth-label" for="emp-prenoms">Prénoms *</label><input type="text" id="emp-prenoms" class="auth-input" maxlength="80" /></div>
+        <div><label class="auth-label" for="emp-sexe">Sexe *</label><select id="emp-sexe" class="auth-input"><option value="">—</option><option value="M">Masculin</option><option value="F">Féminin</option></select></div>
+        <div><label class="auth-label" for="emp-naissance">Date de naissance</label><input type="date" id="emp-naissance" class="auth-input" /></div>
+        <div><label class="auth-label" for="emp-lieu">Lieu de naissance</label><input type="text" id="emp-lieu" class="auth-input" maxlength="80" placeholder="Ex. Comé" /></div>
+        <div><label class="auth-label" for="emp-nationalite">Nationalité</label><input type="text" id="emp-nationalite" class="auth-input" maxlength="60" placeholder="Ex. Béninoise" /></div>
+        <div><label class="auth-label" for="emp-tel">Téléphone</label><input type="tel" id="emp-tel" class="auth-input" maxlength="20" /></div>
+        <div><label class="auth-label" for="emp-email">Email</label><input type="email" id="emp-email" class="auth-input" maxlength="120" /></div>
+        <div style="grid-column:1/-1;"><label class="auth-label" for="emp-poste">Poste occupé *</label><input type="text" id="emp-poste" class="auth-input" maxlength="100" placeholder="Ex. Formateur principal en Graphisme" /></div>
+        <div><label class="auth-label" for="emp-contrat">Type de contrat *</label><select id="emp-contrat" class="auth-input"></select></div>
+        <div><label class="auth-label" for="emp-embauche">Date d'embauche *</label><input type="date" id="emp-embauche" class="auth-input" /></div>
+        <div><label class="auth-label" for="emp-sortie">Date de sortie (fin de contrat)</label><input type="date" id="emp-sortie" class="auth-input" /></div>
+        <div style="grid-column:1/-1;"><label class="auth-label" for="emp-notes">Notes internes (non imprimées)</label><input type="text" id="emp-notes" class="auth-input" maxlength="500" /></div>
+      </div>
+      <p class="cours-aide" style="margin-top:8px;">Date et lieu de naissance obligatoires pour délivrer un document. Le nom est enregistré en majuscules.</p>
+      <div class="auth-error" id="err-emp"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-employe')">Annuler</button>
+      <button class="btn btn-primary btn-sm" id="btn-emp-enreg" onclick="enregistrerEmploye()"><span class="iconify" data-icon="tabler:device-floppy"></span> Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rh-motif">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="rhm-titre">Motif</h3>
+      <button class="modal-close" onclick="fermerModal('modal-rh-motif')"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body">
+      <p class="cours-aide" id="rhm-aide"></p>
+      <label class="auth-label" for="rhm-motif">Motif *</label>
+      <input type="text" id="rhm-motif" class="auth-input" maxlength="300" />
+      <div class="auth-error" id="err-rhm"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fermerModal('modal-rh-motif')">Annuler</button>
+      <button class="btn btn-primary btn-sm" id="btn-rhm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-demande-profil">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-header">
+      <h3 id="dpr-titre">Modification de profil</h3>
+      <button class="modal-close" onclick="fermerModal('modal-demande-profil')"><span class="iconify" data-icon="tabler:x"></span></button>
+    </div>
+    <div class="modal-body" id="dpr-corps"></div>
+    <div class="modal-footer" id="dpr-pied"></div>
   </div>
 </div>
 
@@ -1988,7 +2122,7 @@ function naviguer(page, filtre = '') {
   state.page = page; state.filtre = filtre; state.currentPage = 1;
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', besoins: 'Fiches de recueil des besoins', photos: 'Demandes de photo', galerie: 'Galerie photos', temoignages: 'Témoignages' };
+  const titres = { dashboard: 'Tableau de bord', dossiers: 'Dossiers', renseignements: 'Renseignements', candidatures: 'Candidatures', actualites: 'Actualités & Bandeau', messages: 'Messages (RDV / Chat)', newsletter: 'Newsletter', suivi: 'Téléchargements & paiements', cours: 'Cours (Espace apprenant)', forum: 'Questions apprenants', formateurs: 'Formateurs', besoins: 'Fiches de recueil des besoins', photos: 'Demandes de photo', profils: 'Modifications de profil', personnel: 'Personnel — attestations et certificats de travail', galerie: 'Galerie photos', temoignages: 'Témoignages' };
   document.getElementById('topbar-title').textContent = titres[page] || page;
   if (page === 'dashboard')       chargerDashboard();
   if (page === 'dossiers')        chargerDossiers();
@@ -2003,6 +2137,8 @@ function naviguer(page, filtre = '') {
   if (page === 'formateurs')      chargerFormateursAdmin();
   if (page === 'besoins')         chargerBesoinsAdmin();
   if (page === 'photos')          chargerDemandesPhoto();
+  if (page === 'profils')         chargerDemandesProfil();
+  if (page === 'personnel')       chargerPersonnel();
   if (page === 'galerie')         chargerGalerieAdmin();
   if (page === 'temoignages')     chargerTemoignagesAdmin();
   if (filtre && page === 'dossiers') {
@@ -2305,6 +2441,258 @@ async function examinerDemandePhoto(id) {
     };
     document.getElementById('dp-valider').onclick = () => traiter('Validée');
     document.getElementById('dp-refuser').onclick = () => traiter('Refusée');
+  } catch (e) {
+    corps.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+/* ---------- Registre du personnel + documents de travail (GAS personnel.gs) ---------- */
+let _personnel = { employes: [], documents: [], contrats: [] };
+let _formateursPourImport = [];
+const RH_BADGE = { 'Demandée': 'badge-orange', 'Délivrée': 'badge-green', 'Refusée': 'badge-red', 'Annulée': 'badge-teal' };
+const _dateRh = iso => iso ? new Date(String(iso).length === 10 ? iso + 'T00:00:00' : iso).toLocaleDateString('fr-FR') : '—';
+
+async function chargerPersonnel() {
+  const zone = document.getElementById('rh-employes');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_personnel_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    _personnel = r;
+    _appliquerAlerteRh(r.demandesEnAttente);
+    const nom = id => { const e = r.employes.find(x => x.id === id); return e ? e : null; };
+    // Demandes
+    const demandes = r.documents.filter(d => d.statut === 'Demandée');
+    document.getElementById('rh-demandes-carte').hidden = !demandes.length;
+    document.getElementById('rh-compteur').textContent = demandes.length ? demandes.length + ' en attente' : '';
+    document.getElementById('rh-demandes').innerHTML = demandes.length ? `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Employé</th><th>Document</th><th>Demandé le</th><th>Usage indiqué</th><th></th></tr></thead>
+      <tbody>${demandes.map(d => { const e = nom(d.employeId); return `<tr>
+        <td><strong>${_escAdmin(d.nomComplet)}</strong>${e ? `<br><span style="font-size:11.5px;color:var(--text-3);">${_escAdmin(e.poste)} — depuis le ${_dateRh(e.dateEmbauche)}</span>` : ''}</td>
+        <td>${_escAdmin(d.type)}</td><td style="font-size:12px;">${_dateCourte(d.date)}</td>
+        <td style="font-size:12px;">${_escAdmin(_clairCours(d.motif || '—'))}</td>
+        <td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="ouvrirEmploye('${_escAdmin(d.employeId)}')">Vérifier la fiche</button>
+          <button class="btn btn-primary btn-sm" onclick="delivrerDocRh('', '', '${_escAdmin(d.ref)}')">Délivrer</button>
+          <button class="btn btn-ghost btn-sm" onclick="statutDocRh('${_escAdmin(d.ref)}', 'refuser')">Refuser</button></td>
+      </tr>`; }).join('')}</tbody></table></div>` : '';
+    // Registre
+    zone.innerHTML = r.employes.length ? `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Employé</th><th>Poste</th><th>Contrat</th><th>Embauche</th><th>Statut</th><th>Documents</th><th></th></tr></thead>
+      <tbody>${r.employes.map(e => `<tr>
+        <td><strong>${_escAdmin(e.nom)} ${_escAdmin(e.prenoms)}</strong><br><span class="mono" style="font-size:11px;color:var(--text-3);">${_escAdmin(e.id)}${e.compteFormateur ? ' — compte formateur lié' : ''}</span></td>
+        <td style="font-size:12.5px;">${_escAdmin(_clairCours(e.poste))}</td><td style="font-size:12.5px;">${_escAdmin(e.contrat)}</td>
+        <td style="font-size:12px;">${_dateRh(e.dateEmbauche)}${e.dateSortie ? '<br>→ ' + _dateRh(e.dateSortie) : ''}</td>
+        <td><span class="badge ${e.statut === 'En poste' ? 'badge-green' : 'badge-teal'}">${_escAdmin(e.statut)}</span></td>
+        <td style="white-space:nowrap;">
+          ${e.eligible.attestation ? `<button class="btn btn-ghost btn-sm" onclick="delivrerDocRh('${_escAdmin(e.id)}', 'attestation')"><span class="iconify" data-icon="tabler:file-certificate"></span> Attestation</button>` : ''}
+          ${e.eligible.certificat ? `<button class="btn btn-ghost btn-sm" onclick="delivrerDocRh('${_escAdmin(e.id)}', 'certificat')"><span class="iconify" data-icon="tabler:file-certificate"></span> Certificat</button>` : ''}
+        </td>
+        <td><button class="btn btn-ghost btn-sm" onclick="ouvrirEmploye('${_escAdmin(e.id)}')"><span class="iconify" data-icon="tabler:edit"></span> Modifier</button></td>
+      </tr>`).join('')}</tbody></table></div>` : '<div class="empty-state"><p>Registre vide : ajoutez vos formateurs et employés.</p></div>';
+    // Documents
+    const docs = r.documents.filter(d => d.statut !== 'Demandée');
+    document.getElementById('rh-documents').innerHTML = docs.length ? `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Référence</th><th>Employé</th><th>Document</th><th>Date</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${docs.map(d => `<tr>
+        <td class="mono" style="font-size:12px;">${_escAdmin(d.ref)}</td><td>${_escAdmin(d.nomComplet)}</td><td>${_escAdmin(d.type)}</td>
+        <td style="font-size:12px;">${_dateRh(d.dateDelivrance || d.date)}</td>
+        <td><span class="badge ${RH_BADGE[d.statut] || 'badge-teal'}">${_escAdmin(d.statut)}</span>${d.motif && d.statut !== 'Délivrée' ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(d.motif))}</span>` : ''}</td>
+        <td style="white-space:nowrap;">${d.statut === 'Délivrée' ? `<button class="btn btn-ghost btn-sm" onclick="telechargerDocRh('${_escAdmin(d.ref)}')"><span class="iconify" data-icon="tabler:download"></span> PDF</button>
+          <button class="btn btn-ghost btn-sm" onclick="statutDocRh('${_escAdmin(d.ref)}', 'annuler')">Annuler</button>` : ''}</td>
+      </tr>`).join('')}</tbody></table></div>` : '<div class="empty-state"><p>Aucun document délivré pour le moment.</p></div>';
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+async function ouvrirEmploye(id) {
+  const e = _personnel.employes.find(x => x.id === id) || {};
+  document.getElementById('emp-titre').textContent = id ? 'Fiche — ' + e.nom + ' ' + e.prenoms : 'Nouvel employé';
+  document.getElementById('modal-employe').dataset.id = id || '';
+  document.getElementById('emp-contrat').innerHTML = '<option value="">—</option>' + (_personnel.contrats || []).map(c => `<option value="${_escAdmin(c)}">${_escAdmin(c)}</option>`).join('');
+  const champs = { nom: 'nom', prenoms: 'prenoms', sexe: 'sexe', naissance: 'dateNaissance', lieu: 'lieuNaissance', nationalite: 'nationalite',
+    tel: 'telephone', email: 'email', poste: 'poste', contrat: 'contrat', embauche: 'dateEmbauche', sortie: 'dateSortie', notes: 'notes' };
+  Object.keys(champs).forEach(k => { document.getElementById('emp-' + k).value = _clairCours(e[champs[k]] || ''); });
+  document.getElementById('err-emp').classList.remove('show');
+  ouvrirModal('modal-employe');
+  // Comptes formateurs proposés pour la liaison
+  const sel = document.getElementById('emp-import');
+  try {
+    if (!_formateursPourImport.length) { const r = await apiCall('admin_formateurs_lister'); if (r.status === 'success') _formateursPourImport = r.formateurs; }
+  } catch (x) { /* liaison facultative */ }
+  sel.innerHTML = '<option value="">— Aucun (employé hors espace formateur) —</option>' + _formateursPourImport.map(f => `<option value="${_escAdmin(f.id)}">${_escAdmin(f.prenom + ' ' + f.nom)} — ${_escAdmin(f.email)}</option>`).join('');
+  sel.value = e.compteFormateur || '';
+}
+
+// Choix d'un compte formateur : pré-remplit les champs encore vides.
+function importerFormateurEmploye() {
+  const f = _formateursPourImport.find(x => x.id === document.getElementById('emp-import').value);
+  if (!f) return;
+  const remplir = (k, v) => { const el = document.getElementById('emp-' + k); if (!el.value && v) el.value = v; };
+  remplir('nom', f.nom); remplir('prenoms', f.prenom); remplir('email', f.email); remplir('tel', f.telephone); remplir('poste', 'Formateur');
+}
+
+async function enregistrerEmploye() {
+  const v = k => document.getElementById('emp-' + k).value.trim();
+  const err = document.getElementById('err-emp');
+  const corps = { id: document.getElementById('modal-employe').dataset.id, nom: v('nom'), prenoms: v('prenoms'), sexe: v('sexe'), dateNaissance: v('naissance'),
+    lieuNaissance: v('lieu'), nationalite: v('nationalite'), telephone: v('tel'), email: v('email'), poste: v('poste'), contrat: v('contrat'),
+    dateEmbauche: v('embauche'), dateSortie: v('sortie'), notes: v('notes'), compteFormateur: document.getElementById('emp-import').value };
+  const manque = [['nom', corps.nom.length >= 2], ['prénoms', corps.prenoms.length >= 2], ['sexe', !!corps.sexe], ['poste', corps.poste.length >= 3],
+    ['type de contrat', !!corps.contrat], ['date d\'embauche', !!corps.dateEmbauche]].filter(x => !x[1]).map(x => x[0]);
+  if (corps.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(corps.email)) manque.push('email');
+  if (corps.dateSortie && corps.dateEmbauche && corps.dateSortie < corps.dateEmbauche) manque.push('date de sortie antérieure à l\'embauche');
+  if (manque.length) { err.textContent = 'À vérifier : ' + manque.join(', ') + '.'; err.classList.add('show'); return; }
+  const b = document.getElementById('btn-emp-enreg'); b.disabled = true;
+  try {
+    const r = await apiCall('admin_personnel_enregistrer', corps);
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success'); fermerModal('modal-employe'); chargerPersonnel();
+  } catch (e) { err.textContent = e.message; err.classList.add('show'); }
+  finally { b.disabled = false; }
+}
+
+// Délivrance : directe (employeId + type) ou à partir d'une demande (ref).
+async function delivrerDocRh(employeId, type, ref) {
+  const e = _personnel.employes.find(x => x.id === employeId) || {};
+  const quoi = ref ? 'ce document demandé' : (type === 'certificat' ? 'un certificat de travail' : 'une attestation de travail') + ' pour ' + e.nom + ' ' + e.prenoms;
+  if (!confirm('Délivrer ' + quoi + ' ? Il reprendra les données actuelles de la fiche (poste, contrat, dates) et sera vérifiable en ligne.')) return;
+  try {
+    const r = await apiCall('admin_personnel_delivrer', ref ? { ref } : { employeId, type });
+    if (r.status !== 'success') throw new Error(r.message);
+    toast(r.message, 'success');
+    await telechargerDocumentTravail(r.document);
+    chargerPersonnel();
+  } catch (x) { toast(x.message, 'error'); }
+}
+
+async function telechargerDocRh(ref) {
+  try {
+    const r = await apiCall('admin_personnel_doc_get', { ref });
+    if (r.status !== 'success') throw new Error(r.message);
+    await telechargerDocumentTravail(r.document);
+  } catch (x) { toast(x.message, 'error'); }
+}
+
+function statutDocRh(ref, action) {
+  document.getElementById('rhm-titre').textContent = action === 'refuser' ? 'Refuser la demande' : 'Annuler le document ' + ref;
+  document.getElementById('rhm-aide').textContent = action === 'refuser'
+    ? 'Le motif est envoyé au formateur par email.'
+    : 'Le document ne sera plus reconnu : la vérification en ligne l\'affichera comme ANNULÉ, avec ce motif. Délivrez ensuite un document corrigé si besoin.';
+  const champ = document.getElementById('rhm-motif'), err = document.getElementById('err-rhm');
+  champ.value = ''; err.classList.remove('show');
+  document.getElementById('btn-rhm').onclick = async () => {
+    if (champ.value.trim().length < 5) { err.textContent = 'Indiquez le motif.'; err.classList.add('show'); return; }
+    try {
+      const r = await apiCall('admin_personnel_doc_statut', { ref, motif: champ.value.trim() });
+      if (r.status !== 'success') throw new Error(r.message);
+      toast(r.message, 'success'); fermerModal('modal-rh-motif'); chargerPersonnel();
+    } catch (x) { err.textContent = x.message; err.classList.add('show'); }
+  };
+  ouvrirModal('modal-rh-motif');
+}
+
+/* ---------- Demandes de modification de profil (GAS profil.gs) ---------- */
+const DPR_BADGE = { 'En attente': 'badge-orange', 'Validée': 'badge-green', 'Validée en partie': 'badge-yellow', 'Refusée': 'badge-red', 'Annulée': 'badge-teal' };
+function _valeurProfilAdmin(cle, v) {
+  if (!v) return '<span style="color:var(--text-3);">(vide)</span>';
+  if (cle === 'sexe') return v === 'F' ? 'Féminin' : (v === 'M' ? 'Masculin' : _escAdmin(v));
+  if (cle === 'dateNaissance' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return new Date(v + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  return _escAdmin(_clairCours(v));
+}
+
+async function chargerDemandesProfil() {
+  const zone = document.getElementById('profils-container');
+  zone.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const r = await apiCall('admin_profil_demandes_lister');
+    if (r.status !== 'success') throw new Error(r.message);
+    _appliquerAlerteProfils(r.enAttente);
+    document.getElementById('profils-compteur').textContent = r.enAttente ? r.enAttente + ' en attente' : '';
+    if (!r.demandes.length) { zone.innerHTML = '<div class="empty-state"><p>Aucune demande pour le moment.</p></div>'; return; }
+    zone.innerHTML = `<div style="overflow-x:auto;"><table class="data-table">
+      <thead><tr><th>Apprenant</th><th>Envoyée</th><th>Champs demandés</th><th>Points d'attention</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${r.demandes.map(d => `<tr>
+        <td><strong>${_escAdmin(_clairCours(d.apprenant))}</strong><br><span class="mono" style="font-size:11px;color:var(--text-3);">${_escAdmin(d.dossierId)}</span></td>
+        <td style="font-size:12px;">${_dateCourte(d.date)}</td>
+        <td style="font-size:12px;">${d.champs.map(c => _escAdmin(c)).join(', ')}${d.etatCivil ? '<br><span class="badge badge-orange">État civil + justificatif</span>' : ''}</td>
+        <td style="font-size:12px;">${d.alertes ? `<span style="color:var(--red);font-weight:700;">${d.alertes} alerte${d.alertes > 1 ? 's' : ''}</span>` : '—'}</td>
+        <td><span class="badge ${DPR_BADGE[d.statut] || 'badge-teal'}">${_escAdmin(d.statut)}</span>${d.motifDecision ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(d.motifDecision))}</span>` : ''}</td>
+        <td><button class="btn ${d.statut === 'En attente' ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="examinerDemandeProfil('${_escAdmin(d.id)}')">${d.statut === 'En attente' ? 'Examiner' : 'Voir'}</button></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) {
+    zone.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
+  }
+}
+
+async function examinerDemandeProfil(id) {
+  const corps = document.getElementById('dpr-corps'), pied = document.getElementById('dpr-pied');
+  corps.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>'; pied.innerHTML = '';
+  ouvrirModal('modal-demande-profil');
+  try {
+    const r = await apiCall('admin_profil_demande_get', { id });
+    if (r.status !== 'success') throw new Error(r.message);
+    const d = r.demande, enAttente = d.statut === 'En attente';
+    document.getElementById('dpr-titre').textContent = _clairCours(d.apprenant) + ' — ' + d.dossierId;
+    const lignes = d.modifications.map(m => `<tr>
+      <td><strong>${_escAdmin(m.libelle)}</strong>${m.groupe === 'etatCivil' ? '<br><span class="badge badge-orange" style="margin-top:4px;">État civil</span>' : ''}</td>
+      <td>${_valeurProfilAdmin(m.cle, m.actuel)}${m.perimee ? '<br><span class="pr-perime">Modifiée depuis la demande (était : ' + _valeurProfilAdmin(m.cle, m.avant) + ')</span>' : ''}</td>
+      <td class="pr-apres">${_valeurProfilAdmin(m.cle, m.apres)}</td>
+      <td>${enAttente
+        ? `<label class="pr-coche"><input type="checkbox" class="dpr-accepter" value="${_escAdmin(m.cle)}" data-etat-civil="${m.groupe === 'etatCivil' ? 1 : 0}" ${m.perimee ? 'disabled' : ''}> Accepter</label>`
+        : (m.appliquee ? '<span class="badge badge-green">Appliquée</span>' : '<span class="badge badge-red">Refusée</span>')}</td>
+    </tr>`).join('');
+    const j = d.justificatif;
+    corps.innerHTML = `
+      ${(d.controles || []).map(c => `<div class="pr-alerte ${c.niveau === 'alerte' ? 'alerte' : 'info'}"><span class="iconify" data-icon="${c.niveau === 'alerte' ? 'tabler:alert-triangle' : 'tabler:info-circle'}"></span> ${_escAdmin(c.texte)}</div>`).join('')}
+      <div class="info-grid" style="margin:10px 0 12px;">
+        <div class="info-field"><label>Envoyée le</label><span>${_dateCourte(d.date)}</span></div>
+        <div class="info-field"><label>Contact actuel</label><span>${_escAdmin(d.telephone || '—')} — ${_escAdmin(d.email || 'pas d\'email')}</span></div>
+        <div class="info-field" style="grid-column:1/-1;"><label>Raison donnée par l'apprenant</label><span>${_escAdmin(_clairCours(d.motif))}</span></div>
+      </div>
+      <div style="overflow-x:auto;"><table class="data-table pr-table">
+        <thead><tr><th>Champ</th><th>Valeur actuelle</th><th>Valeur demandée</th><th>${enAttente ? 'Décision' : 'Résultat'}</th></tr></thead>
+        <tbody>${lignes}</tbody></table></div>
+      ${j ? `<div class="modal-section-title" style="margin-top:14px;">Justificatif joint</div>
+        <div class="pr-justif">${j.donnees ? `<img src="${j.donnees}" alt="Justificatif">` : ''}
+        <p style="text-align:center;margin-top:8px;"><a class="btn btn-ghost btn-sm" href="${_escAdmin(j.lien)}" target="_blank" rel="noopener"><span class="iconify" data-icon="tabler:external-link"></span> Ouvrir dans Drive${j.type === 'application/pdf' ? ' (PDF)' : ''}</a></p></div>`
+        : (d.modifications.some(m => m.groupe === 'etatCivil') ? '<p class="cours-aide" style="color:var(--red);">Justificatif introuvable.</p>' : '')}
+      ${enAttente ? `
+        <label class="pr-verif" id="dpr-verif-bloc" hidden><input type="checkbox" id="dpr-verif"> <span>J'ai comparé le justificatif avec les nouvelles données (orthographe exacte, date et lieu de naissance, numéro de pièce) et il s'agit bien de la même personne.</span></label>
+        <label class="auth-label" for="dpr-motif" style="margin-top:10px;">Message à l'apprenant (obligatoire si un champ est refusé)</label>
+        <input type="text" class="auth-input" id="dpr-motif" maxlength="300" placeholder="Ex. : le justificatif est illisible / le numéro est déjà utilisé">
+        <div class="auth-error" id="err-dpr"></div>` : (d.motifDecision ? `<p class="cours-aide"><strong>Message envoyé :</strong> ${_escAdmin(_clairCours(d.motifDecision))} — ${_escAdmin(d.traitePar)}, ${_dateCourte(d.dateTraitement)}</p>` : '')}`;
+    if (!enAttente) { pied.innerHTML = '<button class="btn btn-ghost" onclick="fermerModal(\'modal-demande-profil\')">Fermer</button>'; return; }
+    pied.innerHTML = `<button class="btn btn-ghost" id="dpr-refuser"><span class="iconify" data-icon="tabler:x"></span> Tout refuser</button>
+      <button class="btn btn-primary" id="dpr-appliquer"><span class="iconify" data-icon="tabler:check"></span> Appliquer la décision</button>`;
+    const cases = () => Array.from(corps.querySelectorAll('.dpr-accepter'));
+    const majVerif = () => { document.getElementById('dpr-verif-bloc').hidden = !cases().some(c => c.checked && c.dataset.etatCivil === '1'); };
+    cases().forEach(c => c.addEventListener('change', majVerif));
+    const traiter = async (toutRefuser) => {
+      const err = document.getElementById('err-dpr');
+      err.classList.remove('show');
+      const acceptes = toutRefuser ? [] : cases().filter(c => c.checked).map(c => c.value);
+      const motif = document.getElementById('dpr-motif').value.trim();
+      const nbRefus = d.modifications.length - acceptes.length;
+      if (nbRefus && motif.length < 5) { err.textContent = 'Indiquez à l\'apprenant pourquoi ' + (acceptes.length ? 'certains champs sont refusés' : 'la demande est refusée') + '.'; err.classList.add('show'); return; }
+      const etatCivil = cases().some(c => c.checked && c.dataset.etatCivil === '1') && !toutRefuser;
+      if (etatCivil && !document.getElementById('dpr-verif').checked) { err.textContent = 'Cochez la vérification du justificatif avant d\'accepter un changement d\'état civil.'; err.classList.add('show'); return; }
+      const resume = acceptes.length ? acceptes.length + ' champ(s) accepté(s), ' + nbRefus + ' refusé(s)' : 'refus de toute la demande';
+      if (!confirm('Confirmer : ' + resume + ' ? Les champs acceptés sont appliqués immédiatement au dossier.')) return;
+      pied.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      try {
+        const res = await apiCall('admin_profil_demande_traiter', { id, acceptes, motif, justificatifVerifie: etatCivil ? true : false });
+        if (res.status !== 'success') throw new Error(res.message);
+        toast(res.message, res.emailEnvoye ? 'success' : 'info');
+        fermerModal('modal-demande-profil');
+        chargerDemandesProfil();
+      } catch (e) {
+        err.textContent = e.message; err.classList.add('show');
+        pied.querySelectorAll('button').forEach(b => { b.disabled = false; });
+      }
+    };
+    document.getElementById('dpr-appliquer').onclick = () => traiter(false);
+    document.getElementById('dpr-refuser').onclick = () => traiter(true);
   } catch (e) {
     corps.innerHTML = '<div class="empty-state"><p>Erreur : ' + _escAdmin(e.message) + '</p></div>';
   }
@@ -4786,22 +5174,65 @@ function _appliquerAlertePhotos(n) {
       ? '<strong>1 demande de photo</strong> attend votre validation.'
       : '<strong>' + n + ' demandes de photo</strong> attendent votre validation.';
   }
-  document.title = n ? '(' + n + ') ' + _titreAdmin : _titreAdmin;
   if (_photosEnAttenteConnues !== null && n > _photosEnAttenteConnues) {
     toast('Nouvelle demande de photo d\'identité à valider.', 'info');
   }
   _photosEnAttenteConnues = n;
+  _majTitreAlertes();
+}
+
+let _profilsEnAttenteConnus = null;
+function _appliquerAlerteProfils(n) {
+  n = Number(n) || 0;
+  const b = document.getElementById('badge-profils');
+  if (b) { b.textContent = n; b.style.display = n ? '' : 'none'; }
+  const bandeau = document.getElementById('alerte-profils');
+  if (bandeau) {
+    bandeau.hidden = !n;
+    document.getElementById('alerte-profils-texte').innerHTML = n === 1
+      ? '<strong>1 demande de modification de profil</strong> attend votre vérification.'
+      : '<strong>' + n + ' demandes de modification de profil</strong> attendent votre vérification.';
+  }
+  if (_profilsEnAttenteConnus !== null && n > _profilsEnAttenteConnus) toast('Nouvelle demande de modification de profil à vérifier.', 'info');
+  _profilsEnAttenteConnus = n;
+  _majTitreAlertes();
+}
+
+// Titre de l'onglet : total des demandes en attente (photos + profils).
+let _rhEnAttenteConnues = null;
+function _appliquerAlerteRh(n) {
+  n = Number(n) || 0;
+  const b = document.getElementById('badge-rh');
+  if (b) { b.textContent = n; b.style.display = n ? '' : 'none'; }
+  const bandeau = document.getElementById('alerte-rh');
+  if (bandeau) {
+    bandeau.hidden = !n;
+    document.getElementById('alerte-rh-texte').innerHTML = n === 1
+      ? '<strong>1 demande de document de travail</strong> (attestation ou certificat) à traiter.'
+      : '<strong>' + n + ' demandes de documents de travail</strong> à traiter.';
+  }
+  if (_rhEnAttenteConnues !== null && n > _rhEnAttenteConnues) toast('Nouvelle demande de document de travail.', 'info');
+  _rhEnAttenteConnues = n;
+  _majTitreAlertes();
+}
+
+function _majTitreAlertes() {
+  const n = (_photosEnAttenteConnues || 0) + (_profilsEnAttenteConnus || 0) + (_rhEnAttenteConnues || 0);
+  document.title = n ? '(' + n + ') ' + _titreAdmin : _titreAdmin;
 }
 
 async function actualiserAlertes() {
   try {
     const r = await apiCall('admin_alertes');
-    if (r.status === 'success') _appliquerAlertePhotos(r.alertes.photos);
+    if (r.status !== 'success') return;
+    _appliquerAlertePhotos(r.alertes.photos);
+    _appliquerAlerteProfils(r.alertes.profils);
+    _appliquerAlerteRh(r.alertes.rh);
   } catch (e) { /* silencieux : simple compteur */ }
 }
 
 // Lien direct depuis un email (ex. /admin#photos).
-const PAGES_LIEN_DIRECT = ['photos', 'besoins', 'forum', 'candidatures'];
+const PAGES_LIEN_DIRECT = ['photos', 'profils', 'personnel', 'besoins', 'forum', 'candidatures'];
 function _ouvrirPageDemandee() {
   const page = (location.hash || '').slice(1);
   if (PAGES_LIEN_DIRECT.indexOf(page) === -1) return;
@@ -5319,6 +5750,7 @@ async function supprimerForumAdmin(id) {
 }
 </script>
 <script src="js/fiche-besoins.js?v=20261102"></script>
-<script src="js/attestation_generator.js"></script>
+<script src="js/attestation_generator.js?v=20261103"></script>
+<script src="js/travail_generator.js?v=20261104"></script>
 </body>
 </html>

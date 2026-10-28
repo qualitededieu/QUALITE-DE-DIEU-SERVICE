@@ -779,7 +779,8 @@
           <h2>Authentifier un document LQD Service</h2>
           <p class="intro">
             Entrez le numéro de référence imprimé en bas de l'attestation,
-            de la fiche apprenant ou du badge de certification.
+            de la fiche apprenant, du badge de certification ou du document
+            de travail (référence RH-…).
           </p>
 
           <label class="form-label" for="input-ref">Numéro de référence</label>
@@ -828,7 +829,9 @@
         });
         const result = await resp.json();
 
-        if (result.status === 'success') {
+        if (result.status === 'success' && result.document && result.document.typeDoc === 'travail') {
+          renderDocumentTravail(result.document);
+        } else if (result.status === 'success') {
           renderCarte(result.document, null, { simplifie: true });
         } else {
           renderFormulaire(result.message || "Aucun document ne correspond à ce numéro de référence.");
@@ -837,6 +840,35 @@
         renderFormulaire('Impossible de contacter le serveur de vérification. Vérifiez votre connexion et réessayez.');
         console.error('[verifierParId]', e);
       }
+    }
+
+    /* ================================================================
+       RENDU — ATTESTATION / CERTIFICAT DE TRAVAIL (référence RH-...)
+       Données figées à la délivrance ; un document annulé par
+       l'employeur est signalé comme tel.
+    ================================================================ */
+    function renderDocumentTravail(d) {
+      const nom = esc(String(d.nom || '').toUpperCase()) + ' ' + esc(d.prenoms);
+      if (d.statut === 'Annulée') {
+        renderErreur(`Le document ${d.ref} (${d.type}) établi au nom de ${String(d.nom || '').toUpperCase()} ${d.prenoms} a été annulé par l'employeur` + (d.motifAnnulation ? ` : ${d.motifAnnulation}.` : '.') + ' Il ne doit plus être accepté.', { titre: 'Document annulé' });
+        return;
+      }
+      const ligne = (l, v) => `<div style="display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #EEF0F2;font-size:14px;"><span style="color:#6B7280;">${l}</span><strong style="text-align:right;">${v}</strong></div>`;
+      document.getElementById('app').innerHTML = `
+        <div class="state-form">
+          <div class="icon-wrap" style="background:rgba(29,158,117,0.12);"><iconify-icon icon="tabler:shield-check" style="color:#1D9E75;"></iconify-icon></div>
+          <h2>Document authentique</h2>
+          <p class="intro">Ce document a bien été délivré par LES QUALITÉS DE DIEU SERVICE SARL. Comparez les informations ci-dessous avec le document présenté.</p>
+          ${ligne('Document', esc(d.type))}
+          ${ligne('Référence', esc(d.ref))}
+          ${ligne('Titulaire', nom)}
+          ${ligne('Poste', esc(d.poste))}
+          ${ligne(d.dateSortie ? 'Période d\'emploi' : 'En poste depuis le', d.dateSortie ? formatDate(d.dateEmbauche) + ' au ' + formatDate(d.dateSortie) : formatDate(d.dateEmbauche))}
+          ${ligne('Délivré le', formatDate(d.dateDelivrance))}
+          <button class="btn-verifier" style="margin-top:24px;" onclick="renderFormulaire()">
+            <iconify-icon icon="tabler:arrow-left"></iconify-icon> Vérifier un autre document
+          </button>
+        </div>`;
     }
 
     /* ================================================================
@@ -1052,6 +1084,15 @@
     async function init() {
       const params = new URLSearchParams(window.location.search);
       const token  = params.get('t');
+      const ref    = params.get('ref');
+
+      // QR d'une attestation / d'un certificat de travail : ?ref=RH-...
+      if (!token && ref) {
+        renderFormulaire();
+        document.getElementById('input-ref').value = ref;
+        verifierParId();
+        return;
+      }
 
       if (!token) {
         // Arrivée via /verifier-document tapé à la main (pas de QR scanné,

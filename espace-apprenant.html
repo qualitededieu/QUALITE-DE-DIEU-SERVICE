@@ -225,6 +225,33 @@
     .lecteur-scene{flex:1;padding:0 10px 10px;display:flex;justify-content:center;}
     .lecteur-scene iframe{width:min(1100px,100%);height:100%;border:none;border-radius:8px;background:#fff;}
     .lecteur-scene.video iframe{background:#000;}
+    /* ---------- MON PROFIL ---------- */
+    .pf-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:16px;}
+    .pf-carte h3{font-size:15px;color:var(--teal-900);display:flex;align-items:center;gap:8px;margin:0 0 10px;}
+    .pf-carte h3 small{margin-left:auto;font-size:11px;font-weight:600;color:var(--gray-500);text-transform:none;}
+    .pf-ligne{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13.5px;}
+    .pf-ligne:last-child{border-bottom:none;}
+    .pf-ligne span:first-child{color:var(--gray-500);}
+    .pf-ligne span:last-child{font-weight:600;color:var(--gray-900);text-align:right;word-break:break-word;}
+    .pf-bandeau{padding:13px 16px;border-radius:10px;font-size:13.5px;margin-top:16px;line-height:1.55;}
+    .pf-bandeau ul{margin:6px 0 0 18px;padding:0;}
+    .pf-attente{background:var(--orange-50);border:1px solid var(--orange-100);}
+    .pf-ok{background:var(--teal-50);border:1px solid var(--teal-100);}
+    .pf-refus{background:var(--red-50);border:1px solid #F5C2C1;}
+    .pf-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+    .pf-actions .btn-principal{width:auto;padding:11px 18px;}
+    .btn-secondaire{background:none!important;color:var(--teal-900)!important;border:1.5px solid var(--gray-300)!important;}
+    .pf-form fieldset{border:none;margin:0 0 6px;padding:0;}
+    .pf-form legend{font-family:'Sora',sans-serif;font-weight:700;color:var(--teal-900);font-size:15px;margin-bottom:4px;}
+    .pf-form legend + p{font-size:12.5px;color:var(--gray-500);margin:0 0 12px;}
+    .pf-champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:0 14px;}
+    .pf-form .champ select,.pf-form .champ textarea{width:100%;padding:12px 15px;border:1.5px solid var(--gray-300);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#fff;}
+    .pf-form .champ textarea{min-height:84px;resize:vertical;}
+    .pf-form .champ.modifie input,.pf-form .champ.modifie select{border-color:var(--orange-500);background:var(--orange-50);}
+    .pf-form .champ .avant{display:block;font-size:11.5px;color:var(--gray-500);margin-top:4px;}
+    .pf-justif{border:1.5px dashed var(--orange-500);border-radius:12px;padding:14px;margin:6px 0 16px;background:var(--orange-50);}
+    .pf-justif[hidden],.pf-form[hidden]{display:none;}
+    #pf-msg{display:none;margin:12px 0;padding:11px 15px;border-radius:9px;font-size:13.5px;}
   </style>
 </head>
 <body>
@@ -292,6 +319,9 @@
           </div>
         </div>
         <nav class="app-sidebar-nav">
+          <button class="app-nav-item" data-tab="profil" onclick="basculerOngletEspace('profil')">
+            <span class="iconify" data-icon="tabler:user-circle"></span> Mon profil
+          </button>
           <button class="app-nav-item active" data-tab="documents" onclick="basculerOngletEspace('documents')">
             <span class="iconify" data-icon="tabler:files"></span> Mes documents
           </button>
@@ -345,7 +375,10 @@
                 <span class="iconify" data-icon="tabler:award"></span> Badge
               </button>
             </div>
-            <div class="carte-bloc" id="bloc-photo" style="margin-top:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+          </section>
+
+          <section id="espace-tab-profil" class="app-panel">
+            <div class="carte-bloc" id="bloc-photo" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
               <img id="photo-actuelle" alt="Ma photo d'identité" style="width:70px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--gray-300);background:var(--gray-100);" referrerpolicy="no-referrer">
               <div style="flex:1;min-width:190px;">
                 <div style="font-weight:700;">Ma photo d'identité</div>
@@ -353,6 +386,9 @@
               </div>
               <div id="photo-actions"></div>
             </div>
+            <div id="pf-etat"></div>
+            <div id="pf-contenu"><div class="carte-bloc" style="margin-top:16px;text-align:center;color:var(--gray-500);">Chargement…</div></div>
+            <form id="pf-form" class="carte-bloc pf-form" style="margin-top:16px;" hidden novalidate></form>
           </section>
 
           <section id="espace-tab-cours" class="app-panel">
@@ -633,9 +669,22 @@
       },
     };
 
+    // Photo officielle demandée au serveur EN DONNÉES : un lien Drive chargé
+    // dans un canvas peut être bloqué (CORS) et laisser la case photo vide.
+    // Mise en cache tant que la photo officielle ne change pas.
+    async function _assurerPhotoDonnees(apprenant) {
+      if (!apprenant.photoUrl) return;
+      if (apprenant.photoData && apprenant._photoDataPour === apprenant.photoUrl) return;
+      try {
+        const r = await _postEspace({ action: 'apprenant_photo_donnees', token: _espaceApprenant.token });
+        if (r.status === 'success' && r.photoData) { apprenant.photoData = r.photoData; apprenant._photoDataPour = apprenant.photoUrl; }
+      } catch (e) { /* repli : le lien direct reste utilisé */ }
+    }
+
     async function ouvrirDocument(type) {
       if (!_espaceApprenant) return;
       const { apprenant, token } = _espaceApprenant;
+      const photoPrete = _assurerPhotoDonnees(apprenant);
 
       if (type === 'attestation' || type === 'carte') {
         const meta = DOC_TELECHARGEMENT_META[type];
@@ -661,6 +710,7 @@
           }
 
           if (result.accesAutorise) {
+            await photoPrete;
             meta.afficher(apprenant, token);
             // Décrément après affichage réussi — ne bloque jamais l'utilisateur
             // si cet appel échoue, c'est purement du suivi côté serveur.
@@ -679,6 +729,7 @@
         }
       } else if (type === 'fiche') {
         PK.openModal('modal-fiche-apprenant');
+        await photoPrete;
         afficherFicheApprenant(apprenant, token);
         obtenirGeoInfo().then(geo => fetch(GAS_WEBAPP_URL, {
           method:  'POST',
@@ -687,6 +738,7 @@
         })).catch(() => {});
       } else if (type === 'badge') {
         PK.openModal('modal-badge-certification');
+        await photoPrete;
         afficherBadgeCertification(apprenant, token);
         obtenirGeoInfo().then(geo => fetch(GAS_WEBAPP_URL, {
           method:  'POST',
@@ -875,6 +927,7 @@
        NAVIGATION (onglets sidebar) : Documents / Mes cours / Questions
     ================================================================ */
     const TITRES_ONGLET = {
+      profil:    { titre: 'Mon profil', sousTitre: 'Vos informations personnelles. Une correction ? Envoyez une demande : elle est vérifiée par l\'administration.' },
       documents: { titre: 'Mes documents', sousTitre: 'Carte, attestation, fiche apprenant et badge de certification.' },
       cours:     { titre: 'Mes cours',      sousTitre: 'Supports mis en ligne par le Formateur pour votre filière.' },
       suivi:     { titre: 'Mon suivi',      sousTitre: 'Vos notes publiées par le Formateur et votre assiduité.' },
@@ -889,7 +942,7 @@
       document.getElementById('espace-tab-' + nom).classList.add('active');
       document.getElementById('topbar-titre').textContent = TITRES_ONGLET[nom].titre;
       document.getElementById('topbar-sous-titre').textContent = TITRES_ONGLET[nom].sousTitre;
-      if (nom === 'documents') chargerEtatPhoto();
+      if (nom === 'profil') { chargerEtatPhoto(); chargerProfil(); }
       if (nom === 'cours') chargerCoursEspace();
       if (nom === 'suivi') chargerSuiviEspace();
       if (nom === 'fiche') chargerFicheEspace();
@@ -1227,6 +1280,210 @@
     }
 
     /* ================================================================
+       MON PROFIL (GAS profil.gs) : lecture de toutes les données +
+       demande de modification. Rien n'est modifié directement : la
+       demande est vérifiée champ par champ par l'administration.
+    ================================================================ */
+    let _profil = null;
+    const PF_ICONES = { etatCivil: 'tabler:id', coordonnees: 'tabler:address-book', famille: 'tabler:users' };
+    const PF_MAX_JUSTIF = 5 * 1024 * 1024;
+
+    function _pfValeur(champ, v) {
+      if (!v) return '—';
+      if (champ.type === 'sexe') return v === 'F' ? 'Féminin' : (v === 'M' ? 'Masculin' : v);
+      if (champ.type === 'date') { const d = new Date(v + 'T00:00:00'); return isNaN(d) ? v : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }); }
+      return v;
+    }
+    function _pfDate(iso) { return iso ? new Date(iso).toLocaleDateString('fr-FR') : ''; }
+    function _pfChamp(cle) { for (const g of _profil.groupes) { const c = g.champs.find(x => x.cle === cle); if (c) return c; } return { type: 'texte' }; }
+
+    async function chargerProfil() {
+      if (!_espaceApprenant) return;
+      const zone = document.getElementById('pf-contenu');
+      try {
+        const r = await _postEspace({ action: 'profil_get', token: _espaceApprenant.token });
+        if (_sessionTerminee(r)) return;
+        if (r.status !== 'success') { zone.innerHTML = '<div class="carte-bloc" style="margin-top:16px;color:#c0392b;">' + _txt(r.message || 'Profil indisponible.') + '</div>'; return; }
+        _profil = r;
+        _rendreProfil();
+      } catch (e) {
+        zone.innerHTML = '<div class="carte-bloc" style="margin-top:16px;color:#c0392b;">Erreur réseau. Réessayez.</div>';
+      }
+    }
+
+    function _rendreProfil() {
+      const p = _profil;
+      document.getElementById('pf-form').hidden = true;
+      // État de la demande
+      let etat = '';
+      const liste = d => '<ul>' + d.modifications.map(m => '<li><strong>' + _txt(m.libelle) + '</strong> : ' + _txt(_pfValeur(_pfChamp(m.cle), m.avant)) + ' &rarr; <strong>' + _txt(_pfValeur(_pfChamp(m.cle), m.apres)) + '</strong>' +
+        (m.decision ? ' — <span style="font-weight:700;color:' + (m.decision === 'acceptée' ? '#0F6E56' : '#C0392B') + ';">' + m.decision + '</span>' : '') + '</li>').join('') + '</ul>';
+      if (p.enAttente) {
+        etat = '<div class="pf-bandeau pf-attente"><strong>Demande en cours de vérification</strong> (envoyée le ' + _pfDate(p.enAttente.date) + ')' + liste(p.enAttente) +
+          '<div class="pf-actions"><button type="button" class="btn-principal btn-secondaire" id="pf-annuler" style="color:#C0392B!important;border-color:#C0392B!important;">Annuler ma demande</button></div></div>';
+      } else if (p.derniere) {
+        const cls = p.derniere.statut === 'Refusée' ? 'pf-refus' : 'pf-ok';
+        etat = '<div class="pf-bandeau ' + cls + '"><strong>Dernière demande : ' + _txt(p.derniere.statut.toLowerCase()) + '</strong>' + liste(p.derniere) +
+          (p.derniere.motifDecision ? '<div><strong>Message de l\'administration :</strong> ' + _txt(p.derniere.motifDecision) + '</div>' : '') + '</div>';
+      }
+      document.getElementById('pf-etat').innerHTML = etat;
+      const bA = document.getElementById('pf-annuler'); if (bA) bA.onclick = annulerDemandeProfil;
+
+      // Cartes de lecture
+      const f = p.formation;
+      const carte = (titre, icone, lignes, note) => '<div class="carte-bloc pf-carte"><h3><span class="iconify" data-icon="' + icone + '"></span> ' + titre + (note ? '<small>' + note + '</small>' : '') + '</h3>' +
+        lignes.map(l => '<div class="pf-ligne"><span>' + _txt(l[0]) + '</span><span>' + _txt(l[1]) + '</span></div>').join('') + '</div>';
+      let html = '<div class="pf-grille">';
+      p.groupes.forEach(g => { html += carte(g.titre, PF_ICONES[g.cle] || 'tabler:list', g.champs.map(c => [c.libelle, _pfValeur(c, c.valeur)]), g.justificatif ? 'justificatif exigé' : ''); });
+      html += carte('Ma formation', 'tabler:school', [['N° de dossier', f.id], ['Filière', f.filiere], ['Inscription', _pfDate(f.dateInscription)],
+        ['Début', _pfDate(f.dateEntree)], ['Fin prévue', _pfDate(f.dateFin)], ['Niveau', f.niveau || '—'], ['Statut', f.statut]], 'géré par le centre');
+      html += '</div>';
+      const peut = !p.enAttente && p.restantes > 0;
+      html += '<div class="pf-actions">' + (peut
+        ? '<button type="button" class="btn-principal" id="pf-ouvrir"><span class="iconify" data-icon="tabler:edit"></span> Demander une modification</button><span style="font-size:12.5px;color:var(--gray-500);align-self:center;">' + p.restantes + ' demande' + (p.restantes > 1 ? 's' : '') + ' possible' + (p.restantes > 1 ? 's' : '') + ' sur 12 mois</span>'
+        : (p.enAttente ? '' : '<span style="font-size:13px;color:var(--gray-500);">Limite de demandes atteinte' + (p.prochaineLe ? ' jusqu\'au ' + _pfDate(p.prochaineLe) : '') + ' : adressez-vous au secrétariat.</span>')) + '</div>';
+      document.getElementById('pf-contenu').innerHTML = html;
+      const bO = document.getElementById('pf-ouvrir'); if (bO) bO.onclick = ouvrirFormulaireProfil;
+    }
+
+    function _pfInput(c) {
+      const id = 'pf-' + c.cle, v = _txt(c.valeur).replace(/"/g, '&quot;');
+      if (c.type === 'sexe') return '<select id="' + id + '" data-cle="' + c.cle + '"><option value="M"' + (c.valeur === 'M' ? ' selected' : '') + '>Masculin</option><option value="F"' + (c.valeur === 'F' ? ' selected' : '') + '>Féminin</option></select>';
+      const type = { date: 'date', tel: 'tel', email: 'email' }[c.type] || 'text';
+      const extra = c.type === 'tel' ? ' inputmode="tel" placeholder="01 97 95 12 30"' : (c.type === 'date' ? '' : ' maxlength="' + (c.type === 'nom' ? 60 : 120) + '"');
+      return '<input id="' + id + '" data-cle="' + c.cle + '" type="' + type + '" value="' + v + '"' + extra + ' autocomplete="off">';
+    }
+
+    function ouvrirFormulaireProfil() {
+      const form = document.getElementById('pf-form');
+      let html = '';
+      _profil.groupes.forEach(g => {
+        html += '<fieldset><legend>' + _txt(g.titre) + '</legend><p>' + (g.justificatif ? 'Toute modification exige un justificatif officiel (CNI, CIP, acte de naissance, passeport).' : 'Sans justificatif.') + '</p><div class="pf-champs">' +
+          g.champs.map(c => '<div class="champ" data-champ="' + c.cle + '"><label for="pf-' + c.cle + '">' + _txt(c.libelle) + (c.facultatif ? '' : ' *') + '</label>' + _pfInput(c) + '<span class="avant" hidden></span></div>').join('') + '</div></fieldset>';
+      });
+      html += '<div class="pf-justif" id="pf-justif" hidden><div class="champ" style="margin:0;"><label for="pf-fichier">Justificatif officiel *</label>' +
+        '<input id="pf-fichier" type="file" accept="application/pdf,image/jpeg,image/png"><span class="avant" style="display:block;">PDF, JPEG ou PNG — 5 Mo maximum. La pièce reste privée : seule l\'administration la consulte.</span></div></div>' +
+        '<div class="champ"><label for="pf-motif">Raison de la modification *</label><textarea id="pf-motif" maxlength="300" placeholder="Ex. : erreur de saisie à l\'inscription, nouveau numéro de téléphone…"></textarea></div>' +
+        '<div id="pf-msg"></div>' +
+        '<div class="pf-actions"><button type="submit" class="btn-principal" id="pf-envoyer"><span class="iconify" data-icon="tabler:send"></span> Envoyer pour vérification</button>' +
+        '<button type="button" class="btn-principal btn-secondaire" id="pf-fermer">Annuler</button></div>';
+      form.innerHTML = html;
+      form.hidden = false;
+      form.oninput = form.onchange = _pfMarquerModifs;
+      form.onsubmit = envoyerDemandeProfil;
+      document.getElementById('pf-fermer').onclick = () => { form.hidden = true; form.innerHTML = ''; };
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function _pfNormal(c, v) {
+      v = String(v || '').replace(/\s+/g, ' ').trim();
+      if (c.type === 'tel') { v = v.replace(/\D/g, '').replace(/^00229/, ''); if (v.length === 8) v = '01' + v; }
+      if (c.type === 'email') v = v.toLowerCase();
+      return v;
+    }
+
+    // Champs réellement modifiés (comparés à la valeur actuelle normalisée).
+    function _pfModifs() {
+      const out = {};
+      _profil.groupes.forEach(g => g.champs.forEach(c => {
+        const el = document.getElementById('pf-' + c.cle);
+        if (el && _pfNormal(c, el.value) !== _pfNormal(c, c.valeur)) out[c.cle] = el.value.trim();
+      }));
+      return out;
+    }
+
+    function _pfMarquerModifs() {
+      const modifs = _pfModifs();
+      let etatCivil = false;
+      _profil.groupes.forEach(g => g.champs.forEach(c => {
+        const bloc = document.querySelector('[data-champ="' + c.cle + '"]');
+        const m = Object.prototype.hasOwnProperty.call(modifs, c.cle);
+        bloc.classList.toggle('modifie', m);
+        const av = bloc.querySelector('.avant');
+        av.hidden = !m; av.textContent = m ? 'Actuellement : ' + _pfValeur(c, c.valeur).replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
+        if (m && g.justificatif) etatCivil = true;
+      }));
+      document.getElementById('pf-justif').hidden = !etatCivil;
+    }
+
+    function _pfMessage(txt, ok) {
+      const m = document.getElementById('pf-msg');
+      m.style.display = 'block';
+      m.style.background = ok ? 'rgba(15,110,86,0.1)' : 'rgba(226,75,74,0.1)';
+      m.style.color = ok ? '#0F6E56' : '#C0392B';
+      m.textContent = txt;
+    }
+
+    // Image lourde : réduite à 1800 px (JPEG) avant l'envoi. PDF : tel quel.
+    function _pfLireFichier(fichier) {
+      return new Promise((resolve, reject) => {
+        const lecteur = new FileReader();
+        lecteur.onerror = () => reject(new Error('Fichier illisible.'));
+        lecteur.onload = () => {
+          const url = lecteur.result;
+          if (fichier.type === 'application/pdf' || fichier.size <= 1.5 * 1024 * 1024) return resolve({ base64: url.split(',')[1], mime: fichier.type });
+          const img = new Image();
+          img.onerror = () => reject(new Error('Image illisible.'));
+          img.onload = () => {
+            const k = Math.min(1, 1800 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            resolve({ base64: c.toDataURL('image/jpeg', 0.85).split(',')[1], mime: 'image/jpeg' });
+          };
+          img.src = url;
+        };
+        lecteur.readAsDataURL(fichier);
+      });
+    }
+
+    async function envoyerDemandeProfil(e) {
+      e.preventDefault();
+      const modifs = _pfModifs();
+      if (!Object.keys(modifs).length) return _pfMessage('Aucune modification : changez au moins un champ.');
+      // Contrôles avant envoi (le serveur revérifie tout).
+      for (const cle of Object.keys(modifs)) {
+        const c = _pfChamp(cle), v = modifs[cle];
+        if (!v && !c.facultatif) return _pfMessage(c.libelle + ' : obligatoire.');
+        if (v && c.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return _pfMessage('Email invalide.');
+        if (v && c.type === 'tel' && _pfNormal(c, v).length < 8) return _pfMessage(c.libelle + ' : numéro invalide.');
+        if (v && c.type === 'nom' && !/^[\p{L}][\p{L}' .\-]{1,59}$/u.test(v)) return _pfMessage(c.libelle + ' : lettres, espaces, tirets et apostrophes uniquement.');
+      }
+      const motif = document.getElementById('pf-motif').value.trim();
+      if (motif.length < 10) return _pfMessage('Expliquez la raison de la modification (10 caractères au moins).');
+      const corps = { action: 'profil_demande_envoyer', token: _espaceApprenant.token, modifications: modifs, motif: motif };
+      if (!document.getElementById('pf-justif').hidden) {
+        const f = document.getElementById('pf-fichier').files[0];
+        if (!f) return _pfMessage('Joignez votre justificatif officiel (état civil modifié).');
+        if (['application/pdf', 'image/jpeg', 'image/png'].indexOf(f.type) === -1) return _pfMessage('Justificatif : PDF, JPEG ou PNG uniquement.');
+        if (f.size > PF_MAX_JUSTIF && f.type === 'application/pdf') return _pfMessage('Justificatif trop lourd (5 Mo maximum).');
+        try { const j = await _pfLireFichier(f); corps.justificatifBase64 = j.base64; corps.justificatifMime = j.mime; }
+        catch (x) { return _pfMessage(x.message); }
+      }
+      const b = document.getElementById('pf-envoyer');
+      b.disabled = true; b.textContent = 'Envoi en cours…';
+      try {
+        const r = await _postEspace(corps);
+        if (_sessionTerminee(r)) return;
+        if (r.status !== 'success') { _pfMessage(r.message || 'Envoi impossible.'); b.disabled = false; b.textContent = 'Envoyer pour vérification'; return; }
+        await chargerProfil();
+        const etat = document.getElementById('pf-etat');
+        etat.insertAdjacentHTML('afterbegin', '<div class="pf-bandeau pf-ok">' + _txt(r.message) + '</div>');
+      } catch (x) {
+        _pfMessage('Erreur réseau. Réessayez.'); b.disabled = false; b.textContent = 'Envoyer pour vérification';
+      }
+    }
+
+    async function annulerDemandeProfil() {
+      if (!confirm('Annuler votre demande de modification ?')) return;
+      try {
+        const r = await _postEspace({ action: 'profil_demande_annuler', token: _espaceApprenant.token });
+        if (_sessionTerminee(r)) return;
+        if (r.status !== 'success') return alert(r.message || 'Impossible.');
+        chargerProfil();
+      } catch (e) { alert('Erreur réseau. Réessayez.'); }
+    }
+
+    /* ================================================================
        MISE À JOUR DE LA PHOTO (js/photo-identite.js + GAS photos.gs)
        La photo part en validation : elle ne remplace l'actuelle qu'après
        accord de l'administration.
@@ -1459,10 +1716,10 @@
 
   <script src="js/fiche-besoins.js?v=20261102"></script>
   <script src="js/photo-identite.js?v=20261102"></script>
-  <script src="js/attestation_generator.js"></script>
-  <script src="js/fiche_apprenant_generator.js"></script>
-  <script src="js/badge_certification_generator.js"></script>
-  <script src="js/carte_generator.js"></script>
+  <script src="js/attestation_generator.js?v=20261103"></script>
+  <script src="js/fiche_apprenant_generator.js?v=20261103"></script>
+  <script src="js/badge_certification_generator.js?v=20261103"></script>
+  <script src="js/carte_generator.js?v=20261103"></script>
   <script src="js/traduction.js"></script>
 </body>
 </html>

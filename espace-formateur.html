@@ -93,6 +93,7 @@
       <button type="button" data-onglet="notes"><span class="iconify" data-icon="tabler:report-analytics"></span> Notes</button>
       <button type="button" data-onglet="cours"><span class="iconify" data-icon="tabler:book-2"></span> Cours</button>
       <button type="button" data-onglet="questions"><span class="iconify" data-icon="tabler:message-question"></span> Questions <span class="pastille" id="pastille-questions" hidden></span></button>
+      <button type="button" data-onglet="rh"><span class="iconify" data-icon="tabler:file-certificate"></span> Mes documents</button>
     </nav>
 
     <main class="contenu">
@@ -303,6 +304,13 @@
         <p class="discret">Une question répondue devient visible par les autres apprenants de la même filière. L'apprenant reçoit votre réponse par email.</p>
         <div id="liste-questions"></div>
       </section>
+
+      <!-- Documents de travail (registre du personnel, GAS personnel.gs) -->
+      <section class="panneau" id="p-rh">
+        <h2 class="titre-panneau">Mes documents de travail</h2>
+        <p class="discret">Attestation de travail (en poste) ou certificat de travail (fin de contrat) : votre demande est vérifiée puis délivrée par l'administration. Le document est authentifiable en ligne par sa référence.</p>
+        <div id="rh-contenu"></div>
+      </section>
     </main>
   </div>
 
@@ -317,6 +325,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/fiche-besoins.js"></script>
+  <script src="js/attestation_generator.js?v=20261103"></script>
+  <script src="js/travail_generator.js?v=20261104"></script>
   <script src="js/espace-formateur.js"></script>
 </body>
 </html>

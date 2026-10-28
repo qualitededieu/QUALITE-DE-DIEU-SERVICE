@@ -131,6 +131,37 @@ function _capitaliserPrenom(prenom) {
     .replace(/(^|[\s\-'’])(\p{L})/gu, (m, sep, lettre) => sep + lettre.toUpperCase());
 }
 
+// Lieu de naissance saisi librement ("COME", "come", "porto novo") :
+// casse normale + accents des communes du Bénin connues. Un lieu déjà
+// écrit en casse mixte (ex. "Comé", "Lomé (Togo)") est laissé tel quel.
+const ATT_LIEUX_ACCENTUES = {
+  "come": "Comé", "athieme": "Athiémé", "houeyogbe": "Houéyogbé", "grand popo": "Grand-Popo", "bopa": "Bopa",
+  "lokossa": "Lokossa", "dogbo": "Dogbo", "aplahoue": "Aplahoué", "djakotomey": "Djakotomey", "klouekanme": "Klouékanmè",
+  "lalo": "Lalo", "toviklin": "Toviklin", "cotonou": "Cotonou", "porto novo": "Porto-Novo", "abomey calavi": "Abomey-Calavi",
+  "seme kpodji": "Sèmè-Kpodji", "ouidah": "Ouidah", "allada": "Allada", "kpomasse": "Kpomassè", "tori bossito": "Tori-Bossito",
+  "ze": "Zè", "toffo": "Toffo", "so ava": "Sô-Ava", "abomey": "Abomey", "bohicon": "Bohicon", "cove": "Covè",
+  "zagnanado": "Zagnanado", "zogbodomey": "Zogbodomey", "djidja": "Djidja", "agbangnizoun": "Agbangnizoun", "za kpota": "Za-Kpota",
+  "ouinhi": "Ouinhi", "dassa zoume": "Dassa-Zoumè", "glazoue": "Glazoué", "save": "Savè", "savalou": "Savalou",
+  "ouesse": "Ouèssè", "bante": "Bantè", "pobe": "Pobè", "ketou": "Kétou", "sakete": "Sakété", "ifangni": "Ifangni",
+  "adja ouere": "Adja-Ouèrè", "adjarra": "Adjarra", "avrankou": "Avrankou", "akpro misserete": "Akpro-Missérété",
+  "adjohoun": "Adjohoun", "bonou": "Bonou", "dangbo": "Dangbo", "aguegues": "Aguégués", "parakou": "Parakou",
+  "tchaourou": "Tchaourou", "nikki": "Nikki", "bembereke": "Bembèrèkè", "kandi": "Kandi", "malanville": "Malanville",
+  "banikoara": "Banikoara", "segbana": "Ségbana", "natitingou": "Natitingou", "tanguieta": "Tanguiéta",
+  "djougou": "Djougou", "bassila": "Bassila", "kouande": "Kouandé", "pehunco": "Péhunco", "kerou": "Kérou",
+  "lome": "Lomé", "benin": "Bénin"
+};
+function _lieuAffiche(lieu) {
+  const brut = String(lieu || "").trim().replace(/\s+/g, " ");
+  if (!brut) return "";
+  const estCasseMixte = brut !== brut.toUpperCase() && brut !== brut.toLowerCase();
+  if (estCasseMixte) return brut;
+  return brut.split(/(\s*[,(]\s*)/).map(part => {
+    const cle = part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-']/g, " ").replace(/[()]/g, "").trim();
+    if (ATT_LIEUX_ACCENTUES[cle]) return part.replace(/[^\s,()]+(?:[\s-][^\s,()]+)*/, ATT_LIEUX_ACCENTUES[cle]);
+    return part.toLowerCase().replace(/(^|[\s\-'’(])(\p{L})/gu, (m, sep, l) => sep + l.toUpperCase());
+  }).join("");
+}
+
 function _intituleAffichage(filiere, estStage, sexe) {
   if (!filiere) return estStage ? "Stage professionnel" : "Formation professionnelle";
   if (ATT_NOMS_AFFICHAGE[filiere]) return _accorderGenre(ATT_NOMS_AFFICHAGE[filiere], sexe);
@@ -433,7 +464,7 @@ async function genererAttestationCanvas(apprenant, token) {
   const [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
     _loadImg(ATT_ENTREPRISE.LOGO_URL),
     _loadImg(QR_URL),
-    _loadImg(apprenant.photoUrl),
+    _loadImg(apprenant.photoData || apprenant.photoUrl),
     _loadImg(typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png?v=2"),
     _loadImg(typeof SIGNATURE_PDG_DATA       !== "undefined" ? SIGNATURE_PDG_DATA       : "icons/signature-pdg.png?v=3"),
     // Cachet du Formateur Principal (toi) — distinct du cachet institutionnel
@@ -692,30 +723,22 @@ async function genererAttestationCanvas(apprenant, token) {
     ctx.fillText(nomComplet, BANNER_CX - _mw(ctx, nomComplet) / 2, posY + 56);
     posY += 106 + _g(84); // 106 = jusqu'au bas du bandeau (hauteur fixe), seule la marge sous le bandeau se resserre
 
-    // Ordre de lecture corrigé le 22/09/2026 (demande du PDG) : le nom est
-    // immédiatement suivi de "né(e) le ... à ...", PUIS de "a suivi avec
-    // assiduité...", pour une phrase qui coule ("Monsieur TOSSOU Cossi
-    // Philippe né le 30 juin 1995 à Comé a suivi avec assiduité et validé
-    // la formation en : ..."), au lieu de renvoyer la naissance après le
-    // nom de la filière comme c'était le cas avant.
-    if (apprenant.dateNaissance) {
-      _font(ctx, 44, "normal");
-      ctx.fillStyle = ATT.TEXTE;
-      const lieuTxt = apprenant.lieuNaissance ? ` à ${apprenant.lieuNaissance}` : "";
-      const naissanceTxt = `${_accorderGenre("né(e)", apprenant.sexe)} le ${fmt(apprenant.dateNaissance)}${lieuTxt}`;
-      ctx.fillText(naissanceTxt, CENTRE_HAUT - _mw(ctx, naissanceTxt) / 2, posY);
-      posY += _g(70);
-    }
-
-    // "a suivi ... la formation en :" + nom de la filière en cursive —
-    // même traitement que le gabarit court (initiation), au lieu de la
-    // ligne "Domaine de formation : X" en police normale d'avant (jugée
-    // trop administrative / peu soignée pour un document officiel).
+    // Une seule phrase qui coule, comme sur un acte officiel :
+    // "né le 30 juin 1995 à Comé, a suivi avec assiduité et a validé la
+    // formation en :" (demande du PDG, 27/10/2026). Avant, deux lignes
+    // séparées, trop serrées avec la compaction du Pack, et la cursive
+    // remontait dessus.
     _font(ctx, 44, "normal");
     ctx.fillStyle = ATT.TEXTE;
-    const introFormation = "a suivi avec assiduité et a validé la formation en :";
-    ctx.fillText(introFormation, CENTRE_HAUT - _mw(ctx, introFormation) / 2, posY);
-    posY += _g(78);
+    const lieuAff = _lieuAffiche(apprenant.lieuNaissance);
+    const naissanceTxt = apprenant.dateNaissance
+      ? `${_accorderGenre("né(e)", apprenant.sexe)} le ${fmt(apprenant.dateNaissance)}${lieuAff ? " à " + lieuAff : ""}, `
+      : "";
+    const phraseFormation = naissanceTxt + "a suivi avec assiduité et a validé la formation en :";
+    const INTERLIGNE_PHRASE = 56;
+    const finPhrase = _wrapCentre(ctx, phraseFormation, posY, CW_HAUT - 40, INTERLIGNE_PHRASE, CENTRE_HAUT);
+    const derniereLigneY = finPhrase - INTERLIGNE_PHRASE;
+    posY = finPhrase;
 
     if (apprenant.filiere) {
       // _intituleAffichage() substitue un intitulé "métier" au nom
@@ -738,9 +761,13 @@ async function genererAttestationCanvas(apprenant, token) {
           : "italic bold " + Math.round(taille * 0.74) + "px 'Times New Roman', Times, serif";
         ctx.font = police;
       }
+      // Ligne de base calculée sur la hauteur RÉELLE des majuscules
+      // cursives (boucles du T, du B, du S...) : elles ne touchent plus la
+      // phrase du dessus, quelle que soit la compaction.
+      const hauteurCursive = ctx.measureText(domaineTxt).actualBoundingBoxAscent || Math.round(taille * 0.9);
+      const baselineY = derniereLigneY + 12 + Math.max(22, _g(30)) + hauteurCursive;
       ctx.fillStyle = COULEUR_PRINCIPALE;
       const dW = _mw(ctx, domaineTxt);
-      const baselineY = posY + 14;
       ctx.fillText(domaineTxt, CENTRE_HAUT - dW / 2, baselineY);
       // Marge sous la ligne de base — 4e itération, chaque fois calibrée sur
       // une vraie capture du PDG (25/09/2026) plutôt qu'une nouvelle

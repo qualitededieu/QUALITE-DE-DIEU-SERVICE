@@ -158,7 +158,7 @@ async function genererFicheApprenant(apprenant, token) {
   ]);
 
   const [logo, photo, qr, sig, cachet, sigFormateur, cachetFormateur] = await Promise.all([
-    _fLoadImg(LOGO_URL), _fLoadImg(apprenant.photoUrl), _fLoadImg(QR_URL), _fLoadImg(SIG_SRC), _fLoadImg(CACHET_SRC),
+    _fLoadImg(LOGO_URL), _fLoadImg(apprenant.photoData || apprenant.photoUrl), _fLoadImg(QR_URL), _fLoadImg(SIG_SRC), _fLoadImg(CACHET_SRC),
     _fLoadImg(SIG_FORMATEUR_SRC), _fLoadImg(CACHET_FORMATEUR_SRC),
   ]);
 

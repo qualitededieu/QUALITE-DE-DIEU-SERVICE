@@ -223,7 +223,7 @@ async function genererCarteCanvas(apprenant, token) {
 
   const [logo, photo] = await Promise.all([
     _carteLoadImg(CARTE_ENTREPRISE.LOGO_URL),
-    _carteLoadImg(apprenant.photoUrl),
+    _carteLoadImg(apprenant.photoData || apprenant.photoUrl),
   ]);
 
   const maintenant = new Date();
