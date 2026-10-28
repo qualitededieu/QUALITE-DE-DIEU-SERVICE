@@ -459,7 +459,7 @@ async function genererAttestationCanvas(apprenant, token) {
   // délivrance choisie par l'admin pour une attestation manuelle.
   const dateDocument = apprenant.dateDelivrance ? fmt(apprenant.dateDelivrance) : dateAujourdhui;
 
-  const ATT_VERIF_URL = `https://${ATT_ENTREPRISE.SITE}/verifier-document`;
+  const ATT_VERIF_URL = `https://${ATT_ENTREPRISE.SITE}/verifier`;
   // Attestation manuelle : QR vers la référence (registre), pas un jeton.
   const lienVerif = apprenant.refVerification
     ? `${ATT_VERIF_URL}?ref=${encodeURIComponent(apprenant.refVerification)}`

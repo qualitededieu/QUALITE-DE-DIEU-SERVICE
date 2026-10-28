@@ -138,7 +138,7 @@ async function genererFicheApprenant(apprenant, token) {
   // la fiche n'avait jusque-là qu'un seul signataire.
   const SIG_FORMATEUR_SRC    = typeof SIGNATURE_FORMATEUR_DATA !== "undefined" ? SIGNATURE_FORMATEUR_DATA : "icons/signature-formateur.png?v=2";
   const CACHET_FORMATEUR_SRC = typeof CACHET_FORMATEUR_DATA    !== "undefined" ? CACHET_FORMATEUR_DATA    : "icons/cachet-formateur.png?v=1";
-  const FICHE_VERIF_URL = `https://${FICHE_ENTREPRISE.SITE}/verifier-document`;
+  const FICHE_VERIF_URL = `https://${FICHE_ENTREPRISE.SITE}/verifier`;
   const lienVerif = token
     ? `${FICHE_VERIF_URL}?t=${encodeURIComponent(token)}`
     : FICHE_VERIF_URL;

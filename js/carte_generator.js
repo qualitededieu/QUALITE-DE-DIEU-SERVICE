@@ -517,7 +517,7 @@ async function genererCarteVersoCanvas(apprenant, token) {
   canvas.height = C.H;
   const ctx = canvas.getContext("2d");
 
-  const CARTE_VERIF_URL = "https://qualitededieuservice.com/verifier-document";
+  const CARTE_VERIF_URL = "https://www.qualitededieuservice.com/verifier";
   const lienVerif = token ? `${CARTE_VERIF_URL}?t=${encodeURIComponent(token)}` : CARTE_VERIF_URL;
 
   const [logo, qr, signature, cachet, signatureFormateur, cachetFormateur] = await Promise.all([

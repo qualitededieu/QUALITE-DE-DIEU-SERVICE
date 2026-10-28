@@ -94,15 +94,16 @@
       "destination": "/verifier.html"
     },
     {
-      "source": "/verifier-document",
-      "destination": "/verifier.html"
-    },
-    {
       "source": "/",
       "destination": "/index.html"
     }
   ],
   "redirects": [
+    {
+      "source": "/verifier-document",
+      "destination": "/verifier",
+      "permanent": true
+    },
     {
       "source": "/regularisation",
       "destination": "/contact",

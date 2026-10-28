@@ -95,7 +95,7 @@ async function genererBadgeCertification(apprenant, token) {
   const ctx = canvas.getContext("2d");
 
   const LOGO_URL = BADGE_ENTREPRISE.LOGO_URL;
-  const BADGE_VERIF_URL = `https://${BADGE_ENTREPRISE.SITE}/verifier-document`;
+  const BADGE_VERIF_URL = `https://${BADGE_ENTREPRISE.SITE}/verifier`;
   const lienVerif = token
     ? `${BADGE_VERIF_URL}?t=${encodeURIComponent(token)}`
     : BADGE_VERIF_URL;

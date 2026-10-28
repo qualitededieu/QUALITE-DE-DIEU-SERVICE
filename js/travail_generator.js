@@ -79,7 +79,7 @@ async function genererDocumentTravailCanvas(doc) {
   const ctx = canvas.getContext("2d");
   const M = TRAV.MARGE, LARGEUR = TRAV.W - 2 * M;
   const estCertificat = doc.cle === "certificat";
-  const lienVerif = "https://" + ATT_ENTREPRISE.SITE + "/verifier-document?ref=" + encodeURIComponent(doc.ref);
+  const lienVerif = "https://" + ATT_ENTREPRISE.SITE + "/verifier?ref=" + encodeURIComponent(doc.ref);
   const [logo, qr, signature] = await Promise.all([
     _loadImg(ATT_ENTREPRISE.LOGO_URL),
     _loadImg("https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=2&data=" + encodeURIComponent(lienVerif)),
@@ -168,7 +168,7 @@ async function genererDocumentTravailCanvas(doc) {
   if (qr) ctx.drawImage(qr, M, QY, 300, 300);
   ctx.fillStyle = ATT.GRIS; ctx.font = "28px 'DM Sans', Arial, sans-serif";
   ctx.fillText("Scanner pour vérifier", M, QY + 345);
-  ctx.fillText(ATT_ENTREPRISE.SITE + "/verifier-document", M, QY + 383);
+  ctx.fillText(ATT_ENTREPRISE.SITE + "/verifier", M, QY + 383);
   ctx.fillText("Réf. " + doc.ref, M, QY + 421);
 
   // Pied de page
