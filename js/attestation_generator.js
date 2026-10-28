@@ -437,7 +437,8 @@ async function genererAttestationCanvas(apprenant, token) {
     return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
   }
   const dureeMois = _dureeEnMois(apprenant.dateEntree, apprenant.dateFin);
-  const estFormationLongue = !estStage && (dureeMois === null || dureeMois >= 6);
+  // Attestation manuelle (admin) : toujours le gabarit officiel long.
+  const estFormationLongue = !estStage && (apprenant.gabaritLong || dureeMois === null || dureeMois >= 6);
 
   const COULEUR_PRINCIPALE = (estStage || estFormationLongue) ? ATT.MARINE : "#0B2447";
 
@@ -454,14 +455,20 @@ async function genererAttestationCanvas(apprenant, token) {
   };
   const dateDebut = fmt(apprenant.dateEntree);
   const dateFin   = fmt(apprenant.dateFin);
+  // Date imprimée ("Fait à Comé, le ..." et pied de page) : date de
+  // délivrance choisie par l'admin pour une attestation manuelle.
+  const dateDocument = apprenant.dateDelivrance ? fmt(apprenant.dateDelivrance) : dateAujourdhui;
 
   const ATT_VERIF_URL = `https://${ATT_ENTREPRISE.SITE}/verifier-document`;
-  const lienVerif = token
-    ? `${ATT_VERIF_URL}?t=${encodeURIComponent(token)}`
-    : ATT_VERIF_URL;
+  // Attestation manuelle : QR vers la référence (registre), pas un jeton.
+  const lienVerif = apprenant.refVerification
+    ? `${ATT_VERIF_URL}?ref=${encodeURIComponent(apprenant.refVerification)}`
+    : token
+      ? `${ATT_VERIF_URL}?t=${encodeURIComponent(token)}`
+      : ATT_VERIF_URL;
   const QR_URL = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=2&data=" + encodeURIComponent(lienVerif);
 
-  const [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
+  let [logo, qr, photo, sigFormateur, sigPdg, cachet] = await Promise.all([
     _loadImg(ATT_ENTREPRISE.LOGO_URL),
     _loadImg(QR_URL),
     _loadImg(apprenant.photoData || apprenant.photoUrl),
@@ -473,6 +480,9 @@ async function genererAttestationCanvas(apprenant, token) {
     // intègre déjà son propre cachet dans signature-pdg.png).
     _loadImg(typeof CACHET_FORMATEUR_DATA    !== "undefined" ? CACHET_FORMATEUR_DATA    : "icons/cachet-formateur.png?v=1"),
   ]);
+
+  // Attestation manuelle à signer à la main : ni signatures ni cachets imprimés.
+  if (apprenant.sansSignature) { sigFormateur = null; sigPdg = null; cachet = null; }
 
   _rect(ctx, 0, 0, ATT.W, ATT.H, ATT.CREME);
   _rect(ctx, 0, 0, 18, ATT.H, ATT.OR);
@@ -686,7 +696,9 @@ async function genererAttestationCanvas(apprenant, token) {
     // compétences ne suffisait pas à éviter le chevauchement avec la zone
     // signature/QR (constaté sur une vraie attestation, 22/09/2026) : même
     // à la taille plancher, le texte débordait encore d'environ 140px.
-    const competences = _competencesLongue(apprenant.filiere);
+    // Attestation manuelle "intitulé libre" : compétences saisies par l'admin
+    // (tableau éventuellement vide) au lieu du dictionnaire des filières.
+    const competences = Array.isArray(apprenant.competences) ? apprenant.competences : _competencesLongue(apprenant.filiere);
     const beaucoupDeCompetences = competences.length >= 3;
     // Facteur de compaction appliqué UNIQUEMENT aux espaces de respiration
     // (jamais à la taille des textes/titres, ni à la hauteur des blocs
@@ -713,7 +725,7 @@ async function genererAttestationCanvas(apprenant, token) {
     // au lieu de "Prénom NOM" tout en capitales — demande du PDG du
     // 22/09/2026, pour une lecture "Monsieur TOSSOU Cossi Philippe".
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
-    const civiliteLg = sexeNorm === "F" ? "Madame " : (sexeNorm === "M" ? "Monsieur " : "");
+    const civiliteLg = apprenant.civilite ? apprenant.civilite + " " : (sexeNorm === "F" ? "Madame " : (sexeNorm === "M" ? "Monsieur " : ""));
     const nomComplet = `${civiliteLg}${(apprenant.nom || "").toUpperCase()} ${_capitaliserPrenom(apprenant.prenom)}`;
     const BANNER_CX  = CX + CW_HAUT / 2;
     const BANNER_W   = CW_HAUT;
@@ -731,8 +743,13 @@ async function genererAttestationCanvas(apprenant, token) {
     _font(ctx, 44, "normal");
     ctx.fillStyle = ATT.TEXTE;
     const lieuAff = _lieuAffiche(apprenant.lieuNaissance);
-    const naissanceTxt = apprenant.dateNaissance
-      ? `${_accorderGenre("né(e)", apprenant.sexe)} le ${fmt(apprenant.dateNaissance)}${lieuAff ? " à " + lieuAff : ""}, `
+    // Date complète ("né le 30 juin 1995") ou année seule ("né en 1992"),
+    // nationalité ajoutée quand elle est fournie (attestation manuelle).
+    const quandNaissance = apprenant.dateNaissance ? " le " + fmt(apprenant.dateNaissance)
+      : (apprenant.anneeNaissance ? " en " + apprenant.anneeNaissance : "");
+    const nationaliteTxt = apprenant.nationalite ? ", de nationalité " + String(apprenant.nationalite).toLowerCase() : "";
+    const naissanceTxt = quandNaissance
+      ? `${_accorderGenre("né(e)", apprenant.sexe)}${quandNaissance}${lieuAff ? " à " + lieuAff : ""}${nationaliteTxt}, `
       : "";
     const phraseFormation = naissanceTxt + "a suivi avec assiduité et a validé la formation en :";
     const INTERLIGNE_PHRASE = 56;
@@ -803,18 +820,27 @@ async function genererAttestationCanvas(apprenant, token) {
     }
 
     _font(ctx, 44, "normal");
-    const dureeTxt = dureeMois !== null ? ` (${dureeMois} mois)` : "";
+    const dureeTxt = apprenant.dureeTexte ? ` (${apprenant.dureeTexte})` : (dureeMois !== null ? ` (${dureeMois} mois)` : "");
     const d1 = "durant la période du ", d2 = dateDebut, d3 = " au ", d4 = dateFin + dureeTxt + ",";
     let dx = CX;
     ctx.fillStyle = ATT.TEXTE; ctx.fillText(d1, dx, posY); dx += _mw(ctx, d1);
     _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d2, dx, posY); dx += _mw(ctx, d2);
     _font(ctx, 44, "normal"); ctx.fillStyle = ATT.TEXTE; ctx.fillText(d3, dx, posY); dx += _mw(ctx, d3);
-    _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d4, dx, posY);
+    _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(d4, dx, posY); dx += _mw(ctx, d4);
+    // Mention (attestation manuelle) : "..., avec la mention Bien."
+    if (apprenant.mention) {
+      const m1 = " avec la mention ";
+      _font(ctx, 44, "normal"); ctx.fillStyle = ATT.TEXTE;
+      const finLigne = CX + (posY < PHOTO_Y + PHOTO_H ? CW_HAUT : CW);
+      if (dx + _mw(ctx, m1 + apprenant.mention + ".") > finLigne) { posY += _g(58); dx = CX; ctx.fillText(m1.trim() + " ", dx, posY); dx += _mw(ctx, m1.trim() + " "); }
+      else { ctx.fillText(m1, dx, posY); dx += _mw(ctx, m1); }
+      _font(ctx, 44, "bold"); ctx.fillStyle = COULEUR_PRINCIPALE; ctx.fillText(apprenant.mention + ".", dx, posY);
+    }
     posY += _g(64);
 
     _font(ctx, 44, "normal");
     ctx.fillStyle = ATT.TEXTE;
-    posY = _wrap(ctx, "Cette formation professionnelle complète lui a permis de valider les compétences suivantes :", CX, posY, CW_HAUT, 54) + _g(10);
+    if (competences.length) posY = _wrap(ctx, "Cette formation professionnelle complète lui a permis de valider les compétences suivantes :", CX, posY, CW_HAUT, 54) + _g(10);
 
     const gapBloc = _g(12);
     const [tailleComp, ligneHComp] = _choisirTailleCompetences(ctx, competences, posY, PHOTO_Y + PHOTO_H, CX, CW_HAUT, CW, gapBloc, _g(10));
@@ -905,7 +931,7 @@ async function genererAttestationCanvas(apprenant, token) {
     const sexeNorm   = String(apprenant.sexe || "").trim().toUpperCase();
     // Même convention NOM + Prénom que le gabarit long — cohérence entre
     // les deux formats de document (demande du PDG le 22/09/2026).
-    const civilite   = sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : "");
+    const civilite   = apprenant.civilite ? ({ Monsieur: "M. ", Madame: "Mme ", Mademoiselle: "Mlle " }[apprenant.civilite] || apprenant.civilite + " ") : (sexeNorm === "F" ? "Mme. " : (sexeNorm === "M" ? "M. " : ""));
     const nomComplet = `${civilite}${(apprenant.nom || "").toUpperCase()} ${_capitaliserPrenom(apprenant.prenom)}`;
     const BANNER_CX  = CENTRE_HAUT_COURT;
     _roundRect(ctx, CX, posY - 52, CW_HAUT_COURT, 158, 24, COULEUR_PRINCIPALE);
@@ -992,7 +1018,7 @@ async function genererAttestationCanvas(apprenant, token) {
       _font(ctx, 34, "normal", "DM Sans");
       ctx.fillStyle = ATT.GRIS;
       const ld1 = "Fait à Comé, le ";
-      const ld2 = dateAujourdhui;
+      const ld2 = dateDocument;
       const largeurTotale = _mw(ctx, ld1) + (() => { _font(ctx, 34, "bold", "DM Sans"); const w = _mw(ctx, ld2); _font(ctx, 34, "normal", "DM Sans"); return w; })();
       let fx = centreTitre - largeurTotale / 2;
       _font(ctx, 34, "normal", "DM Sans");
@@ -1092,7 +1118,7 @@ async function genererAttestationCanvas(apprenant, token) {
 
   _font(ctx, 30, "normal", "DM Sans");
   ctx.fillStyle = "rgba(255,255,255,0.48)";
-  const refTxt = `Réf : ${apprenant.id}   —   Document généré le ${dateAujourdhui}`;
+  const refTxt = `Réf : ${apprenant.id}   —   Document ${apprenant.dateDelivrance ? "délivré" : "généré"} le ${dateDocument}`;
   ctx.fillText(refTxt, (ATT.W - _mw(ctx, refTxt)) / 2, FTR_Y + 62);
 
   _font(ctx, 40, "bold", "DM Sans");
@@ -1118,8 +1144,26 @@ async function genererAttestationCanvas(apprenant, token) {
   // recadrer, rendant le document inutilisable comme preuve officielle
   // tant que la date de fin n'est pas passée.
   _dessinerFiligraneSiNonTerminee(ctx, apprenant);
+  if (apprenant.specimen) _dessinerSpecimen(ctx);
 
   return canvas;
+}
+
+// Aperçu d'une attestation manuelle avant émission : inutilisable comme preuve.
+function _dessinerSpecimen(ctx) {
+  ctx.save();
+  ctx.translate(ATT.W / 2, ATT.H / 2);
+  ctx.rotate(-Math.PI / 7);
+  ctx.textAlign = "center";
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#C81E1E";
+  _font(ctx, 300, "bold");
+  ctx.fillText("SPÉCIMEN", 0, 40);
+  ctx.globalAlpha = 0.5;
+  _font(ctx, 70, "bold", "DM Sans");
+  ctx.fillText("APERÇU — SANS VALEUR", 0, 170);
+  ctx.textAlign = "left";
+  ctx.restore();
 }
 
 function _dessinerFiligraneSiNonTerminee(ctx, apprenant) {

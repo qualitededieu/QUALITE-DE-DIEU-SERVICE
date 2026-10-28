@@ -831,6 +831,8 @@
 
         if (result.status === 'success' && result.document && result.document.typeDoc === 'travail') {
           renderDocumentTravail(result.document);
+        } else if (result.status === 'success' && result.document && result.document.typeDoc === 'attestation-manuelle') {
+          renderAttestationManuelle(result.document);
         } else if (result.status === 'success') {
           renderCarte(result.document, null, { simplifie: true });
         } else {
@@ -865,6 +867,33 @@
           ${ligne('Poste', esc(d.poste))}
           ${ligne(d.dateSortie ? 'Période d\'emploi' : 'En poste depuis le', d.dateSortie ? formatDate(d.dateEmbauche) + ' au ' + formatDate(d.dateSortie) : formatDate(d.dateEmbauche))}
           ${ligne('Délivré le', formatDate(d.dateDelivrance))}
+          <button class="btn-verifier" style="margin-top:24px;" onclick="renderFormulaire()">
+            <iconify-icon icon="tabler:arrow-left"></iconify-icon> Vérifier un autre document
+          </button>
+        </div>`;
+    }
+
+    /* ================================================================
+       RENDU — ATTESTATION MANUELLE (référence LQD-AM-...)
+    ================================================================ */
+    function renderAttestationManuelle(d) {
+      const nom = String(d.nom || '').toUpperCase() + ' ' + (d.prenoms || '');
+      if (d.statut !== 'Valide') {
+        renderErreur(`L'attestation ${d.ref} établie au nom de ${nom} a été annulée par le centre` + (d.motifAnnulation ? ` : ${d.motifAnnulation}.` : '.') + ' Elle ne doit plus être acceptée.', { titre: 'Attestation annulée' });
+        return;
+      }
+      const ligne = (l, v) => `<div style="display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #EEF0F2;font-size:14px;"><span style="color:#6B7280;">${l}</span><strong style="text-align:right;">${v}</strong></div>`;
+      document.getElementById('app').innerHTML = `
+        <div class="state-form">
+          <div class="icon-wrap" style="background:rgba(29,158,117,0.12);"><iconify-icon icon="tabler:shield-check" style="color:#1D9E75;"></iconify-icon></div>
+          <h2>Attestation authentique</h2>
+          <p class="intro">Cette attestation de fin de formation a bien été délivrée par LES QUALITÉS DE DIEU SERVICE. Comparez les informations ci-dessous avec le document présenté.</p>
+          ${ligne('Référence', esc(d.ref))}
+          ${ligne('Titulaire', esc((d.civilite ? d.civilite + ' ' : '') + nom))}
+          ${ligne('Formation', esc(d.formation))}
+          ${ligne('Période', formatDate(d.debut) + ' au ' + formatDate(d.fin) + (d.duree ? ' (' + esc(d.duree) + ')' : ''))}
+          ${d.mention ? ligne('Mention', esc(d.mention)) : ''}
+          ${ligne('Délivrée le', formatDate(d.dateDelivrance))}
           <button class="btn-verifier" style="margin-top:24px;" onclick="renderFormulaire()">
             <iconify-icon icon="tabler:arrow-left"></iconify-icon> Vérifier un autre document
           </button>
