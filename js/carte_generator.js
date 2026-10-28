@@ -121,7 +121,7 @@ function _carteLoadImg(src) {
 }
 // Retour à la ligne simple, aligné à gauche — utilisé pour l'adresse du
 // verso, seul texte de la carte assez long pour en avoir besoin.
-function _carteWrap(ctx, txt, x, y, maxW, lh) {
+function _carteWrapBrut(ctx, txt, x, y, maxW, lh) {
   const words = String(txt).split(" ");
   let ligne = "", curY = y;
   for (const mot of words) {
@@ -131,6 +131,12 @@ function _carteWrap(ctx, txt, x, y, maxW, lh) {
   }
   if (ligne) { ctx.fillText(ligne, x, curY); curY += lh; }
   return curY;
+}
+
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _carteWrap(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _carteWrapBrut(ctx, t, ...reste)) : _carteWrapBrut(ctx, txt, ...reste);
 }
 function _carteEllipseBlob(ctx, cx, cy, rx, ry, rotationDeg, colorStops) {
   ctx.save();

@@ -86,7 +86,7 @@ function _fDrawCover(ctx, img, x, y, w, h, topBias = 0.5) {
   else { sw = img.width; sh = sw / boxRatio; sx = 0; sy = (img.height - sh) * topBias; }
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
-function _fWrap(ctx, texte, x, y, maxW, lh) {
+function _fWrapBrut(ctx, texte, x, y, maxW, lh) {
   const mots = String(texte).split(" ");
   let ligne = "", curY = y;
   for (const mot of mots) {
@@ -97,7 +97,13 @@ function _fWrap(ctx, texte, x, y, maxW, lh) {
   if (ligne) { ctx.fillText(ligne, x, curY); curY += lh; }
   return curY;
 }
-function _fWrapCentre(ctx, texte, cx, y, maxW, lh) {
+
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _fWrap(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _fWrapBrut(ctx, t, ...reste)) : _fWrapBrut(ctx, txt, ...reste);
+}
+function _fWrapCentreBrut(ctx, texte, cx, y, maxW, lh) {
   const mots = String(texte).split(" ");
   let ligne = "", lignes = [];
   for (const mot of mots) {
@@ -109,6 +115,12 @@ function _fWrapCentre(ctx, texte, cx, y, maxW, lh) {
   let curY = y;
   lignes.forEach(l => { ctx.fillText(l, cx - _fMw(ctx, l) / 2, curY); curY += lh; });
   return curY;
+}
+
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _fWrapCentre(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _fWrapCentreBrut(ctx, t, ...reste)) : _fWrapCentreBrut(ctx, txt, ...reste);
 }
 function _fIconUrl(nom, couleur, taille = 70) {
   return `https://api.iconify.design/${nom}.svg?color=${encodeURIComponent(couleur)}&width=${taille}&height=${taille}`;

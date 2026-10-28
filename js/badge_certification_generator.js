@@ -25,7 +25,7 @@ function _bCenterText(ctx, txt, cx, y, color) {
   ctx.fillStyle = color;
   ctx.fillText(txt, cx - _bMw(ctx, txt) / 2, y);
 }
-function _bWrapCentre(ctx, texte, cx, y, maxW, lh) {
+function _bWrapCentreBrut(ctx, texte, cx, y, maxW, lh) {
   const mots = String(texte).split(" ");
   let ligne = "", lignes = [];
   for (const mot of mots) {
@@ -37,6 +37,12 @@ function _bWrapCentre(ctx, texte, cx, y, maxW, lh) {
   let curY = y;
   lignes.forEach(l => { _bCenterText(ctx, l, cx, curY, ctx.fillStyle); curY += lh; });
   return curY;
+}
+
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _bWrapCentre(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _bWrapCentreBrut(ctx, t, ...reste)) : _bWrapCentreBrut(ctx, txt, ...reste);
 }
 function _bLoadImg(src) {
   return new Promise(resolve => {

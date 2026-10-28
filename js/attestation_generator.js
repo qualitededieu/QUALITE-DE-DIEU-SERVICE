@@ -304,7 +304,7 @@ function _bboxEncre(img, seuilAlpha = 10) {
     return { x: 0, y: 0, w: img.width, h: img.height };
   }
 }
-function _wrapCentre(ctx, txt, cy, maxW, lh, centreX) {
+function _wrapCentreBrut(ctx, txt, cy, maxW, lh, centreX) {
   const cx = centreX !== undefined ? centreX : ATT.W / 2;
   const words = String(txt).split(" ");
   let line = "", lignes = [];
@@ -318,7 +318,13 @@ function _wrapCentre(ctx, txt, cy, maxW, lh, centreX) {
   lignes.forEach(l => { ctx.fillText(l, cx - _mw(ctx, l) / 2, y); y += lh; });
   return y;
 }
-function _wrap(ctx, txt, x, y, maxW, lh) {
+
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _wrapCentre(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _wrapCentreBrut(ctx, t, ...reste)) : _wrapCentreBrut(ctx, txt, ...reste);
+}
+function _wrapBrut(ctx, txt, x, y, maxW, lh) {
   const words = String(txt).split(" ");
   let line = "", curY = y;
   for (const w of words) {
@@ -330,10 +336,16 @@ function _wrap(ctx, txt, x, y, maxW, lh) {
   return curY;
 }
 
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _wrap(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _wrapBrut(ctx, t, ...reste)) : _wrapBrut(ctx, txt, ...reste);
+}
+
 // Variante "à blanc" de _wrap : mesure la hauteur sans dessiner (measureText
 // n'a pas besoin de fillStyle ni de fillText). Utilisée pour choisir la
 // bonne taille de police AVANT de dessiner — voir _choisirTailleCompetences.
-function _mesurerFinWrap(ctx, txt, y, maxW, lh) {
+function _mesurerFinWrapBrut(ctx, txt, y, maxW, lh) {
   const words = String(txt).split(" ");
   let line = "", curY = y;
   for (const w of words) {
@@ -343,6 +355,12 @@ function _mesurerFinWrap(ctx, txt, y, maxW, lh) {
   }
   if (line) { curY += lh; }
   return curY;
+}
+
+// Traduction des documents (js/traduction-documents.js) : le paragraphe est
+// traduit en entier, puis découpé ; ses fragments ne sont pas retraduits.
+function _mesurerFinWrap(ctx, txt, ...reste) {
+  return window.TradDoc ? TradDoc.bloc(String(txt), t => _mesurerFinWrapBrut(ctx, t, ...reste)) : _mesurerFinWrapBrut(ctx, txt, ...reste);
 }
 
 // Version "à blanc" de la boucle de compétences (voir plus bas, la boucle
@@ -702,7 +720,9 @@ async function genererAttestationCanvas(apprenant, token) {
     // à la taille plancher, le texte débordait encore d'environ 140px.
     // Attestation manuelle "intitulé libre" : compétences saisies par l'admin
     // (tableau éventuellement vide) au lieu du dictionnaire des filières.
-    const competences = Array.isArray(apprenant.competences) ? apprenant.competences : _competencesLongue(apprenant.filiere);
+    const competencesFr = Array.isArray(apprenant.competences) ? apprenant.competences : _competencesLongue(apprenant.filiere);
+    // Traduction des documents : catégorie et texte traduits en entier, avant la mise en page.
+    const competences = window.TradDoc ? competencesFr.map(b => ({ categorie: TradDoc.t(b.categorie), texte: TradDoc.t(b.texte) })) : competencesFr;
     const beaucoupDeCompetences = competences.length >= 3;
     // Facteur de compaction appliqué UNIQUEMENT aux espaces de respiration
     // (jamais à la taille des textes/titres, ni à la hauteur des blocs
@@ -849,8 +869,9 @@ async function genererAttestationCanvas(apprenant, token) {
     if (competences.length) posY = _wrap(ctx, "Cette formation professionnelle complète lui a permis de valider les compétences suivantes :", CX, posY, CW_HAUT, 54) + _g(10);
 
     const gapBloc = _g(12);
-    const [tailleComp, ligneHComp] = _choisirTailleCompetences(ctx, competences, posY, PHOTO_Y + PHOTO_H, CX, CW_HAUT, CW, gapBloc, _g(10));
-    competences.forEach(bloc => {
+    const _sansTrad = fn => (window.TradDoc ? TradDoc.sansTraduction(fn) : fn());
+    const [tailleComp, ligneHComp] = _sansTrad(() => _choisirTailleCompetences(ctx, competences, posY, PHOTO_Y + PHOTO_H, CX, CW_HAUT, CW, gapBloc, _g(10)));
+    _sansTrad(() => competences.forEach(bloc => {
       // Zone photo dépassée (posY sous PHOTO_Y + PHOTO_H) : on repasse
       // en pleine largeur pour les compétences restantes.
       const largeurDisponible = (posY < PHOTO_Y + PHOTO_H) ? CW_HAUT : CW;
@@ -879,7 +900,7 @@ async function genererAttestationCanvas(apprenant, token) {
       }
       if (ligne) { ctx.fillText(ligne, premierMot ? x : CX, posY); posY += ligneHComp; }
       posY += gapBloc;
-    });
+    }));
 
     posY += _g(10);
     _font(ctx, 40, "italic");

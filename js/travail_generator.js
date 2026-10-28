@@ -39,6 +39,11 @@ function _travContrat(contrat) {
 // Paragraphe justifié avec segments gras : [{ t: "texte", g: true }, ...].
 // Renvoie la position verticale sous le paragraphe.
 function _travParagraphe(ctx, segments, x, y, largeur, taille, interligne, justifier) {
+  if (!window.TradDoc) return _travParagrapheBrut(ctx, segments, x, y, largeur, taille, interligne, justifier);
+  const traduits = segments.map(sg => ({ t: TradDoc.t(sg.t), g: sg.g }));
+  return TradDoc.sansTraduction(() => _travParagrapheBrut(ctx, traduits, x, y, largeur, taille, interligne, justifier));
+}
+function _travParagrapheBrut(ctx, segments, x, y, largeur, taille, interligne, justifier) {
   const police = g => (g ? "bold " : "") + taille + "px 'Times New Roman', Times, serif";
   // Un mot qui commence par une ponctuation (", ." ...) se colle au précédent :
   // jamais d'espace avant une virgule entre deux segments de style différent.

@@ -275,16 +275,19 @@
       if (boutons.length) html += `<label for="rh-usage">Usage du document (facultatif)</label><input type="text" id="rh-usage" maxlength="200" placeholder="Ex. : dossier de prêt bancaire, visa, concours"><div class="actions-rapides" style="margin-top:12px;">${boutons.join('')}</div>`;
       else html += '<p class="discret" style="margin:12px 0 0;">Une demande est déjà en cours de traitement.</p>';
       html += '</div>';
-      html += r.documents.length ? `<div class="carte"><h2 class="titre-carte"><span class="iconify" data-icon="tabler:files"></span> Historique</h2>${r.documents.map(d => `
+      // Site dans une autre langue : PDF traduit automatiquement + original français (seul à faire foi)
+      const traduit = !!(window.TradDoc && window.TradDoc.langue() !== 'fr');
+      html += r.documents.length ? `<div class="carte"><h2 class="titre-carte"><span class="iconify" data-icon="tabler:files"></span> Historique</h2>${traduit ? '<p class="discret" style="margin:0 0 6px;">Le PDF traduit est une traduction automatique : seul l\'original en français fait foi.</p>' : ''}${r.documents.map(d => `
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--gris-100);">
           <div style="flex:1;min-width:200px;"><strong>${esc(d.type)}</strong> <span class="badge ${RH_BADGES[d.statut] || ''}">${esc(d.statut)}</span><br>
             <span class="discret">Réf. ${esc(d.ref)} — ${d.statut === 'Délivrée' ? 'délivré le ' + dateFr(d.dateDelivrance) : 'demandé le ' + dateFr(d.date)}</span>
             ${d.motif ? `<br><span class="discret">Motif : ${esc(d.motif)}</span>` : ''}</div>
-          ${d.statut === 'Délivrée' ? `<button type="button" class="btn btn-contour btn-petit" data-rh-pdf="${esc(d.ref)}"><span class="iconify" data-icon="tabler:download"></span> PDF</button>` : ''}
+          ${d.statut === 'Délivrée' ? `<button type="button" class="btn btn-contour btn-petit" data-rh-pdf="${esc(d.ref)}"><span class="iconify" data-icon="tabler:download"></span> PDF${traduit ? ' (' + esc(window.TradDoc.nomLangue()) + ')' : ''}</button>` : ''}
+          ${d.statut === 'Délivrée' && traduit ? `<button type="button" class="btn btn-contour btn-petit" data-rh-pdf="${esc(d.ref)}" data-rh-fr="1"><span class="iconify" data-icon="tabler:download"></span> Original FR</button>` : ''}
         </div>`).join('')}</div>` : '';
       zone.innerHTML = html;
       zone.querySelectorAll('[data-rh-demander]').forEach(b => b.addEventListener('click', () => demanderRh(b.dataset.rhDemander, b)));
-      zone.querySelectorAll('[data-rh-pdf]').forEach(b => b.addEventListener('click', () => telechargerRh(b.dataset.rhPdf, b)));
+      zone.querySelectorAll('[data-rh-pdf]').forEach(b => b.addEventListener('click', () => telechargerRh(b.dataset.rhPdf, b, b.dataset.rhFr === '1')));
     } catch (e) {
       if (e.message !== 'session') zone.innerHTML = '<div class="carte vide">' + esc(e.message) + '</div>';
     }
@@ -300,14 +303,17 @@
       chargerRh();
     } catch (e) { bouton.disabled = false; echec(e); }
   }
-  async function telechargerRh(ref, bouton) {
+  async function telechargerRh(ref, bouton, original) {
     bouton.disabled = true;
+    const td = window.TradDoc, avant = td ? td.forcerFrancais : false;
     try {
       const r = await api('formateur_rh_document', { ref: ref });
       if (r.status !== 'success') throw new Error(r.message);
+      if (td) td.forcerFrancais = !!original;
       await telechargerDocumentTravail(r.document);
+      if (td && !original && td.erreur) toast('Traduction indisponible : document téléchargé en français.');
     } catch (e) { echec(e); }
-    finally { bouton.disabled = false; }
+    finally { if (td) td.forcerFrancais = avant; bouton.disabled = false; }
   }
 
   /* ---------------------------- Accueil ---------------------------- */
