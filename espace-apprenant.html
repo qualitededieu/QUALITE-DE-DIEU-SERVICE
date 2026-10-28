@@ -1358,11 +1358,13 @@
       const form = document.getElementById('pf-form');
       let html = '';
       _profil.groupes.forEach(g => {
-        html += '<fieldset><legend>' + _txt(g.titre) + '</legend><p>' + (g.justificatif ? 'Toute modification exige un justificatif officiel (CNI, CIP, acte de naissance, passeport).' : 'Sans justificatif.') + '</p><div class="pf-champs">' +
+        html += '<fieldset><legend>' + _txt(g.titre) + '</legend><p>' + (g.justificatif ? 'Ces données figurent sur votre attestation : joignez si possible un acte de naissance en plus de votre pièce d\'identité.' : 'Joignez un justificatif si possible (ex. : facture pour une adresse).') + '</p><div class="pf-champs">' +
           g.champs.map(c => '<div class="champ" data-champ="' + c.cle + '"><label for="pf-' + c.cle + '">' + _txt(c.libelle) + (c.facultatif ? '' : ' *') + '</label>' + _pfInput(c) + '<span class="avant" hidden></span></div>').join('') + '</div></fieldset>';
       });
-      html += '<div class="pf-justif" id="pf-justif" hidden><div class="champ" style="margin:0;"><label for="pf-fichier">Justificatif officiel *</label>' +
-        '<input id="pf-fichier" type="file" accept="application/pdf,image/jpeg,image/png"><span class="avant" style="display:block;">PDF, JPEG ou PNG — 5 Mo maximum. La pièce reste privée : seule l\'administration la consulte.</span></div></div>' +
+      html += '<div class="pf-justif" id="pf-justif"><div class="champ"><label for="pf-fichier">Pièce d\'identité (CIP ou CNI) *</label>' +
+        '<input id="pf-fichier" type="file" accept="application/pdf,image/jpeg,image/png"><span class="avant" style="display:block;">Exigée pour toute demande. Photo lisible ou PDF, 5 Mo maximum.</span></div>' +
+        '<div class="champ" style="margin:0;"><label for="pf-autres">Autres justificatifs (facultatif, 2 au maximum)</label>' +
+        '<input id="pf-autres" type="file" multiple accept="application/pdf,image/jpeg,image/png"><span class="avant" style="display:block;">Acte de naissance, facture, attestation de résidence… Les pièces restent privées : seule l\'administration les consulte.</span></div></div>' +
         '<div class="champ"><label for="pf-motif">Raison de la modification *</label><textarea id="pf-motif" maxlength="300" placeholder="Ex. : erreur de saisie à l\'inscription, nouveau numéro de téléphone…"></textarea></div>' +
         '<div id="pf-msg"></div>' +
         '<div class="pf-actions"><button type="submit" class="btn-principal" id="pf-envoyer"><span class="iconify" data-icon="tabler:send"></span> Envoyer pour vérification</button>' +
@@ -1394,16 +1396,13 @@
 
     function _pfMarquerModifs() {
       const modifs = _pfModifs();
-      let etatCivil = false;
       _profil.groupes.forEach(g => g.champs.forEach(c => {
         const bloc = document.querySelector('[data-champ="' + c.cle + '"]');
         const m = Object.prototype.hasOwnProperty.call(modifs, c.cle);
         bloc.classList.toggle('modifie', m);
         const av = bloc.querySelector('.avant');
         av.hidden = !m; av.textContent = m ? 'Actuellement : ' + _pfValeur(c, c.valeur).replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
-        if (m && g.justificatif) etatCivil = true;
       }));
-      document.getElementById('pf-justif').hidden = !etatCivil;
     }
 
     function _pfMessage(txt, ok) {
@@ -1451,14 +1450,21 @@
       const motif = document.getElementById('pf-motif').value.trim();
       if (motif.length < 10) return _pfMessage('Expliquez la raison de la modification (10 caractères au moins).');
       const corps = { action: 'profil_demande_envoyer', token: _espaceApprenant.token, modifications: modifs, motif: motif };
-      if (!document.getElementById('pf-justif').hidden) {
-        const f = document.getElementById('pf-fichier').files[0];
-        if (!f) return _pfMessage('Joignez votre justificatif officiel (état civil modifié).');
-        if (['application/pdf', 'image/jpeg', 'image/png'].indexOf(f.type) === -1) return _pfMessage('Justificatif : PDF, JPEG ou PNG uniquement.');
-        if (f.size > PF_MAX_JUSTIF && f.type === 'application/pdf') return _pfMessage('Justificatif trop lourd (5 Mo maximum).');
-        try { const j = await _pfLireFichier(f); corps.justificatifBase64 = j.base64; corps.justificatifMime = j.mime; }
-        catch (x) { return _pfMessage(x.message); }
+      // Pièce d'identité obligatoire + 2 justificatifs facultatifs (le serveur revérifie tout).
+      const pieceId = document.getElementById('pf-fichier').files[0];
+      const autres = Array.from(document.getElementById('pf-autres').files || []);
+      if (!pieceId) return _pfMessage('Joignez votre pièce d\'identité (CIP ou CNI) : elle est exigée pour toute demande.');
+      if (autres.length > 2) return _pfMessage('Deux justificatifs supplémentaires au maximum.');
+      for (const f of [pieceId].concat(autres)) {
+        if (['application/pdf', 'image/jpeg', 'image/png'].indexOf(f.type) === -1) return _pfMessage('« ' + f.name + ' » : PDF, JPEG ou PNG uniquement.');
+        if (f.size > PF_MAX_JUSTIF && f.type === 'application/pdf') return _pfMessage('« ' + f.name + ' » : trop lourd (5 Mo maximum).');
       }
+      try {
+        const j = await _pfLireFichier(pieceId);
+        corps.pieceIdentite = { base64: j.base64, mime: j.mime };
+        corps.piecesAutres = [];
+        for (const f of autres) { const x = await _pfLireFichier(f); corps.piecesAutres.push({ base64: x.base64, mime: x.mime }); }
+      } catch (x) { return _pfMessage(x.message); }
       const b = document.getElementById('pf-envoyer');
       b.disabled = true; b.textContent = 'Envoi en cours…';
       try {

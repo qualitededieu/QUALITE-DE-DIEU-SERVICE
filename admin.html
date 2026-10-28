@@ -1187,7 +1187,7 @@
                   <label class="am-interrupteur" id="am-bloc-demo" hidden><input type="checkbox" id="am-demo"><span>Mode démonstration</span></label>
                   <label class="am-interrupteur" id="am-bloc-signer" hidden><input type="checkbox" id="am-signer"><span>Signer et apposer le cachet</span></label>
                   <label class="am-interrupteur"><input type="checkbox" id="am-envoyer" disabled><span>Envoyer le PDF par e-mail</span></label>
-                  <div class="am-aide" id="am-aide-signer">Sans signature : à signer et cacheter à la main. Seul le Principal émet une attestation signée.</div>
+                  <div class="am-aide" id="am-aide-signer">Sans signature : à signer et cacheter à la main. Seuls le Principal et le développeur émettent une attestation signée.</div>
                 </div>
               </div>
             </div>
@@ -1203,7 +1203,7 @@
       <div class="am-vue" id="am-vue-equipe" hidden>
         <div class="table-card" id="am-carte-roles" hidden>
           <div class="table-card-header"><span class="table-card-title"><span class="iconify" data-icon="tabler:shield-lock"></span> Rôles des comptes admin</span></div>
-          <p class="cours-aide" style="padding:0 20px;"><strong>Principal</strong> : signe et cachète, annule. <strong>Secrétariat</strong> : émet sans signature, télécharge, envoie. <strong>Développeur</strong> : annule, démonstrations, journal (ne signe jamais). Effet immédiat ; personne ne modifie son propre rôle.</p>
+          <p class="cours-aide" style="padding:0 20px;"><strong>Principal</strong> : signe et cachète, annule. <strong>Secrétariat</strong> : émet sans signature, télécharge, envoie. <strong>Développeur</strong> : accès complet (signe, annule, démonstrations, journal). Effet immédiat ; personne ne modifie son propre rôle.</p>
           <div id="am-roles"></div>
         </div>
         <div class="table-card" id="am-carte-journal" hidden>
@@ -1260,7 +1260,7 @@
           <span class="table-card-title"><span class="iconify" data-icon="tabler:user-edit"></span> Demandes de modification de profil <span id="profils-compteur" class="gal-compteur"></span></span>
           <button class="btn btn-ghost btn-sm" onclick="chargerDemandesProfil()"><span class="iconify" data-icon="tabler:refresh"></span> Actualiser</button>
         </div>
-        <p class="cours-aide" style="padding:0 20px;">Les apprenants ne modifient rien eux-mêmes : chaque champ demandé attend votre décision. <strong>État civil</strong> (nom, prénoms, sexe, naissance, nationalité, pièce) : comparez avec le justificatif joint, ces données figurent sur l'attestation.</p>
+        <p class="cours-aide" style="padding:0 20px;">Les apprenants ne modifient rien eux-mêmes : chaque champ demandé attend votre décision. Chaque demande est accompagnée de la <strong>pièce d'identité</strong> (CIP ou CNI) et, au besoin, de 2 justificatifs. <strong>État civil</strong> : ces données figurent sur l'attestation, comparez avec soin.</p>
         <div id="profils-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
       </div>
     </div>
@@ -3231,7 +3231,7 @@ async function examinerDemandeProfil(id) {
         ? `<label class="pr-coche"><input type="checkbox" class="dpr-accepter" value="${_escAdmin(m.cle)}" data-etat-civil="${m.groupe === 'etatCivil' ? 1 : 0}" ${m.perimee ? 'disabled' : ''}> Accepter</label>`
         : (m.appliquee ? '<span class="badge badge-green">Appliquée</span>' : '<span class="badge badge-red">Refusée</span>')}</td>
     </tr>`).join('');
-    const j = d.justificatif;
+    const pieces = d.justificatifs || [];
     corps.innerHTML = `
       ${(d.controles || []).map(c => `<div class="pr-alerte ${c.niveau === 'alerte' ? 'alerte' : 'info'}"><span class="iconify" data-icon="${c.niveau === 'alerte' ? 'tabler:alert-triangle' : 'tabler:info-circle'}"></span> ${_escAdmin(c.texte)}</div>`).join('')}
       <div class="info-grid" style="margin:10px 0 12px;">
@@ -3242,12 +3242,12 @@ async function examinerDemandeProfil(id) {
       <div style="overflow-x:auto;"><table class="data-table pr-table">
         <thead><tr><th>Champ</th><th>Valeur actuelle</th><th>Valeur demandée</th><th>${enAttente ? 'Décision' : 'Résultat'}</th></tr></thead>
         <tbody>${lignes}</tbody></table></div>
-      ${j ? `<div class="modal-section-title" style="margin-top:14px;">Justificatif joint</div>
-        <div class="pr-justif">${j.donnees ? `<img src="${j.donnees}" alt="Justificatif">` : ''}
-        <p style="text-align:center;margin-top:8px;"><a class="btn btn-ghost btn-sm" href="${_escAdmin(j.lien)}" target="_blank" rel="noopener"><span class="iconify" data-icon="tabler:external-link"></span> Ouvrir dans Drive${j.type === 'application/pdf' ? ' (PDF)' : ''}</a></p></div>`
-        : (d.modifications.some(m => m.groupe === 'etatCivil') ? '<p class="cours-aide" style="color:var(--red);">Justificatif introuvable.</p>' : '')}
+      ${pieces.length ? pieces.map((j, i) => `<div class="modal-section-title" style="margin-top:14px;">${j.role === 'identite' ? 'Pièce d\'identité (CIP / CNI)' : 'Justificatif supplémentaire ' + i}</div>
+        ${j.manquant ? '<p class="cours-aide" style="color:var(--red);">Fichier introuvable dans Drive.</p>' : `<div class="pr-justif">${j.donnees ? `<img src="${j.donnees}" alt="${j.role === 'identite' ? 'Pièce d\'identité' : 'Justificatif'}">` : ''}
+        <p style="text-align:center;margin-top:8px;"><a class="btn btn-ghost btn-sm" href="${_escAdmin(j.lien)}" target="_blank" rel="noopener"><span class="iconify" data-icon="tabler:external-link"></span> Ouvrir dans Drive${j.type === 'application/pdf' ? ' (PDF)' : ''}</a></p></div>`}`).join('')
+        : '<p class="cours-aide" style="color:var(--red);">Aucune pièce jointe (demande antérieure à l\'obligation).</p>'}
       ${enAttente ? `
-        <label class="pr-verif" id="dpr-verif-bloc" hidden><input type="checkbox" id="dpr-verif"> <span>J'ai comparé le justificatif avec les nouvelles données (orthographe exacte, date et lieu de naissance, numéro de pièce) et il s'agit bien de la même personne.</span></label>
+        <label class="pr-verif" id="dpr-verif-bloc" hidden><input type="checkbox" id="dpr-verif"> <span>J'ai vérifié la pièce d'identité et les justificatifs : il s'agit bien de la même personne et ils confirment les nouvelles données (orthographe, dates, numéro de pièce).</span></label>
         <label class="auth-label" for="dpr-motif" style="margin-top:10px;">Message à l'apprenant (obligatoire si un champ est refusé)</label>
         <input type="text" class="auth-input" id="dpr-motif" maxlength="300" placeholder="Ex. : le justificatif est illisible / le numéro est déjà utilisé">
         <div class="auth-error" id="err-dpr"></div>` : (d.motifDecision ? `<p class="cours-aide"><strong>Message envoyé :</strong> ${_escAdmin(_clairCours(d.motifDecision))} — ${_escAdmin(d.traitePar)}, ${_dateCourte(d.dateTraitement)}</p>` : '')}`;
@@ -3255,7 +3255,7 @@ async function examinerDemandeProfil(id) {
     pied.innerHTML = `<button class="btn btn-ghost" id="dpr-refuser"><span class="iconify" data-icon="tabler:x"></span> Tout refuser</button>
       <button class="btn btn-primary" id="dpr-appliquer"><span class="iconify" data-icon="tabler:check"></span> Appliquer la décision</button>`;
     const cases = () => Array.from(corps.querySelectorAll('.dpr-accepter'));
-    const majVerif = () => { document.getElementById('dpr-verif-bloc').hidden = !cases().some(c => c.checked && c.dataset.etatCivil === '1'); };
+    const majVerif = () => { document.getElementById('dpr-verif-bloc').hidden = !cases().some(c => c.checked); };
     cases().forEach(c => c.addEventListener('change', majVerif));
     const traiter = async (toutRefuser) => {
       const err = document.getElementById('err-dpr');
@@ -3264,13 +3264,13 @@ async function examinerDemandeProfil(id) {
       const motif = document.getElementById('dpr-motif').value.trim();
       const nbRefus = d.modifications.length - acceptes.length;
       if (nbRefus && motif.length < 5) { err.textContent = 'Indiquez à l\'apprenant pourquoi ' + (acceptes.length ? 'certains champs sont refusés' : 'la demande est refusée') + '.'; err.classList.add('show'); return; }
-      const etatCivil = cases().some(c => c.checked && c.dataset.etatCivil === '1') && !toutRefuser;
-      if (etatCivil && !document.getElementById('dpr-verif').checked) { err.textContent = 'Cochez la vérification du justificatif avant d\'accepter un changement d\'état civil.'; err.classList.add('show'); return; }
+      const verifExigee = acceptes.length > 0;
+      if (verifExigee && !document.getElementById('dpr-verif').checked) { err.textContent = 'Cochez la vérification de la pièce d\'identité et des justificatifs avant d\'accepter une modification.'; err.classList.add('show'); return; }
       const resume = acceptes.length ? acceptes.length + ' champ(s) accepté(s), ' + nbRefus + ' refusé(s)' : 'refus de toute la demande';
       if (!confirm('Confirmer : ' + resume + ' ? Les champs acceptés sont appliqués immédiatement au dossier.')) return;
       pied.querySelectorAll('button').forEach(b => { b.disabled = true; });
       try {
-        const res = await apiCall('admin_profil_demande_traiter', { id, acceptes, motif, justificatifVerifie: etatCivil ? true : false });
+        const res = await apiCall('admin_profil_demande_traiter', { id, acceptes, motif, justificatifVerifie: verifExigee });
         if (res.status !== 'success') throw new Error(res.message);
         toast(res.message, res.emailEnvoye ? 'success' : 'info');
         fermerModal('modal-demande-profil');
