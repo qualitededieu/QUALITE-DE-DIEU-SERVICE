@@ -199,6 +199,10 @@ function _competencesLongue(filiereStr) {
     parCategorie.get(entree.categorie).push(entree.texte);
   });
 
+  // Formation hors catalogue (intitulé libre d'une attestation manuelle) :
+  // aucune compétence n'est inventée, pas même le module Management.
+  if (!parCategorie.size) return [];
+
   const resultat = Array.from(parCategorie.entries()).map(([categorie, textes]) => ({
     categorie,
     texte: textes.join(" "),
@@ -745,8 +749,10 @@ async function genererAttestationCanvas(apprenant, token) {
     const lieuAff = _lieuAffiche(apprenant.lieuNaissance);
     // Date complète ("né le 30 juin 1995") ou année seule ("né en 1992"),
     // nationalité ajoutée quand elle est fournie (attestation manuelle).
-    const quandNaissance = apprenant.dateNaissance ? " le " + fmt(apprenant.dateNaissance)
-      : (apprenant.anneeNaissance ? " en " + apprenant.anneeNaissance : "");
+    // Dossier créé par une attestation manuelle : la naissance peut n'être qu'une année ("1992").
+    const anneeSeule = /^\d{4}$/.test(String(apprenant.dateNaissance || "").trim());
+    const quandNaissance = apprenant.dateNaissance && !anneeSeule ? " le " + fmt(apprenant.dateNaissance)
+      : (anneeSeule ? " en " + String(apprenant.dateNaissance).trim() : (apprenant.anneeNaissance ? " en " + apprenant.anneeNaissance : ""));
     const nationaliteTxt = apprenant.nationalite ? ", de nationalité " + String(apprenant.nationalite).toLowerCase() : "";
     const naissanceTxt = quandNaissance
       ? `${_accorderGenre("né(e)", apprenant.sexe)}${quandNaissance}${lieuAff ? " à " + lieuAff : ""}${nationaliteTxt}, `

@@ -1145,7 +1145,10 @@
                 <div><label class="auth-label" for="am-lieu">Lieu de naissance *</label><input id="am-lieu" class="auth-input" maxlength="60" list="am-communes" autocomplete="off" placeholder="Comé"><datalist id="am-communes"></datalist></div>
                 <div><label class="auth-label" for="am-nationalite">Nationalité *</label><input id="am-nationalite" class="auth-input" maxlength="30" value="béninoise" list="am-nationalites">
                   <datalist id="am-nationalites"><option value="béninoise"><option value="togolaise"><option value="nigériane"><option value="nigérienne"><option value="burkinabè"><option value="ivoirienne"></datalist></div>
-                <div class="plein"><label class="auth-label" for="am-email">E-mail de l'apprenant(e) (facultatif)</label><input id="am-email" class="auth-input" type="email" maxlength="254" autocomplete="off" placeholder="prenom.nom@gmail.com"></div>
+                <div><label class="auth-label" for="am-tel">Téléphone * (connexion à l'espace apprenant)</label><input id="am-tel" class="auth-input" type="tel" inputmode="tel" maxlength="20" autocomplete="off" placeholder="01 97 95 12 30"></div>
+                <div><label class="auth-label" for="am-email">E-mail (facultatif)</label><input id="am-email" class="auth-input" type="email" maxlength="254" autocomplete="off" placeholder="prenom.nom@gmail.com"></div>
+                <div class="plein"><label class="auth-label" for="am-dossier">N° de dossier existant (facultatif)</label><input id="am-dossier" class="auth-input" maxlength="16" autocomplete="off" placeholder="LQD-250310-AB12" style="text-transform:uppercase;">
+                  <div class="am-aide">Laissez vide : le dossier est retrouvé automatiquement (même téléphone et même NOM) ou créé comme une inscription en ligne. La personne se connecte ensuite à l'espace apprenant avec son n° de dossier et son téléphone.</div></div>
                 <div class="plein">
                   <span class="auth-label">Photo d'identité *</span>
                   <div class="am-photo">
@@ -2759,6 +2762,7 @@ function _amLireFormulaire(avecPhoto) {
   const d = { genre: _amGenre(), civilite: _amVal('am-civilite'), nom: _amNom(_amVal('am-nom')), prenoms: _amPrenoms(_amVal('am-prenoms')),
     naissanceType: type, naissance: type === 'date' ? _amVal('am-naissance-date') : _amVal('am-naissance-annee'),
     lieu: _amVal('am-lieu'), nationalite: _amVal('am-nationalite').toLowerCase(), email: _amVal('am-email').toLowerCase(),
+    telephone: _amVal('am-tel'), dossierId: _amVal('am-dossier').toUpperCase(),
     filiere: _amVal('am-filiere'), intitule: _amVal('am-intitule'), competences: _amVal('am-competences'),
     debut: _amVal('am-debut'), fin: _amVal('am-fin'), duree: _amVal('am-duree'), mention: _amVal('am-mention'),
     dateDelivrance: _amVal('am-delivrance'), signer: document.getElementById('am-signer').checked && _amPeut('signer'),
@@ -2770,6 +2774,9 @@ function _amLireFormulaire(avecPhoto) {
   if (d.lieu.length < 2 || !AM_TEXTE_RE.test(d.lieu)) e.push('lieu de naissance');
   if (d.nationalite.length < 3 || !AM_TEXTE_RE.test(d.nationalite)) e.push('nationalité');
   if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.push('email');
+  const tel = d.telephone.replace(/\D/g, '').replace(/^00229/, '');
+  if (!d.demo && !(tel.length === 8 || (tel.length >= 10 && tel.length <= 15))) e.push('téléphone');
+  if (d.dossierId && !/^LQD-\d{6}-[A-Z0-9]{4}$/.test(d.dossierId)) e.push('n° de dossier (LQD-AAMMJJ-XXXX)');
   if (!d.filiere) e.push('filière');
   if (d.filiere === 'Autre' && (d.intitule.length < 5 || !AM_TEXTE_RE.test(d.intitule))) e.push('intitulé de la formation');
   if (d.filiere === 'Autre' && d.competences && !AM_TEXTE_RE.test(d.competences)) e.push('compétences (symboles non autorisés)');
@@ -2824,6 +2831,7 @@ function preparerEmissionAm() {
     ['Période', _amDateFr(d.debut) + ' au ' + _amDateFr(d.fin) + ' (' + d.duree + ')'],
     ['Mention', d.mention || 'Aucune'], ['Délivrée le', _amDateFr(d.dateDelivrance)],
     ['Signature', d.signer ? 'Signée et cachetée' : 'À signer à la main'],
+    ['Espace apprenant', d.demo ? 'Aucun (démonstration)' : (d.dossierId ? 'Rattaché au dossier ' + d.dossierId : 'Dossier retrouvé ou créé automatiquement') + ' — connexion avec le téléphone ' + d.telephone],
     ['E-mail', document.getElementById('am-envoyer').checked ? 'Envoi à ' + d.email : 'Pas d\'envoi']]
     .concat(d.demo ? [['Mode', 'DÉMONSTRATION (numéro DEMO-, sans valeur)']] : []);
   document.getElementById('am-recap').innerHTML = lignes.map(x => `<dt>${x[0]}</dt><dd>${_escAdmin(x[1])}</dd>`).join('');
@@ -2875,13 +2883,18 @@ async function emettreAm(d) {
     fermerModal('modal-am-confirmer');
     const arch = await _amGenererEtArchiver(r.attestation, document.getElementById('am-envoyer').checked);
     toast(arch.message + ' Code de vérification : ' + arch.code + '.', 'success');
+    if (r.dossier) {
+      const msg = (r.dossier.cree ? 'Dossier ' + r.dossier.id + ' créé' : 'Rattachée au dossier ' + r.dossier.id)
+        + ' : espace apprenant avec ce n° et le téléphone ' + r.dossier.telephone + '.' + (r.dossier.avertissement ? ' ' + r.dossier.avertissement : '');
+      setTimeout(() => toast(msg, r.dossier.avertissement ? 'info' : 'success'), 600);
+    }
     _amReinitialiser();
   } catch (e) { fermerModal('modal-am-confirmer'); toast(e.message, 'error'); }
   finally { b.disabled = false; b.innerHTML = '<span class="iconify" data-icon="tabler:check"></span> Émettre'; }
 }
 
 function _amReinitialiser() {
-  ['am-nom', 'am-prenoms', 'am-naissance-annee', 'am-naissance-date', 'am-lieu', 'am-email', 'am-intitule', 'am-competences', 'am-debut', 'am-fin', 'am-duree'].forEach(id => { document.getElementById(id).value = ''; });
+  ['am-nom', 'am-prenoms', 'am-naissance-annee', 'am-naissance-date', 'am-lieu', 'am-email', 'am-tel', 'am-dossier', 'am-intitule', 'am-competences', 'am-debut', 'am-fin', 'am-duree'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('am-mention').value = ''; document.getElementById('am-filiere').value = '';
   document.getElementById('am-nationalite').value = 'béninoise';
   document.getElementById('am-signer').checked = false; document.getElementById('am-demo').checked = false;
@@ -2930,7 +2943,7 @@ function _rendreRegistreAm() {
       if (_amPeut('annuler') && a.statut !== 'annulee') actions.push(btn('tabler:ban', 'Annuler', 'annuler', 'btn-danger'));
       return `<tr>
         <td class="mono" style="font-size:12px;white-space:nowrap;">${_escAdmin(a.numero)}${a.signee ? ' <span class="iconify" data-icon="tabler:signature" title="Signée électroniquement" style="color:var(--orange);"></span>' : ''}${a.demo ? ' <span class="badge badge-yellow">Démo</span>' : ''}</td>
-        <td><strong>${_escAdmin(a.nom)} ${_escAdmin(a.prenoms)}</strong>${a.envoyeA ? `<br><span style="font-size:11px;color:var(--text-3);">Envoyée à ${_escAdmin(a.envoyeA)}</span>` : ''}</td>
+        <td><strong>${_escAdmin(a.nom)} ${_escAdmin(a.prenoms)}</strong>${a.dossier ? `<br><span class="mono" style="font-size:11px;color:var(--text-3);">Dossier ${_escAdmin(a.dossier)}</span>` : ''}${a.envoyeA ? `<br><span style="font-size:11px;color:var(--text-3);">Envoyée à ${_escAdmin(a.envoyeA)}</span>` : ''}</td>
         <td style="font-size:12.5px;">${_escAdmin(_clairCours(a.formation))}${a.mention ? `<br><span style="font-size:11px;color:var(--text-3);">Mention ${_escAdmin(a.mention)}</span>` : ''}</td>
         <td style="font-size:12px;white-space:nowrap;">${_amDateFr(a.dateDelivrance)}</td>
         <td><span class="badge ${cls}">${_escAdmin(lib)}</span>${a.motif ? `<br><span style="font-size:11px;color:var(--text-3);">${_escAdmin(_clairCours(a.motif))}</span>` : ''}</td>
